@@ -2,6 +2,10 @@
 Created on Jan 19, 2017
 
 @author: Alexandre Day
+
+    Purpose:
+        Compute robustness of clustering for indivial data point
+        
 '''
 
 import numpy as np
