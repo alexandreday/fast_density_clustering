@@ -1,2 +1,3 @@
-* Fast density clustering *
-Clustering for 2 dimensional data using local densities to a directed graph. Example for gaussian mixtures is given.
+# Fast density clustering
+Clustering for 2 dimensional data using local densities to a construct a directed graph. Example for gaussian mixtures is given.
+The codes runs for large datasets (N > 10000) and is based on kd-trees. More coming soon ...
