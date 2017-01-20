@@ -54,9 +54,10 @@ def density_map(x,y,z,
     if show:
         plt.show()
 
-def summarize(idx_centers,cluster_label,rho,n_true_center,palette,X,y=None):
+def summary(idx_centers,cluster_label,rho,n_true_center,X,y=None):
     
     n_center=idx_centers.shape[0]
+    palette=sns.color_palette('Paired',n_center+10)
     plt.figure(1)
 
     if y is not None:

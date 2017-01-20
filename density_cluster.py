@@ -25,15 +25,13 @@ def main():
     """
     Example on a gaussian mixture with n=15 centers in 2 dimension with 100000 data points
     """
-    palette=sns.color_palette('Paired',20)
-    n_true_center=15
-    X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
+    n_true_center=20
+    X,y=datasets.make_blobs(5000,2,n_true_center,random_state=0)
         
-    dcluster=DCluster(bandwidth='manual',bandwidth_value=0.5)
+    dcluster=DCluster(bandwidth='auto',bandwidth_value=0.5)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)
     
-    plotting.summarize(idx_centers,cluster_label,rho,n_true_center,palette,X,y)
-    
+    plotting.summary(idx_centers,cluster_label,rho,n_true_center,X,y)
     
 class DCluster:
     """ Density clustering via kernel density modelling
@@ -61,6 +59,7 @@ class DCluster:
     bandwidth: str, optional (default: 'auto')
         If you want the bandwidth to be set automatically or want to set it yourself.
         Valid options = {'auto' | 'manual'}
+        
     bandwidth_value: float, required if bandwidth='manual'
     
     """
