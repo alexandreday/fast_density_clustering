@@ -22,13 +22,16 @@ import sys,os
 from special_datasets import gaussian_mixture
 
 
+
 def main():
     """
     Example on a gaussian mixture with n=15 centers in 2 dimension with 100000 data points
     """
     n_true_center=10
     #X,y=datasets.make_blobs(5000,2,n_true_center,random_state=0)
-    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[1.0,2.0,0.5],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1])
+    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[1.0,2.0,0.5],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
+                         random_state=np.random.randint(1000000)
+                         )
             
     dcluster=DCluster(bandwidth='auto',bandwidth_value=0.5)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)
@@ -193,20 +196,13 @@ def find_optimal_bandwidth(X,X_train,X_test):
     Purpose:
         Given a training and a test set, finds the optimal bandwidth in a gaussian kernel density model
     """
-    
     from scipy import optimize
     hi=bandwidth_estimate(X)
-    th=2.5*hi
-    print("Estimate -> ",hi,'\t',log_likelihood_test_set(th,X_train,X_test))
-    
-    brack=(2.0*hi,3.*hi)
     args=(X_train,X_test)
-    brack,_,_=optimize.bracket(log_likelihood_test_set,args=args,xa=1.5*hi, xb=2.5*hi,maxiter=20)
-    print(brack)
-    exit()
-    xmin,fval,iter,funcalls=optimize.brent(log_likelihood_test_set,brack=brack,args=args,tol=0.01,maxiter=25,full_output=True)
+    options={'maxiter':25,'disp':False}
+    res=optimize.minimize(log_likelihood_test_set,hi, args=args,method='L-BFGS-B', bounds=[(0.01,5)], tol=0.001, options=options)
     
-    return xmin
+    return res.x
 
 def compute_density(X,bandwidth=1.0):
     """
