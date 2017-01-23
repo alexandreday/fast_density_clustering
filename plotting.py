@@ -54,6 +54,14 @@ def density_map(x,y,z,
     if show:
         plt.show()
 
+def scatter_w_label(x,y,z):
+    n_unique_label=np.unique(z).shape[0]
+    palette=sns.color_palette('Paired',n_unique_label+10)
+    for i in range(n_unique_label):
+        pos=(z==i)
+        plt.scatter(x[pos],y[pos],c=palette[i],rasterized=True)
+    plt.show()
+
 def summary(idx_centers,cluster_label,rho,n_true_center,X,y=None):
     
     n_center=idx_centers.shape[0]

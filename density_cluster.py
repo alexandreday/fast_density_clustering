@@ -35,6 +35,8 @@ def main():
                          random_state=1
                          )
     
+    plotting.scatter_w_label(X[:,0],X[:,1],y)
+    exit()
     #Xred=np.fromfile('result.dat').reshape(-1,2)
     Xred=X
     #Xred=tsne.fit_transform(X)
