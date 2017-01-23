@@ -1,0 +1,10 @@
+*.pdf
+*.png
+test.py
+#.gitignore
+data
+data.dat
+result.dat
+bh_tsne
+.DS_Store
+__pycache__/
