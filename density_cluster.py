@@ -20,23 +20,29 @@ from sklearn.model_selection import train_test_split
 from numpy.random import random
 import sys,os
 from special_datasets import gaussian_mixture
-
-
+sys.path.append("../../tSNE_visual/src/")
+from tsne import TSNE
+import pickle
 
 def main():
     """
     Example on a gaussian mixture with n=15 centers in 2 dimension with 100000 data points
     """
+    tsne=TSNE(n_components=2,n_iter=5000,angle=0.0)    
     n_true_center=10
     #X,y=datasets.make_blobs(5000,2,n_true_center,random_state=0)
     X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[1.0,2.0,0.5],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                         random_state=np.random.randint(1000000)
+                         random_state=1
                          )
-            
-    dcluster=DCluster(bandwidth='auto',bandwidth_value=0.5)
-    cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)
     
-    plotting.summary(idx_centers,cluster_label,rho,n_true_center,X,y)
+    #Xred=np.fromfile('result.dat').reshape(-1,2)
+    Xred=X
+    #Xred=tsne.fit_transform(X)
+    
+    dcluster=DCluster(bandwidth='auto',perplexity=40.,NH_size=40)
+    cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(Xred)
+    
+    plotting.summary(idx_centers,cluster_label,rho,n_true_center,Xred,y)
     
 class DCluster:
     """ Density clustering via kernel density modelling
@@ -70,13 +76,14 @@ class DCluster:
     """
     
     def __init__(self,perplexity=40.0,test_size=0.1,
-                 random_state=0,verbose=1,
+                 random_state=0,verbose=1,NH_size=40,
                  bandwidth='auto',bandwidth_value=None):
         self.perplexity=round(perplexity)
         self.test_size=test_size
         self.random_state=random_state
         self.verbose=verbose
         self.bandwidth_value=None
+        self.NH_size=NH_size
         if bandwidth is not 'auto': # Need to implement something else here
             assert bandwidth is 'manual'
             self.bandwidth_value=bandwidth_value
@@ -105,7 +112,7 @@ class DCluster:
         rho,kde=compute_density(X,bandwidth=bandwidthCV)
     
         print("--> Finding centers ...")
-        delta,nn_delta,idx_centers,density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.perplexity)
+        delta,nn_delta,idx_centers,density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.NH_size)
         
         print("--> Assigning labels ...")
         cluster_label=assign_cluster(idx_centers,nn_delta,density_graph)
@@ -198,6 +205,17 @@ def find_optimal_bandwidth(X,X_train,X_test):
     """
     from scipy import optimize
     hi=bandwidth_estimate(X)
+    #===========================================================================
+    # d=[]
+    # for h in np.arange(0.05,5.0,0.05):
+    #     vv=[h,log_likelihood_test_set(h,X_train,X_test)]
+    #     print(vv)
+    #     d.append(vv)
+    # d=np.array(d)
+    # plt.scatter(d[:,0],d[:,1])
+    # plt.show()
+    # exit()
+    #===========================================================================
     args=(X_train,X_test)
     options={'maxiter':25,'disp':False}
     res=optimize.minimize(log_likelihood_test_set,hi, args=args,method='L-BFGS-B', bounds=[(0.01,5)], tol=0.001, options=options)
