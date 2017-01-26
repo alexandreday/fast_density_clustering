@@ -20,8 +20,7 @@ from sklearn.model_selection import train_test_split
 from numpy.random import random
 import sys,os
 from special_datasets import gaussian_mixture
-sys.path.append("../../tSNE_visual/src/")
-from tsne import TSNE
+from tsne.tsne import TSNE # download from https://github.com/alexandreday/tsne_visual
 import pickle
 
 def main():
