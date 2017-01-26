@@ -29,22 +29,22 @@ def main():
     tsne=TSNE(n_components=2,n_iter=5000,angle=0.5)    
     n_true_center=10
     
-    #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
-    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                         random_state=10
-                         )
-    
-    
-    
+    X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
     #===========================================================================
-    # plotting.scatter_w_label(X[:,0],X[:,1],y)
-    # exit()
-    # #exit()
-    # #Xred=np.fromfile('result.dat').reshape(-1,2)
-    # #Xred=X
-    # Xred=tsne.fit_transform(X)
-    # exit()
+    # X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
+    #                      random_state=10
+    #                      )
+    # 
     #===========================================================================
+    
+    
+    #plotting.scatter_w_label(X[:,0],X[:,1],y)
+    #exit()
+    #exit()
+    #Xred=np.fromfile('result.dat').reshape(-1,2)
+    #Xred=X
+    #Xred=tsne.fit_transform(X)
+    #exit()
     
     dcluster=DCluster(bandwidth='auto',perplexity=40.,NH_size=40)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)    
@@ -104,7 +104,7 @@ class DCluster:
         
         # Find optimal bandwidth
 
-        X_train, X_test, _,_ = train_test_split(X,range(X.shape[0]),test_size=0.1, random_state=0)
+        X_train, X_test, _,_ = train_test_split(X,range(X.shape[0]),test_size=0.5, random_state=0)
         
         if self.bandwidth_value is None:
             print("--> Finding optimal bandwidth ...")
@@ -131,48 +131,6 @@ class DCluster:
         
         return cluster_label,idx_centers,rho,delta,kde.tree_
     
-def index_greater(array):
-    """
-    Purpose:
-        Fast compiled function for finding first item in an array that has a value greater than the first element in that array
-        If no element is found, returns None
-    """
-    item=array[0]
-    for idx, val in np.ndenumerate(array):
-        if val > item:
-            return idx
-
-
-def assign_cluster_deep(root,cluster_label,density_graph,label):
-    """
-    Purpose:
-        Recursive function for assigning labels for a tree graph.
-        Stopping condition is met when the root is empty (i.e. a leaf has been reached)
-        
-    """
-    
-    if not root:  # then must be a leaf !
-        return
-    else:
-        for child in root:
-            cluster_label[child]=label
-            assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
-
-def assign_cluster(idx_centers,nn_delta,density_graph):
-    """ 
-    Purpose:
-        Given the cluster centers and the local gradients (nn_delta) assign to every
-        point a cluster label
-    """
-    
-    n_center=idx_centers.shape[0]
-    n_sample=nn_delta.shape[0]
-    cluster_label=-1*np.ones(n_sample,dtype=np.int)
-    
-    for c,label in zip(idx_centers,range(n_center)):
-        cluster_label[c]=label
-        assign_cluster_deep(density_graph[c],cluster_label,density_graph,label)    
-    return cluster_label    
  
 def bandwidth_estimate(X):
     """
@@ -268,6 +226,48 @@ def compute_delta(X,rho,tree,cutoff=40):
     
     return delta,nn_delta,idx_centers,density_graph
 
+def index_greater(array):
+    """
+    Purpose:
+        Fast compiled function for finding first item in an array that has a value greater than the first element in that array
+        If no element is found, returns None
+    """
+    item=array[0]
+    for idx, val in np.ndenumerate(array):
+        if val > item:
+            return idx
+
+
+def assign_cluster_deep(root,cluster_label,density_graph,label):
+    """
+    Purpose:
+        Recursive function for assigning labels for a tree graph.
+        Stopping condition is met when the root is empty (i.e. a leaf has been reached)
+        
+    """
+    
+    if not root:  # then must be a leaf !
+        return
+    else:
+        for child in root:
+            cluster_label[child]=label
+            assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
+
+def assign_cluster(idx_centers,nn_delta,density_graph):
+    """ 
+    Purpose:
+        Given the cluster centers and the local gradients (nn_delta) assign to every
+        point a cluster label
+    """
+    
+    n_center=idx_centers.shape[0]
+    n_sample=nn_delta.shape[0]
+    cluster_label=-1*np.ones(n_sample,dtype=np.int)
+    
+    for c,label in zip(idx_centers,range(n_center)):
+        cluster_label[c]=label
+        assign_cluster_deep(density_graph[c],cluster_label,density_graph,label)    
+    return cluster_label    
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')

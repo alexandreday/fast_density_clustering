@@ -64,26 +64,28 @@ def scatter_w_label(x,y,z):
 
 def summary(idx_centers,cluster_label,rho,n_true_center,X,y=None):
     
+    fontsize=15
     n_center=idx_centers.shape[0]
     palette=sns.color_palette('Paired',n_center+10)
-    plt.figure(1)
+    plt.figure(1,figsize=(20,10))
 
     if y is not None:
-        plt.subplot(221,aspect='equal')
-        plt.title('True labels')
+        plt.subplot(131)
+        plt.title('True labels',fontsize=fontsize)
         print("--> First plotting true clustered labels, then inferred labels, then density map ... ")
         for i in range(n_true_center):
             pos=(y==i)
             plt.scatter(X[pos,0],X[pos,1],c=palette[i],rasterized=True)
         
-    plt.subplot(222,aspect='equal')
+    plt.subplot(132)
     for i in range(n_center):
         pos=(cluster_label==i)
         plt.scatter(X[pos,0],X[pos,1],c=palette[i],rasterized=True)
  
-    plt.title('Inferred labels')
+    plt.title('Inferred labels',fontsize=fontsize)
+    plt.tight_layout()
+    plt.subplot(133)
+    density_map(X[:,0], X[:,1],rho,centers=X[idx_centers],title='Density map')
     
-    plt.subplot(223,aspect='equal')
-    density_map(X[:,0], X[:,1],rho,centers=X[idx_centers])
     plt.clf()
 
