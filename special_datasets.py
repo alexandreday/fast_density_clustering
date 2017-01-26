@@ -21,7 +21,6 @@ def gaussian_mixture(n_sample=1000,n_center=2,sigma_range=[1.0],pop_range=[0.1,0
      
     for c in range(n_center):
         n_sample_c=round(n_sample*pop_range[c])
-         
         sig_1,sig_2=sigma_range[np.random.randint(0,n_sigma,2)]
         bound=np.sqrt(sig_1*sig_2)
         sig_12=np.random.uniform()*2*bound-bound

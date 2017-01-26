@@ -15,7 +15,6 @@ from sklearn.neighbors import KernelDensity
 from sklearn import datasets
 import plotting
 import time
-from numba import njit
 from sklearn.model_selection import train_test_split
 from numpy.random import random
 import sys,os
@@ -27,18 +26,25 @@ def main():
     """
     Example on a gaussian mixture with n=15 centers in 2 dimension with 100000 data points
     """
-    tsne=TSNE(n_components=2,n_iter=5000,angle=0.0)    
-    n_true_center=15
-    X,y=datasets.make_blobs(500,2,n_true_center,random_state=0)
-    #X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[1.0,2.0,0.5],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-    #                     random_state=1
-    #                     )
+    tsne=TSNE(n_components=2,n_iter=5000,angle=0.5)    
+    n_true_center=10
     
-    #plotting.scatter_w_label(X[:,0],X[:,1],y)
-    #exit()
-    #Xred=np.fromfile('result.dat').reshape(-1,2)
-    #Xred=X
-    #Xred=tsne.fit_transform(X)
+    #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
+    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
+                         random_state=10
+                         )
+    
+    
+    
+    #===========================================================================
+    # plotting.scatter_w_label(X[:,0],X[:,1],y)
+    # exit()
+    # #exit()
+    # #Xred=np.fromfile('result.dat').reshape(-1,2)
+    # #Xred=X
+    # Xred=tsne.fit_transform(X)
+    # exit()
+    #===========================================================================
     
     dcluster=DCluster(bandwidth='auto',perplexity=40.,NH_size=40)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)    
@@ -125,7 +131,6 @@ class DCluster:
         
         return cluster_label,idx_centers,rho,delta,kde.tree_
     
-@njit
 def index_greater(array):
     """
     Purpose:
