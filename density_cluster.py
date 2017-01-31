@@ -26,7 +26,7 @@ def main():
     """
     Example on a gaussian mixture with n=15 centers in 2 dimension with 100000 data points
     """
-    tsne=TSNE(n_components=2,n_iter=5000,angle=0.5)    
+    #tsne=TSNE(n_components=2,n_iter=5000,angle=0.5)    
     n_true_center=10
     
     X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
