@@ -109,7 +109,14 @@ class DCluster:
         print("--> Done in %.3f s" % (time.time()-start))
         
         print("--> Found %i centers ! ..." % idx_centers.shape[0])
+
+        _,nn_list=kde.tree_.query(list(X), k=20)
         
+        print("--> Checking stability")
+        check_cluster_stability(rho, nn_list, idx_centers, 0.5)
+
+        exit()
+
         enablePrint()
         
         return cluster_label, idx_centers, rho, delta, kde.tree_
@@ -245,14 +252,39 @@ def blockPrint():
 def enablePrint():
     sys.stdout = sys.__stdout__
 
-
-if __name__=="__main__":
-    main()
-
-def check_cluster_stability():
+def find_valley_NH(rho, nn_list, idx, threshold, NH, search_size = 10):
+    """
+    Purpose:
+        Recursive function for searching for nearest neighbors within
+        some density threshold. NH should be an empty set.
+    """
+    if rho[idx] > threshold: # stop condition // noise threshold
+        NH.add(idx) # NH is a hash table -> elements are unique and adding is done in O(1)
+        for nn_idx in nn_list[idx][:search_size]: # maybe need to play with the size of nn_list we want to take
+            if nn_idx not in NH:
+                find_valley_NH(rho, nn_list, nn_idx, threshold, NH)
+    
+def check_cluster_stability(rho, nn_list, idx_centers, threshold):
     """
     Purpose:
         Given the identified cluster centers, performs a more rigourous
         neighborhood search (based on some noise threshold) for points with higher densities.
-        This is vaguely similar to a watershed cuts in image segmentation.
+        This is vaguely similar to a watershed cuts in image segmentation and basically
+        makes sure we haven't identified spurious cluster centers w.r.t to some noise threshold (false positive).
     """
+
+    n_false_pos=0
+    for idx in idx_centers:
+        NH = set([])
+        rho_center = rho[idx]
+        delta_rho = rho_center - threshold
+        find_valley_NH(rho, nn_list, idx, delta_rho, NH)
+        NH = np.array(list(NH))
+        if rho[idx] < np.max(rho[NH]):
+            "False positive !"
+            n_false_pos+=1
+    
+    print("Number of false positives: ",n_false_pos)
+
+if __name__=="__main__":
+    main()
