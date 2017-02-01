@@ -27,13 +27,13 @@ def main():
     """
 
     n_true_center=10
-    #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
+    #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
 
     X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],
                             pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                            random_state=10)
+                            random_state=8234)
 
-    dcluster=DCluster(NH_size=40)
+    dcluster=DCluster(NH_size=100)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)    
     plotting.summary(idx_centers,cluster_label,rho,n_true_center,X,y)
 
@@ -103,19 +103,17 @@ class DCluster:
         print("--> Finding centers ...")
         delta,nn_delta,idx_centers,density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.NH_size)
         
+        print("--> Checking stability ...")
+
+        _,nn_list=kde.tree_.query(list(X), k=20)
+        idx_centers=check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, 0.2)
+
         print("--> Assigning labels ...")
         cluster_label=assign_cluster(idx_centers,nn_delta,density_graph)
         
         print("--> Done in %.3f s" % (time.time()-start))
         
         print("--> Found %i centers ! ..." % idx_centers.shape[0])
-
-        _,nn_list=kde.tree_.query(list(X), k=20)
-        
-        print("--> Checking stability")
-        check_cluster_stability(rho, nn_list, idx_centers, 0.5)
-
-        exit()
 
         enablePrint()
         
@@ -264,7 +262,7 @@ def find_valley_NH(rho, nn_list, idx, threshold, NH, search_size = 10):
             if nn_idx not in NH:
                 find_valley_NH(rho, nn_list, nn_idx, threshold, NH)
     
-def check_cluster_stability(rho, nn_list, idx_centers, threshold):
+def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, threshold):
     """
     Purpose:
         Given the identified cluster centers, performs a more rigourous
@@ -274,17 +272,26 @@ def check_cluster_stability(rho, nn_list, idx_centers, threshold):
     """
 
     n_false_pos=0
+    idx_true_centers=[]
+
     for idx in idx_centers:
         NH = set([])
         rho_center = rho[idx]
         delta_rho = rho_center - threshold
         find_valley_NH(rho, nn_list, idx, delta_rho, NH)
         NH = np.array(list(NH))
-        if rho[idx] < np.max(rho[NH]):
-            "False positive !"
+        idx_max = NH[np.argmax(rho[NH])]
+        if rho[idx] < rho[idx_max]:
+            nn_delta[idx] = idx_max
+            delta[idx] = np.linalg.norm(X[idx_max]-X[idx])
+            density_graph[idx_max].append(idx)
             n_false_pos+=1
-    
-    print("Number of false positives: ",n_false_pos)
+        else:
+            idx_true_centers.append(idx)
+        
+    print("--> Number of false positives = %i ..."%n_false_pos)
+    return np.array(idx_true_centers,dtype=np.int)
+
 
 if __name__=="__main__":
     main()
