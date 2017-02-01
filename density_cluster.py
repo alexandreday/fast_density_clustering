@@ -4,8 +4,7 @@ Created on Jan 16, 2017
 @author: Alexandre Day
 
     Purpose:
-        Code for performing robust density clustering 
-        
+        Code for performing robust density clustering
 '''
 
 import numpy as np
@@ -23,93 +22,89 @@ import pickle
 
 def main():
     """
-    Example on a gaussian mixture with n=15 centers in 2 dimension with 100000 data points
+        Example for gaussian mixture (the number of cluster center can be changed, but
+        adjust the parameters accordingly !)
     """
-
-    n_true_center=10
+    print("Hello !")
+    n_true_center = 10
     #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
 
-    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],
-                            pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                            random_state=8234)
+    X,y = gaussian_mixture(n_sample=10000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
+                            pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
+                            random_state = 8234)
 
-    dcluster=DCluster(NH_size=100)
-    cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)    
-    plotting.summary(idx_centers,cluster_label,rho,n_true_center,X,y)
+    dcluster = DCluster(NH_size = 100)
+    cluster_label, idx_centers, rho, delta, kde_tree = dcluster.fit(X)
+    plotting.summary(idx_centers, cluster_label, rho, n_true_center,X ,y)
 
-
-
-##########################
-##########################
-##########################
-
-
+############################################################################################################
+############################################################################################################
 class DCluster:
     """ Fast two dimensional density clustering via kernel density modelling
-      
+
     Parameters
     ----------
 
     NH_size : int, optional (default: 40)
         Neighborhood size. This is related to the perplexity (in t-SNE)
-        and is an effective scale that defines the number of neighbors of each data point. 
+        and is an effective scale that defines the number of neighbors of each data point.
         Larger datasets usually require a larger perplexity/NH_size. Consider selecting a value
         between 20 and 100.
-    
+
     random_state: int, optional (default: 0)
         Random number for seeding random number generator
-    
+
     verbose: int, optional (default: 1)
         Set to 0 if you don't want to see print to screen.
-    
+
     bandwidth: str, optional (default: 'auto')
         If you want the bandwidth to be set automatically or want to set it yourself.
         Valid options = {'auto' | 'manual'}
-        
+
     bandwidth_value: float, required if bandwidth='manual'
-    
+
     """
-    
-    def __init__(self,NH_size = 40,test_size = 0.1,
-                 random_state = 0,verbose = 1,
-                 bandwidth = None):
+
+    def __init__(self, NH_size=40, test_size=0.1,
+                 random_state=0, verbose=1,
+                 bandwidth=None):
 
         self.test_size = test_size
         self.random_state = random_state
         self.verbose = verbose
         self.NH_size = NH_size
         self.bandwidth = bandwidth
-    
+
     def fit(self,X):
-        if self.verbose==0:
+        if self.verbose == 0:
             blockPrint()
-            
+
         n_sample = X.shape[0]
         print("--> Starting clustering with n=%i samples..." % n_sample)
         start = time.time()
-    
+
         if self.bandwidth:
             bandwidthCV = self.bandwidth
         else:
             print("--> Finding optimal bandwidth ...")
-            X_train, X_test, y_train, y_test = train_test_split(X, range(X.shape[0]), test_size = self.test_size, random_state = self.random_state)
+            X_train, X_test, y_train, y_test = train_test_split(X, range(X.shape[0]), test_size=self.test_size, random_state=self.random_state)
             bandwidthCV = find_optimal_bandwidth(X, X_train, X_test)
-        
+
         print("--> Using bandwidth = %.3f" % bandwidthCV)
-    
+
         print("--> Computing density ...")
-        rho, kde = compute_density(X, bandwidth = bandwidthCV)
-    
+        rho, kde = compute_density(X, bandwidth=bandwidthCV)
+
         print("--> Finding centers ...")
-        delta,nn_delta,idx_centers,density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.NH_size)
+        delta, nn_delta, idx_centers, density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.NH_size)
         
         print("--> Checking stability ...")
 
-        _,nn_list=kde.tree_.query(list(X), k=20)
-        idx_centers=check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, 0.2)
+        _, nn_list=kde.tree_.query(list(X), k=20)
+        idx_centers = check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, 0.2)
 
         print("--> Assigning labels ...")
-        cluster_label=assign_cluster(idx_centers,nn_delta,density_graph)
+        cluster_label = assign_cluster(idx_centers, nn_delta, density_graph)
         
         print("--> Done in %.3f s" % (time.time()-start))
         
@@ -129,7 +124,7 @@ def bandwidth_estimate(X):
     nbrs = NearestNeighbors(n_neighbors=40,algorithm='kd_tree').fit(X)
     nn_dist,_ = nbrs.kneighbors(X)
 
-    return np.median(nn_dist[:,-1]),np.mean(nn_dist[:,1]),
+    return np.median(nn_dist[:,-1]), np.mean(nn_dist[:,1])
   
 def log_likelihood_test_set(bandwidth,X_train,X_test):
     """
@@ -254,7 +249,7 @@ def find_valley_NH(rho, nn_list, idx, threshold, NH, search_size = 10):
     """
     Purpose:
         Recursive function for searching for nearest neighbors within
-        some density threshold. NH should be an empty set.
+        some density threshold. NH should be an empty set for the inital function call.
     """
     if rho[idx] > threshold: # stop condition // noise threshold
         NH.add(idx) # NH is a hash table -> elements are unique and adding is done in O(1)
