@@ -11,13 +11,13 @@ Created on Jan 16, 2017
 import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
-from sklearn.neighbors import KernelDensity,NearestNeighbors
+from sklearn.neighbors import KernelDensity, NearestNeighbors
 from sklearn import datasets
 import plotting
 import time
 from sklearn.model_selection import train_test_split
 from numpy.random import random
-import sys,os
+import sys, os
 from special_datasets import gaussian_mixture
 import pickle
 
