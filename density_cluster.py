@@ -11,7 +11,7 @@ Created on Jan 16, 2017
 import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
-from sklearn.neighbors import KernelDensity
+from sklearn.neighbors import KernelDensity,NearestNeighbors
 from sklearn import datasets
 import plotting
 import time
@@ -19,53 +19,36 @@ from sklearn.model_selection import train_test_split
 from numpy.random import random
 import sys,os
 from special_datasets import gaussian_mixture
-from tsne.tsne import TSNE # download from https://github.com/alexandreday/tsne_visual
 import pickle
 
 def main():
     """
     Example on a gaussian mixture with n=15 centers in 2 dimension with 100000 data points
     """
-    #tsne=TSNE(n_components=2,n_iter=5000,angle=0.5)    
+
     n_true_center=10
-    
-    X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
-    #===========================================================================
-    # X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-    #                      random_state=10
-    #                      )
-    # 
-    #===========================================================================
-    
-    
-    #plotting.scatter_w_label(X[:,0],X[:,1],y)
-    #exit()
-    #exit()
-    #Xred=np.fromfile('result.dat').reshape(-1,2)
-    #Xred=X
-    #Xred=tsne.fit_transform(X)
-    #exit()
-    
-    dcluster=DCluster(bandwidth='auto',perplexity=40.,NH_size=40)
+    #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
+
+    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
+                          random_state=10)
+
+    dcluster=DCluster(bandwidth='auto',NH_size=40)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)    
     plotting.summary(idx_centers,cluster_label,rho,n_true_center,X,y)
     
 class DCluster:
-    """ Density clustering via kernel density modelling
+    """ Fast two dimensional density clustering via kernel density modelling
+    
     
        
     Parameters
     ----------
-    
-    n_components : int, optional (default: 2)
-        Dimension of the embedded space.
 
-    perplexity : int, optional (default: 40)
-        The perplexity is related to the number of nearest neighbors that
-        is used in other manifold learning algorithms. Larger datasets
-        usually require a larger perplexity. Consider selecting a value
-        between 20 and 100. Perplexity can be thought as the effective number
-        of neighbors.
+    NH_size : int, optional (default: 40)
+        Neighborhood size. This is related to the perplexity (in t-SNE)
+        and is an effective scale that defines the number of neighbors of each data point. 
+        Larger datasets usually require a larger perplexity/NH_size. Consider selecting a value
+        between 20 and 100.
     
     random_state: int, optional (default: 0)
         Random number for seeding random number generator
@@ -81,10 +64,9 @@ class DCluster:
     
     """
     
-    def __init__(self,perplexity=40.0,test_size=0.1,
-                 random_state=0,verbose=1,NH_size=40,
+    def __init__(self,NH_size=40,test_size=0.1,
+                 random_state=0,verbose=1,
                  bandwidth='auto',bandwidth_value=None):
-        self.perplexity=round(perplexity)
         self.test_size=test_size
         self.random_state=random_state
         self.verbose=verbose
@@ -101,13 +83,10 @@ class DCluster:
         n_sample=X.shape[0]
         print("--> Starting clustering with n=%i samples..."%n_sample)
         start=time.time()
-        
-        # Find optimal bandwidth
-
-        X_train, X_test, _,_ = train_test_split(X,range(X.shape[0]),test_size=0.5, random_state=0)
-        
+    
         if self.bandwidth_value is None:
             print("--> Finding optimal bandwidth ...")
+            X_train, X_test, y_train,y_test = train_test_split(X,range(X.shape[0]),test_size=self.test_size, random_state=0)
             bandwidthCV=find_optimal_bandwidth(X,X_train,X_test)
         else:
             bandwidthCV=self.bandwidth_value
@@ -135,29 +114,20 @@ class DCluster:
 def bandwidth_estimate(X):
     """
     Purpose:
-        Gives a rough estimate of the optimal bandwidth ... this is a bit wonky ... needs some more justification ... 
+        Gives a rough estimate of the optimal bandwidth (based on the notion 
+        of some effective neigborhood)
     """
-    
-    assert X.shape[1]==2
-    n_sample=X.shape[0]
-    x25,x75=np.percentile(X[:,0],25),np.percentile(X[:,0],75)
-    y25,y75=np.percentile(X[:,1],25),np.percentile(X[:,1],75)
-    Aeff=(y75-y25)*(x75-x25)
-    
-    dist_uniform=np.sqrt(Aeff/(n_sample*0.5))
-    
-    kde=KernelDensity(bandwidth=0.3, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.5, rtol=0.05, breadth_first=True, leaf_size=40)
-    kde.fit(X)
-    nn_dist,_=kde.tree_.query(list(X), k=40)
-    return dist_uniform/np.mean(nn_dist[:,1:]) # --- need to understand this better !
+    nbrs = NearestNeighbors(n_neighbors=40,algorithm='kd_tree').fit(X)
+    nn_dist,_ = nbrs.kneighbors(X)
+
+    return np.median(nn_dist[:,-1]),np.mean(nn_dist[:,1]),
   
 def log_likelihood_test_set(bandwidth,X_train,X_test):
     """
     Purpose:
         Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
     """
-    
-    kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.0000005, rtol=0.000005, breadth_first=True, leaf_size=40)
+    kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=0.0005, rtol=0.0005,leaf_size=40)
     kde.fit(X_train)
     return -kde.score(X_test)
 
@@ -166,24 +136,20 @@ def find_optimal_bandwidth(X,X_train,X_test):
     Purpose:
         Given a training and a test set, finds the optimal bandwidth in a gaussian kernel density model
     """
-    from scipy import optimize
-    hi=bandwidth_estimate(X)
-    #===========================================================================
-    # d=[]
-    # for h in np.arange(0.05,5.0,0.05):
-    #     vv=[h,log_likelihood_test_set(h,X_train,X_test)]
-    #     print(vv)
-    #     d.append(vv)
-    # d=np.array(d)
-    # plt.scatter(d[:,0],d[:,1])
-    # plt.show()
-    # exit()
-    #===========================================================================
-    args=(X_train,X_test)
-    options={'maxiter':25,'disp':False}
-    res=optimize.minimize(log_likelihood_test_set,hi, args=args,method='L-BFGS-B', bounds=[(0.01,5)], tol=0.001, options=options)
+    from scipy.optimize import fminbound
+
+    hest,hmin=bandwidth_estimate(X)
     
-    return res.x
+    #print("rough bandwidth ",hest,hmin)
+    
+    args=(X_train,X_test)
+    
+    # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the minima
+    
+    h_optimal,score_opt,_,niter=fminbound(log_likelihood_test_set,hmin,1.5*hest,args,maxfun=25,xtol=0.01,full_output=True)
+    print("--> Found log-likelihood minima in %i evaluations"%niter)
+
+    return h_optimal
 
 def compute_density(X,bandwidth=1.0):
     """

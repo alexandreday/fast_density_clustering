@@ -1,7 +1,9 @@
 *.pdf
 *.png
 test.py
-#.gitignore
+*.
+!.gitignore
+tags
 data
 data.dat
 result.dat

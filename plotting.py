@@ -72,7 +72,7 @@ def summary(idx_centers,cluster_label,rho,n_true_center,X,y=None):
     if y is not None:
         plt.subplot(131)
         plt.title('True labels',fontsize=fontsize)
-        print("--> First plotting true clustered labels, then inferred labels, then density map ... ")
+        print("--> Plotting summary: True clustered labels, inferred labels and density map ")
         for i in range(n_true_center):
             pos=(y==i)
             plt.scatter(X[pos,0],X[pos,1],c=palette[i],rasterized=True)
