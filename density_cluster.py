@@ -249,3 +249,10 @@ def enablePrint():
 if __name__=="__main__":
     main()
 
+def check_cluster_stability():
+    """
+    Purpose:
+        Given the identified cluster centers, performs a more rigourous
+        neighborhood search (based on some noise threshold) for points with higher densities.
+        This is vaguely similar to a watershed cuts in image segmentation.
+    """
