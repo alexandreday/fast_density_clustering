@@ -29,10 +29,11 @@ def main():
     n_true_center=10
     #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=0)
 
-    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                          random_state=10)
+    X,y=gaussian_mixture(n_sample=10000,n_center=n_true_center,sigma_range=[0.25,0.5,1.25],
+                            pop_range=[0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
+                            random_state=10)
 
-    dcluster=DCluster(bandwidth='auto',NH_size=40)
+    dcluster=DCluster(NH_size=40)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)    
     plotting.summary(idx_centers,cluster_label,rho,n_true_center,X,y)
 
@@ -45,9 +46,7 @@ def main():
 
 class DCluster:
     """ Fast two dimensional density clustering via kernel density modelling
-    
-    
-       
+      
     Parameters
     ----------
 
@@ -71,37 +70,35 @@ class DCluster:
     
     """
     
-    def __init__(self,NH_size=40,test_size=0.1,
-                 random_state=0,verbose=1,
-                 bandwidth='auto',bandwidth_value=None):
-        self.test_size=test_size
-        self.random_state=random_state
-        self.verbose=verbose
-        self.bandwidth_value=None
-        self.NH_size=NH_size
-        if bandwidth is not 'auto': # Need to implement something else here
-            assert bandwidth is 'manual'
-            self.bandwidth_value=bandwidth_value
+    def __init__(self,NH_size = 40,test_size = 0.1,
+                 random_state = 0,verbose = 1,
+                 bandwidth = None):
+
+        self.test_size = test_size
+        self.random_state = random_state
+        self.verbose = verbose
+        self.NH_size = NH_size
+        self.bandwidth = bandwidth
     
     def fit(self,X):
         if self.verbose==0:
             blockPrint()
             
-        n_sample=X.shape[0]
-        print("--> Starting clustering with n=%i samples..."%n_sample)
-        start=time.time()
+        n_sample = X.shape[0]
+        print("--> Starting clustering with n=%i samples..." % n_sample)
+        start = time.time()
     
-        if self.bandwidth_value is None:
-            print("--> Finding optimal bandwidth ...")
-            X_train, X_test, y_train,y_test = train_test_split(X,range(X.shape[0]),test_size=self.test_size, random_state=self.random_state)
-            bandwidthCV=find_optimal_bandwidth(X,X_train,X_test)
+        if self.bandwidth:
+            bandwidthCV = self.bandwidth
         else:
-            bandwidthCV=self.bandwidth_value
+            print("--> Finding optimal bandwidth ...")
+            X_train, X_test, y_train, y_test = train_test_split(X, range(X.shape[0]), test_size = self.test_size, random_state = self.random_state)
+            bandwidthCV = find_optimal_bandwidth(X, X_train, X_test)
         
-        print("--> Using bandwidth = %.3f"%bandwidthCV)
+        print("--> Using bandwidth = %.3f" % bandwidthCV)
     
         print("--> Computing density ...")
-        rho,kde=compute_density(X,bandwidth=bandwidthCV)
+        rho, kde = compute_density(X, bandwidth = bandwidthCV)
     
         print("--> Finding centers ...")
         delta,nn_delta,idx_centers,density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.NH_size)
@@ -109,13 +106,13 @@ class DCluster:
         print("--> Assigning labels ...")
         cluster_label=assign_cluster(idx_centers,nn_delta,density_graph)
         
-        print("--> Done in %.3f s"%(time.time()-start))
+        print("--> Done in %.3f s" % (time.time()-start))
         
-        print("--> Found %i centers ! ..."%idx_centers.shape[0])
+        print("--> Found %i centers ! ..." % idx_centers.shape[0])
         
         enablePrint()
         
-        return cluster_label,idx_centers,rho,delta,kde.tree_
+        return cluster_label, idx_centers, rho, delta, kde.tree_
     
  
 def bandwidth_estimate(X):
