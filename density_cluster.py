@@ -35,7 +35,14 @@ def main():
     dcluster=DCluster(bandwidth='auto',NH_size=40)
     cluster_label,idx_centers,rho,delta,kde_tree=dcluster.fit(X)    
     plotting.summary(idx_centers,cluster_label,rho,n_true_center,X,y)
-    
+
+
+
+##########################
+##########################
+##########################
+
+
 class DCluster:
     """ Fast two dimensional density clustering via kernel density modelling
     
@@ -86,7 +93,7 @@ class DCluster:
     
         if self.bandwidth_value is None:
             print("--> Finding optimal bandwidth ...")
-            X_train, X_test, y_train,y_test = train_test_split(X,range(X.shape[0]),test_size=self.test_size, random_state=0)
+            X_train, X_test, y_train,y_test = train_test_split(X,range(X.shape[0]),test_size=self.test_size, random_state=self.random_state)
             bandwidthCV=find_optimal_bandwidth(X,X_train,X_test)
         else:
             bandwidthCV=self.bandwidth_value
