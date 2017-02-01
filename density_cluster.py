@@ -7,6 +7,7 @@ Created on Jan 16, 2017
         Code for performing robust density clustering
 '''
 
+print("@@@@@@@ Loading libraries ...")
 import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -19,13 +20,13 @@ from numpy.random import random
 import sys, os
 from special_datasets import gaussian_mixture
 import pickle
+print("@@@@@@@ Ok ready to cluster ! ...")
 
 def main():
     """
         Example for gaussian mixture (the number of cluster center can be changed, but
         adjust the parameters accordingly !)
     """
-    print("Hello !")
     n_true_center = 10
     #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
 
