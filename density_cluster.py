@@ -240,12 +240,6 @@ def assign_cluster(idx_centers,nn_delta,density_graph):
         assign_cluster_deep(density_graph[c],cluster_label,density_graph,label)    
     return cluster_label    
 
-def blockPrint():
-    sys.stdout = open(os.devnull, 'w')
-
-def enablePrint():
-    sys.stdout = sys.__stdout__
-
 def find_valley_NH(rho, nn_list, idx, threshold, NH, search_size = 10):
     """
     Purpose:
@@ -288,6 +282,11 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
     print("--> Number of false positives = %i ..."%n_false_pos)
     return np.array(idx_true_centers,dtype=np.int)
 
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+def enablePrint():
+    sys.stdout = sys.__stdout__
 
 if __name__=="__main__":
     main()
