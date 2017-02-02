@@ -6,8 +6,9 @@ Created on Jan 20, 2017
 
 import numpy as np
 
-def gaussian_mixture(n_sample=1000,n_center=2,sigma_range=[1.0],pop_range=[0.1,0.9],random_state=0):
-    np.random.seed(random_state)
+def gaussian_mixture(n_sample=1000,n_center=2,sigma_range=[1.0],pop_range=[0.1,0.9],random_state=None):
+    if random_state:
+        np.random.seed(random_state)
     assert abs(np.sum(pop_range)-1.0)<0.0001
     assert n_center==len(pop_range)
     n_sigma=len(sigma_range)
