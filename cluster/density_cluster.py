@@ -6,21 +6,13 @@ Created on Jan 16, 2017
     Purpose:
         Code for performing robust density clustering
 '''
-
-print("@@@@@@@ Loading libraries ...")
 import numpy as np
-from matplotlib import pyplot as plt
-import seaborn as sns
 from sklearn.neighbors import KernelDensity, NearestNeighbors
 from sklearn import datasets
-import plotting
 import time
 from sklearn.model_selection import train_test_split
 from numpy.random import random
 import sys, os
-from special_datasets import gaussian_mixture
-import pickle
-print("@@@@@@@ Ok ready to cluster ! ...")
 
 def main():
     """
@@ -34,7 +26,7 @@ def main():
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
                             )#random_state = 8234)
 
-    dcluster = DCluster(NH_size = 100)
+    dcluster = DCluster(NH_size = 100, noise_threshold=0.3)
     cluster_label, idx_centers, rho, delta, kde_tree = dcluster.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center,X ,y)
 
@@ -68,6 +60,7 @@ class DCluster:
 
     def __init__(self, NH_size=40, test_size=0.1,
                  random_state=0, verbose=1,
+                 noise_threshold=0.4,
                  bandwidth=None):
 
         self.test_size = test_size
@@ -75,6 +68,7 @@ class DCluster:
         self.verbose = verbose
         self.NH_size = NH_size
         self.bandwidth = bandwidth
+        self.delta_rho_threshold=noise_threshold
 
     def fit(self,X):
         if self.verbose == 0:
@@ -102,7 +96,7 @@ class DCluster:
         print("--> Checking stability ...")
 
         _, nn_list=kde.tree_.query(list(X), k=20)
-        idx_centers = check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, 0.2)
+        idx_centers = check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, self.delta_rho_threshold)
 
         print("--> Assigning labels ...")
         cluster_label = assign_cluster(idx_centers, nn_delta, density_graph)
@@ -289,4 +283,11 @@ def enablePrint():
     sys.stdout = sys.__stdout__
 
 if __name__=="__main__":
+    from matplotlib import pyplot as plt
+    import seaborn as sns
+    import plotting
+    from special_datasets import gaussian_mixture
+    import pickle
+
+
     main()
