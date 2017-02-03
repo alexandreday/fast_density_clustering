@@ -6,6 +6,7 @@ Created on Jan 16, 2017
     Purpose:
         Code for performing robust density clustering
 '''
+
 import numpy as np
 from sklearn.neighbors import KernelDensity, NearestNeighbors
 from sklearn import datasets
@@ -15,10 +16,12 @@ from numpy.random import random
 import sys, os
 
 def main():
-    """
+
+    '''
         Example for gaussian mixture (the number of cluster center can be changed, but
         adjust the parameters accordingly !)
-    """
+    '''
+    
     n_true_center = 10
     #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
 
@@ -28,10 +31,11 @@ def main():
 
     dcluster = DCluster(NH_size = 100, noise_threshold=0.3)
     cluster_label, idx_centers, rho, delta, kde_tree = dcluster.fit(X)
-    plotting.summary(idx_centers, cluster_label, rho, n_true_center,X ,y)
+    plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y)
 
 ############################################################################################################
 ############################################################################################################
+
 class DCluster:
     """ Fast two dimensional density clustering via kernel density modelling
 
@@ -283,11 +287,11 @@ def enablePrint():
     sys.stdout = sys.__stdout__
 
 if __name__=="__main__":
+
     from matplotlib import pyplot as plt
     import seaborn as sns
     import plotting
     from special_datasets import gaussian_mixture
     import pickle
-
 
     main()
