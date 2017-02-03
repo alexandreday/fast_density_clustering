@@ -62,7 +62,7 @@ def scatter_w_label(x,y,z):
         plt.scatter(x[pos],y[pos],c=palette[i],rasterized=True)
     plt.show()
 
-def summary(idx_centers,cluster_label,rho,n_true_center,X,y=None):
+def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, savefile=None):
     
     fontsize=15
     n_center=idx_centers.shape[0]
@@ -85,7 +85,9 @@ def summary(idx_centers,cluster_label,rho,n_true_center,X,y=None):
     plt.title('Inferred labels',fontsize=fontsize)
     plt.tight_layout()
     plt.subplot(133)
-    density_map(X[:,0], X[:,1],rho,centers=X[idx_centers],title='Density map')
-    
+    density_map(X[:,0], X[:,1],rho,centers=X[idx_centers],title='Density map',show=False)
+    if savefile:
+        plt.savefig(savefile)
+    plt.show()
     plt.clf()
 
