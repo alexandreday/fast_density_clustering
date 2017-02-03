@@ -8,9 +8,11 @@ O(nlog n) and hash tables (O(1) insertion and item search). The codes runs for l
 
 Clone or download this repository and run the following command inside the top directory:
 
-pip install .
+```
+pip3 install .
+```
 
-That's it ! Check the example for gaussian mixtures.
+That's it ! Check the example for gaussian mixtures. You should be able to run it directly.
 
 # Citation
 
