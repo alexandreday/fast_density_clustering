@@ -62,7 +62,7 @@ def scatter_w_label(x,y,z):
         plt.scatter(x[pos],y[pos],c=palette[i],rasterized=True)
     plt.show()
 
-def summary(idx_centers, cluster_label, rho, n_true_center=None, X, y=None, savefile=None):
+def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, savefile=None):
     
     fontsize=15
     n_sample=X.shape[0]
