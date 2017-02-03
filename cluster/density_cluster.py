@@ -32,6 +32,9 @@ def main():
     dcluster = DCluster(NH_size = 100, noise_threshold=0.3)
     cluster_label, idx_centers, rho, delta, kde_tree = dcluster.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y)
+    print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
+    with open("result.dat", "wb") as f:
+        pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
 
 ############################################################################################################
 ############################################################################################################
