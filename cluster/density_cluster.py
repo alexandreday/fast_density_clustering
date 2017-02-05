@@ -21,15 +21,15 @@ def main():
         Example for gaussian mixture (the number of cluster center can be changed, but
         adjust the parameters accordingly !)
     '''
-    
+
     n_true_center = 10
     #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
 
     X,y = gaussian_mixture(n_sample=10000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                            )#random_state = 8234)
+                            random_state = 8234)
 
-    dcluster = DCluster(NH_size = 100, noise_threshold=0.3)
+    dcluster = DCluster(NH_size = 20, noise_threshold=0.5)
     cluster_label, idx_centers, rho, delta, kde_tree = dcluster.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
@@ -241,18 +241,31 @@ def assign_cluster(idx_centers,nn_delta,density_graph):
         assign_cluster_deep(density_graph[c],cluster_label,density_graph,label)    
     return cluster_label    
 
-def find_valley_NH(rho, nn_list, idx, threshold, NH, search_size = 10):
+def find_NH_tree_search(rho, nn_list, idx, delta, search_size = 10):
     """
     Purpose:
-        Recursive function for searching for nearest neighbors within
-        some density threshold. NH should be an empty set for the inital function call.
+        Function for searching for nearest neighbors within
+        some density threshold. 
+        NH should be an empty set for the inital function call.
     """
-    if rho[idx] > threshold: # stop condition // noise threshold
-        NH.add(idx) # NH is a hash table -> elements are unique and adding is done in O(1)
-        for nn_idx in nn_list[idx][:search_size]: # maybe need to play with the size of nn_list we want to take
-            if nn_idx not in NH:
-                find_valley_NH(rho, nn_list, nn_idx, threshold, NH)
-    
+    NH=set([])
+    new_leaves=[idx]
+
+    while True:
+        if len(new_leaves) == 0: 
+            break
+
+        leaves=new_leaves
+        new_leaves=[]
+        for leaf in leaves:
+            nn_leaf=nn_list[leaf][1:search_size]
+            for nn in nn_leaf:
+                if (rho[nn] > delta) & (nn not in NH):
+                    NH.add(nn)
+                    new_leaves.append(nn)
+
+    return np.array(list(NH))
+
 def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, threshold):
     """
     Purpose:
@@ -266,20 +279,21 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
     idx_true_centers=[]
 
     for idx in idx_centers:
-        NH = set([])
+
         rho_center = rho[idx]
         delta_rho = rho_center - threshold
-        find_valley_NH(rho, nn_list, idx, delta_rho, NH)
-        NH = np.array(list(NH))
+        
+        NH = find_NH_tree_search(rho, nn_list, idx, delta_rho)
         idx_max = NH[np.argmax(rho[NH])]
-        if rho[idx] < rho[idx_max]:
+
+        if (rho[idx] < rho[idx_max]) & (idx != idx_max):
             nn_delta[idx] = idx_max
             delta[idx] = np.linalg.norm(X[idx_max]-X[idx])
             density_graph[idx_max].append(idx)
             n_false_pos+=1
         else:
             idx_true_centers.append(idx)
-        
+
     print("--> Number of false positives = %i ..."%n_false_pos)
     return np.array(idx_true_centers,dtype=np.int)
 
