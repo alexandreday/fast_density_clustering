@@ -1,3 +1,13 @@
+'''
+Created on Feb 1, 2017
+
+@author: Alexandre Day
+
+    Purpose:
+        Perform density clustering on gaussian mixture
+'''
+
+
 from cluster.density_cluster import DCluster
 from sklearn.datasets import make_blobs
 from cluster import plotting

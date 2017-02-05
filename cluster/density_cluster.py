@@ -27,9 +27,9 @@ def main():
 
     X,y = gaussian_mixture(n_sample=10000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                            random_state = 8234)
+                            )#random_state = 8234)
 
-    dcluster = DCluster(NH_size = 20, noise_threshold=0.5)
+    dcluster = DCluster(NH_size = 40, noise_threshold=0.3)
     cluster_label, idx_centers, rho, delta, kde_tree = dcluster.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
