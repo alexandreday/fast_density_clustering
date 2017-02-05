@@ -33,8 +33,18 @@ colors = np.hstack([colors] * 20)
 
 plot_num = 1
 
-plt.figure(figsize=(2.5, 10))
-plt.subplots_adjust(left=.02, right=.98, bottom=.001, top=.96, wspace=.05, hspace=.01)
+plt.figure(figsize=(10, 10))
+#plt.subplots_adjust(left=.02, right=.98, bottom=.001, top=.96, wspace=.05, hspace=.01)
+
+####################
+###################
+
+noise_threshold=1.0
+NH_size=50
+
+##################
+#################
+
 
 datasets = [noisy_circles, noisy_moons, blobs, no_structure]
 for i_dataset, dataset in enumerate(datasets):
@@ -44,21 +54,20 @@ for i_dataset, dataset in enumerate(datasets):
 
     # create clustering estimators
 
-    dc=DCluster(noise_threshold=1.0,NH_size=50)
+    dc=DCluster(noise_threshold=noise_threshold,NH_size=NH_size)
     s=time.time()
     cluster_label, idx_centers, rho, delta, kde_tree =dc.fit(X)
     dt=time.time()-s
 
     n_center=len(idx_centers)
 
-    plt.subplot(4,1,plot_num)
-    if plot_num == 1:
-            plt.title("Local density clustering with noise threshold = 1.0 and neighborhood size = 50")
+    plt.subplot(2,2,plot_num)
     plt.scatter(X[:, 0], X[:, 1], color=colors[cluster_label].tolist(), s=10)
     plt.text(.99, .01, ('%.2fs' % (dt)).lstrip('0'),
                  transform=plt.gca().transAxes, size=15,
                  horizontalalignment='right')
     plot_num+=1
 
-
+plt.suptitle("Local density clustering with \n noise threshold = %.2f and neighborhood size = %i"%(noise_threshold,NH_size))
+#plt.tight_layout()
 plt.show()
