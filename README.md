@@ -12,10 +12,10 @@ pip3 install .
 ```
 That's it ! 
 # Examples
-Check the example for gaussian mixtures (example.py). You should be able to run it directly. It
+Check out the example for gaussian mixtures (example.py). You should be able to run it directly. It
 should produce a plot similar to this: ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/result.png)
 
-In another example (example2.py), the algorithm is benchmarked against some sklearn datasets (the same parameters are used for all datasets): ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
+In another example (example2.py), the algorithm is benchmarked against some sklearn datasets (note that the same parameters across all datasets) : ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
 # Citation
 
 If you use this code in a scientific publication, I would appreciate citation/reference to this repository
