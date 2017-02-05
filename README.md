@@ -1,7 +1,8 @@
 # Fast density clustering
-Python code for clustering two dimensional data using kernel density maps to construct a density graph. Examples for gaussian mixtures is given.
-Our algorithm solves multiscale problems (multiple variances and population sizes) and works for non-convex structures. It uses cross-validation and is regularized by two main global parameters : a neighborhood
-size and a noise threshold measure. The later detects spurious cluster centers while the former guarantees that only local information is used to infer cluster centers (we avoid using long distance information). The underlying code is based on fast kd-trees nearest-neighbor searches O(nlog n) and hash tables (O(1) insertion and item search). The codes runs for large datasets (for N=10000, run time is 2-3 seconds). More coming soon ...
+Python code for clustering two dimensional data using kernel density maps to construct a density graph. Examples for gaussian mixtures and some benchmarks are provided. Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters.It uses cross-validation and is regularized by two main global parameters : a neighborhood
+size and a noise threshold measure. The later detects spurious cluster centers while the former guarantees that only local information is used to infer cluster centers (we avoid using long distance information). 
+
+The underlying code is based on fast KD-trees for nearest-neighbor searches O(nlog n). While the algorithm is well suited for small datasets with meaningful densities, it works quite well on large datasets (c.g. for N=10000, run time is a few seconds).
 
 # Running
 
