@@ -6,12 +6,12 @@ The underlying code is based on fast KD-trees for nearest-neighbor searches O(n 
 
 # Running
 
-Clone or download this repository and run the following command inside the top directory:
-
+Clone or download this repository. Open the file and use the following command:
 ```
 pip3 install .
 ```
-That's it ! 
+That's it ! You can now import the package ```clustering``` from you python scripts. Check out the examples
+in the file ```example``` and see if you can run the scripts provided.
 # Examples and comparison with other methods
 Check out the example for gaussian mixtures (example.py). You should be able to run it directly. It
 should produce a plot similar to this: ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/result.png)
