@@ -5,7 +5,7 @@ size and a noise threshold measure. The later detects spurious cluster centers w
 The underlying code is based on fast KD-trees for nearest-neighbor searches O(n log n). While the algorithm is well suited for small datasets with meaningful densities, it works quite well on large datasets (c.g. for N=10000, run time is a few seconds).
 
 # Running
-
+NOTE: you will need a python3 version to run this code.
 Clone or download this repository. Open the file and use the following command:
 ```
 pip3 install .
