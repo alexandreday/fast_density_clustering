@@ -21,6 +21,7 @@ def main():
         Example for gaussian mixture (the number of cluster center can be changed, but
         adjust the parameters accordingly !)
     '''
+    from special_datasets import gaussian_mixture
 
     n_true_center = 10
     #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
@@ -29,8 +30,8 @@ def main():
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
                             )#random_state = 8234)
 
-    dcluster = DCluster(NH_size = 40, noise_threshold=0.3)
-    cluster_label, idx_centers, rho, delta, kde_tree = dcluster.fit(X)
+    fdc = FDC(NH_size = 40, noise_threshold=0.3)
+    cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
     with open("result.dat", "wb") as f:
@@ -39,8 +40,8 @@ def main():
 ############################################################################################################
 ############################################################################################################
 
-class DCluster:
-    """ Fast two dimensional density clustering via kernel density modelling
+class FDC:
+    """ Fast Density Clustering via kernel density modelling 
 
     Parameters
     ----------

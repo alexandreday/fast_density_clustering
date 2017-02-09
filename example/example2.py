@@ -15,15 +15,14 @@ import matplotlib.pyplot as plt
 from sklearn import cluster, datasets
 from sklearn.neighbors import kneighbors_graph
 from sklearn.preprocessing import StandardScaler
-from cluster.density_cluster import DCluster
+from clustering.fdc import FDC
 
 np.random.seed(0)
 
 # Generate datasets. We choose the size big enough to see the scalability
 # of the algorithms, but not too big to avoid too long running times
 n_samples = 1500
-noisy_circles = datasets.make_circles(n_samples=n_samples, factor=.5,
-                                      noise=.05)
+noisy_circles = datasets.make_circles(n_samples=n_samples, factor=.5, noise=.05)
 noisy_moons = datasets.make_moons(n_samples=n_samples, noise=.05)
 blobs = datasets.make_blobs(n_samples=n_samples, random_state=8)
 no_structure = np.random.rand(n_samples, 2), None
@@ -54,9 +53,9 @@ for i_dataset, dataset in enumerate(datasets):
 
     # create clustering estimators
 
-    dc=DCluster(noise_threshold=noise_threshold,NH_size=NH_size)
+    fdc=FDC(noise_threshold=noise_threshold, NH_size=NH_size)
     s=time.time()
-    cluster_label, idx_centers, rho, delta, kde_tree =dc.fit(X)
+    cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
     dt=time.time()-s
 
     n_center=len(idx_centers)
