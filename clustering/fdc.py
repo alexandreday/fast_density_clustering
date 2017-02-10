@@ -288,7 +288,7 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
         idx_max = NH[np.argmax(rho[NH])]
 
         if (rho[idx] < rho[idx_max]) & (idx != idx_max):
-            nn_delta[idx] = idx_max
+            nn_delta[idx] = idx_max ##  -> ......... reassignment 
             delta[idx] = np.linalg.norm(X[idx_max]-X[idx])
             density_graph[idx_max].append(idx)
             n_false_pos+=1
