@@ -26,11 +26,11 @@ def main():
     n_true_center = 10
     #X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
 
-    X,y = gaussian_mixture(n_sample=10000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
+    X,y = gaussian_mixture(n_sample=50000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
                             )#random_state = 8234)
 
-    fdc = FDC(NH_size = 50, noise_threshold=0.2)
+    fdc = FDC(NH_size = 50, noise_threshold=0.3)
     cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y, show=True)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
@@ -281,7 +281,8 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
     n_false_pos=0
     idx_true_centers=[]
 
-    ### Things to change : 1 - small NH threshold, 2 - cluster reassignment
+    ### Things to change : 1 - small NH threshold (check this now)
+    ## dissimilar clusters
 
     for idx in idx_centers:
 
