@@ -281,9 +281,6 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
     n_false_pos=0
     idx_true_centers=[]
 
-    ### Things to change : 1 - small NH threshold (check this now)
-    ## dissimilar clusters
-
     for idx in idx_centers:
 
         rho_center = rho[idx]

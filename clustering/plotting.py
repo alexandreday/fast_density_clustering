@@ -11,7 +11,7 @@ import seaborn as sns
 sns.set_style("whitegrid")
 global contrast_colors
 
-contrast_colors=["#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46",
+contrast_colors=["#1CE6FF", "#FF34FF", "#FF4A46",
  "#008941", "#006FA6", "#A30059","#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", 
  "#B79762", "#004D43", "#8FB0FF", "#997D87","#5A0007", "#809693", 
  "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80","#61615A", "#BA0900",
@@ -35,6 +35,7 @@ def set_latex():
 def density_map(x,y,z,
                 xlabel=None,ylabel=None,zlabel=None,label=None,
                 centers=None,
+                psize=20,
                 out_file=None,title=None,show=True,cmap='coolwarm',remove_tick=False):
     """ 
     Purpose:
@@ -45,9 +46,9 @@ def density_map(x,y,z,
     fontsize=15
 
     if label is not None:
-        plt.scatter(x,y,c=z,cmap=cmap,alpha=1.0,rasterized=True,label=label)
+        plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True,label=label)
     else:
-        plt.scatter(x,y,c=z,cmap=cmap,alpha=1.0,rasterized=True)
+        plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True)
     
     cb=plt.colorbar()
     
@@ -73,15 +74,15 @@ def density_map(x,y,z,
     if show:
         plt.show()
 
-def scatter_w_label(x,y,z):
+def scatter_w_label(x,y,z,psize=20):
     n_unique_label=np.unique(z).shape[0]
     palette=sns.color_palette('Paired',n_unique_label+10)
     for i in range(n_unique_label):
         pos=(z==i)
-        plt.scatter(x[pos],y[pos],c=palette[i],rasterized=True)
+        plt.scatter(x[pos],y[pos],s=psize,c=palette[i],rasterized=True)
     plt.show()
 
-def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, savefile=False, show=False):
+def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20, savefile=False, show=False):
     
     fontsize=15
     n_sample=X.shape[0]
@@ -100,22 +101,22 @@ def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, savefile=
     else:
         for i in range(n_true_center):
             pos=(y==i)
-            plt.scatter(X[pos,0],X[pos,1],c=palette[i],rasterized=True)
+            plt.scatter(X[pos,0],X[pos,1], s=psize,c=palette[i],rasterized=True)
             
     plt.subplot(132)
     for i in range(n_center):
         pos=(cluster_label==i)
-        plt.scatter(X[pos,0],X[pos,1],c=palette[i],rasterized=True)
+        plt.scatter(X[pos,0],X[pos,1],c=palette[i], s=psize, rasterized=True)
  
     plt.title('Inferred labels',fontsize=fontsize)
     plt.tight_layout()
     plt.subplot(133)
-    density_map(X[:,0], X[:,1],rho,centers=X[idx_centers],title='Density map',show=False)
+    density_map(X[:,0], X[:,1],rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
 
     if savefile is True:
         plt.savefig(savefile)
     if show is True:
         plt.show()
-        
+
     plt.clf()
 
