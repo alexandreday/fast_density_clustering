@@ -30,9 +30,9 @@ def main():
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
                             )#random_state = 8234)
 
-    fdc = FDC(NH_size = 40, noise_threshold=0.3)
+    fdc = FDC(NH_size = 50, noise_threshold=0.2)
     cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
-    plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y)
+    plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y, show=True)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
     with open("result.dat", "wb") as f:
         pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
@@ -188,7 +188,7 @@ def compute_delta(X,rho,tree,cutoff=40):
     
     for i in range(n_sample):
         idx=index_greater(rho[nn_list[i]])
-        if idx is not None:
+        if idx:
             density_graph[nn_list[i,idx[0]]].append(i)
             nn_delta[i]=nn_list[i,idx[0]]
             delta[i]=nn_dist[i,idx[0]]
@@ -199,15 +199,17 @@ def compute_delta(X,rho,tree,cutoff=40):
     
     return delta,nn_delta,idx_centers,density_graph
 
-def index_greater(array):
+def index_greater(array,prec=1e-8):
     """
     Purpose:
-        Fast compiled function for finding first item in an array that has a value greater than the first element in that array
+        Function for finding first item in an array that has a value greater than the first element in that array
         If no element is found, returns None
+    Precision:
+        1e-8
     """
     item=array[0]
     for idx, val in np.ndenumerate(array):
-        if val > item:
+        if val > (item + prec):
             return idx
 
 
@@ -279,6 +281,8 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
     n_false_pos=0
     idx_true_centers=[]
 
+    ### Things to change : 1 - small NH threshold, 2 - cluster reassignment
+
     for idx in idx_centers:
 
         rho_center = rho[idx]
@@ -288,10 +292,19 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
         idx_max = NH[np.argmax(rho[NH])]
 
         if (rho[idx] < rho[idx_max]) & (idx != idx_max):
-            nn_delta[idx] = idx_max ##  -> ......... reassignment 
-            delta[idx] = np.linalg.norm(X[idx_max]-X[idx])
-            density_graph[idx_max].append(idx)
-            n_false_pos+=1
+            ## reassigning to nn with higher density (in the NH)
+            X_nn_idx=X[NH]
+            NH_list=list(NH[np.argsort(np.linalg.norm(X_nn_idx-X[idx],axis=1))]) # NH-list ---
+            idx_gr=index_greater(rho[NH_list])
+            if idx_gr:
+                idx_gr=idx_gr[0]
+                idx_reassign=NH_list[idx_gr]
+                nn_delta[idx] = idx_reassign
+                delta[idx] = np.linalg.norm(X[idx_reassign]-X[idx])
+                density_graph[idx_reassign].append(idx)
+                n_false_pos+=1
+            else:
+                assert False, "Error in max idx_gr, should not return None"
         else:
             idx_true_centers.append(idx)
 
