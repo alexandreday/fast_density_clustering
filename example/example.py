@@ -19,7 +19,7 @@ X, y = make_blobs(10000, 2, n_true_center)
 fdc = FDC(noise_threshold=0.05, NH_size=40)
 cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
 
-plotting.summary(idx_centers, cluster_label, rho, n_true_center, X, y, savefile="result.png")
+plotting.summary(idx_centers, cluster_label, rho, n_true_center, X, y, savefile="result.png",show=True)
 
 print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
 with open("result.dat", "wb") as f:

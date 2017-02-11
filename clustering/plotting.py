@@ -81,7 +81,7 @@ def scatter_w_label(x,y,z):
         plt.scatter(x[pos],y[pos],c=palette[i],rasterized=True)
     plt.show()
 
-def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, savefile=None, show=None):
+def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, savefile=False, show=False):
     
     fontsize=15
     n_sample=X.shape[0]
@@ -111,9 +111,11 @@ def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, savefile=
     plt.tight_layout()
     plt.subplot(133)
     density_map(X[:,0], X[:,1],rho,centers=X[idx_centers],title='Density map',show=False)
-    if savefile:
+
+    if savefile is True:
         plt.savefig(savefile)
-    if show:
+    if show is True:
         plt.show()
+        
     plt.clf()
 
