@@ -36,6 +36,8 @@ def main():
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
     with open("result.dat", "wb") as f:
         pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
+    
+
 
 ############################################################################################################
 ############################################################################################################
@@ -251,7 +253,7 @@ def find_NH_tree_search(rho, nn_list, idx, delta, search_size = 10):
         some density threshold. 
         NH should be an empty set for the inital function call.
     """
-    NH=set([])
+    NH=set([idx])
     new_leaves=[idx]
 
     while True:
@@ -288,6 +290,7 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
         
         NH = find_NH_tree_search(rho, nn_list, idx, delta_rho)
         idx_max = NH[np.argmax(rho[NH])]
+
 
         if (rho[idx] < rho[idx_max]) & (idx != idx_max):
             ## reassigning to nn with higher density (in the NH)

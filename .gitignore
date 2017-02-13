@@ -8,5 +8,7 @@ data
 data.dat
 result.dat
 bh_tsne
+linkage.txt
+test2.py
 .DS_Store
 __pycache__/
