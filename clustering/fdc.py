@@ -9,7 +9,6 @@ Created on Jan 16, 2017
 
 import numpy as np
 from sklearn.neighbors import KernelDensity, NearestNeighbors
-from sklearn import datasets
 import time
 from sklearn.model_selection import train_test_split
 from numpy.random import random
@@ -21,6 +20,7 @@ def main():
         Example for gaussian mixture (the number of cluster center can be changed, but
         adjust the parameters accordingly !)
     '''
+    from sklearn import datasets
     from special_datasets import gaussian_mixture
 
     n_true_center = 10
@@ -30,7 +30,7 @@ def main():
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
                             )#random_state = 8234)
 
-    fdc = FDC(NH_size = 50, noise_threshold=0.3)
+    fdc = FDC(nh_size = 50, noise_threshold=0.3)
     cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y, show=True)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
@@ -43,19 +43,22 @@ def main():
 ############################################################################################################
 
 class FDC:
+
     """ Fast Density Clustering via kernel density modelling 
 
     Parameters
     ----------
 
-    NH_size : int, optional (default: 40)
+    nh_size : int, optional (default: 40)
         Neighborhood size. This is related to the perplexity (in t-SNE)
         and is an effective scale that defines the number of neighbors of each data point.
-        Larger datasets usually require a larger perplexity/NH_size. Consider selecting a value
-        between 20 and 100.
+        Larger datasets usually require a larger perplexity/nh_size. Consider selecting a value
+        between 20 and 100. 
 
     random_state: int, optional (default: 0)
-        Random number for seeding random number generator
+        Random number for seeding random number generator. By default, the
+        method generates the same results. This random is used to seed
+        the cross-validation (set partitions) which will in turn affect the bandwitdth value
 
     verbose: int, optional (default: 1)
         Set to 0 if you don't want to see print to screen.
@@ -64,11 +67,9 @@ class FDC:
         If you want the bandwidth to be set automatically or want to set it yourself.
         Valid options = {'auto' | 'manual'}
 
-    bandwidth_value: float, required if bandwidth='manual'
-
     """
 
-    def __init__(self, NH_size=40, test_size=0.1,
+    def __init__(self, nh_size=40, test_size=0.1,
                  random_state=0, verbose=1,
                  noise_threshold=0.4,
                  bandwidth=None):
@@ -76,11 +77,28 @@ class FDC:
         self.test_size = test_size
         self.random_state = random_state
         self.verbose = verbose
-        self.NH_size = NH_size
+        self.nh_size = nh_size
         self.bandwidth = bandwidth
         self.delta_rho_threshold=noise_threshold
 
     def fit(self,X):
+        """ Performs density clustering on given data
+
+        Parameters
+        ----------
+
+        X : array, (n_sample, n_feature)
+            Data to cluster. 
+        Return
+        ----------
+        tuple:
+            cluster_label, array (n_sample,)
+            idx_centers, array (n_cluster_centers,)
+            rho, (n_sample,)
+            delta, (n_sample,)
+            kdTree, sklearn.KDTree
+        """
+
         if self.verbose == 0:
             blockPrint()
 
@@ -101,7 +119,7 @@ class FDC:
         rho, kde = compute_density(X, bandwidth=bandwidthCV)
 
         print("--> Finding centers ...")
-        delta, nn_delta, idx_centers, density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.NH_size)
+        delta, nn_delta, idx_centers, density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.nh_size)
         
         print("--> Checking stability ...")
 
@@ -165,8 +183,8 @@ def compute_density(X,bandwidth=1.0):
     Purpose:
         Given an array of data, computes the local density of every point using kernel density estimation
         
-    Return: array, shape(n_sample,1)
-
+    Return:
+        kde.score_samples(X),kde
     """
     kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
     kde.fit(X)
@@ -177,6 +195,8 @@ def compute_delta(X,rho,tree,cutoff=40):
     """
     Purpose:
         Computes distance to nearest-neighbor with higher density
+    Return:
+        delta,nn_delta,idx_centers,density_graph
     """
     n_sample,n_feature=X.shape
     
@@ -208,6 +228,8 @@ def index_greater(array,prec=1e-8):
         If no element is found, returns None
     Precision:
         1e-8
+    Return:
+        int or None
     """
     item=array[0]
     for idx, val in np.ndenumerate(array):
@@ -220,7 +242,6 @@ def assign_cluster_deep(root,cluster_label,density_graph,label):
     Purpose:
         Recursive function for assigning labels for a tree graph.
         Stopping condition is met when the root is empty (i.e. a leaf has been reached)
-        
     """
     
     if not root:  # then must be a leaf !
@@ -252,6 +273,8 @@ def find_NH_tree_search(rho, nn_list, idx, delta, search_size = 10):
         Function for searching for nearest neighbors within
         some density threshold. 
         NH should be an empty set for the inital function call.
+    Return:
+        List of points in the neighborhood of point idx
     """
     NH=set([idx])
     new_leaves=[idx]
@@ -290,7 +313,6 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
         
         NH = find_NH_tree_search(rho, nn_list, idx, delta_rho)
         idx_max = NH[np.argmax(rho[NH])]
-
 
         if (rho[idx] < rho[idx_max]) & (idx != idx_max):
             ## reassigning to nn with higher density (in the NH)
