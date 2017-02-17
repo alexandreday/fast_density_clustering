@@ -33,18 +33,39 @@ contrast_colors=["#1CE6FF", "#FF34FF", "#FF4A46",
 def set_latex():
     import latex
     
-def density_map(x,y,z,
+def density_map(X,z,
                 xlabel=None,ylabel=None,zlabel=None,label=None,
                 centers=None,
                 psize=20,
-                out_file=None,title=None,show=True,cmap='coolwarm',remove_tick=False):
-    """ 
-    Purpose:
-        Produces a 2D intensity map
+                out_file=None,title=None,show=True,cmap='coolwarm',remove_tick=False,
+                use_perc=False):
+    """Plots a 2D density map given x,y coordinates and an intensity z for
+    every data point
+
+    Parameters
+    ----------
+    X : array-like, shape=[n_samples,2]
+        Input points.
+    z : array-like, shape=[n_samples]
+        Density at every point
+
+    Returns
+    -------
+    None
     """
-    palette=np.array(sns.color_palette('hls', 10))
+    x, y = X[:,0], X[:,1]
+    palette = np.array(sns.color_palette('hls', 10))
     
-    fontsize=15
+    fontsize = 15
+
+    if use_perc :
+        n_sample = len(x)
+        outlier_window = int(0.05 * n_sample)
+
+        argz = np.argsort(z)
+        bot_outliers = argz[:outlier_window]
+        top_outliers = argz[-outlier_window:]
+        typical = argz[outlier_window:-outlier_window]
 
     if label is not None:
         plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True,label=label)
@@ -123,7 +144,7 @@ def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20,
     plt.title('Inferred labels',fontsize=fontsize)
     plt.tight_layout()
     plt.subplot(133)
-    density_map(X[:,0], X[:,1],rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
+    density_map(X,rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
 
     if savefile is True:
         plt.savefig(savefile)
@@ -132,3 +153,61 @@ def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20,
 
     plt.clf()
 
+def dendrogram(delta_list, cl_idx_list):
+    from scipy.cluster.hierarchy import dendrogram
+    from scipy.cluster.hierarchy import linkage
+
+    linkage, dict_centers = np.array(get_linkage(delta_list, cl_idx_list))
+    dendrogram(linkage)
+    plt.show()
+
+def get_linkage(delta_space,cl_idxc):
+
+    ### --> Need to review this dendrogram shit
+    
+    eta = 1e-8
+    initial_idxc=cl_idxc[0][1]
+    n_initial_idxc = len(initial_idxc)
+    current_n = n_initial_idxc-3 ## In the end 6 should remain unclustered 
+    current_leaf = 0
+    dict_centers = dict( zip(cl_idxc[0][1],[-1]*n_initial_idxc) )
+    linkage = []
+
+    for i in range(len(delta_space)-1):
+        cl_i1, idxc_i1 = cl_idxc[i]
+        cl_i2, idxc_i2 = cl_idxc[i+1]
+        
+        merged_idx = list(set(idxc_i1)-set(idxc_i2))
+        if len(merged_idx) > 0 :
+            unmerged_idx = idxc_i2
+
+            n_merged=0
+            for m_idx in merged_idx:
+
+                assigned_cluster = cl_i2[m_idx]
+                Z0 = m_idx
+
+                for um_idx in unmerged_idx:
+                    if assigned_cluster == cl_i2[um_idx]:
+                        Z1=um_idx
+                        break
+                if dict_centers[Z0] == -1:
+                    dict_centers[Z0] = current_leaf
+                    current_leaf+= 1
+                else:
+                    dict_centers[Z0] = current_n
+                    current_n += 1
+
+                if dict_centers[Z1] == -1 :
+                    dict_centers[Z1] = current_leaf
+                    current_leaf += 1
+                else:
+                    dict_centers[Z1] = current_n
+                    current_n += 1
+
+                linkage.append( [dict_centers[Z0], dict_centers[Z1], 
+                delta_space[i]+n_merged*eta, list(cl_i2[initial_idxc]).count(assigned_cluster)]
+                )
+                n_merged += 1
+
+    return linkage, dict_centers
