@@ -6,6 +6,7 @@ Created on Jan 16, 2017
 
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib.patheffects as PathEffects
 import seaborn as sns
 
 sns.set_style("whitegrid")
@@ -83,7 +84,7 @@ def scatter_w_label(x,y,z,psize=20):
     plt.show()
 
 def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20, savefile=False, show=False):
-    
+
     fontsize=15
     n_sample=X.shape[0]
     n_center=idx_centers.shape[0]
@@ -103,11 +104,22 @@ def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20,
             pos=(y==i)
             plt.scatter(X[pos,0],X[pos,1], s=psize,c=palette[i],rasterized=True)
             
-    plt.subplot(132)
+    ax = plt.subplot(132)
     for i in range(n_center):
         pos=(cluster_label==i)
         plt.scatter(X[pos,0],X[pos,1],c=palette[i], s=psize, rasterized=True)
- 
+     
+    centers = X[idx_centers]
+    for xy, i in zip(centers, range(n_center)) :
+        # Position of each label.
+        txt = ax.annotate(str(i),xy,
+        xytext=(0,0), textcoords='offset points',
+        fontsize=20,horizontalalignment='center', verticalalignment='center'
+        )
+        txt.set_path_effects([
+            PathEffects.Stroke(linewidth=5, foreground="w"),
+            PathEffects.Normal()])
+
     plt.title('Inferred labels',fontsize=fontsize)
     plt.tight_layout()
     plt.subplot(133)

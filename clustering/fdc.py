@@ -30,7 +30,7 @@ def main():
                             pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
                             )#random_state = 8234)
 
-    fdc = FDC(nh_size = 50, noise_threshold=0.3)
+    fdc = FDC(nh_size = 50, noise_threshold=0.3)  
     cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
     plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y, show=True)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
