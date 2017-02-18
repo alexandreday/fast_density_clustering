@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from sklearn import cluster, datasets
 from sklearn.neighbors import kneighbors_graph
 from sklearn.preprocessing import StandardScaler
-from clustering.fdc import FDC
+from fdc import FDC
 
 np.random.seed(0)
 

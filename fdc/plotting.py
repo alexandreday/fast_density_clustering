@@ -26,8 +26,7 @@ contrast_colors=["#1CE6FF", "#FF34FF", "#FF4A46",
         "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00","#7900D7", "#A77500",
          "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700","#549E79",
           "#FFF69F", "#201625", "#72418F","#BC23FF","#99ADC0","#3A2465”,”#922329",
-          "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"
-]
+          "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
 
 
 def set_latex():
@@ -113,7 +112,7 @@ def scatter_w_label(x,y,z,psize=20):
         plt.scatter(x[pos],y[pos],s=psize,c=palette[i],rasterized=True)
     plt.show()
 
-def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20, savefile=False, show=False):
+def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20, savefile=None, show=False):
 
     fontsize=15
     n_sample=X.shape[0]
@@ -155,7 +154,7 @@ def summary(idx_centers, cluster_label, rho, n_true_center, X, y=None, psize=20,
     plt.subplot(133)
     density_map(X,rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
 
-    if savefile is True:
+    if savefile:
         plt.savefig(savefile)
     if show is True:
         plt.show()
