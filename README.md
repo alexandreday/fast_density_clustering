@@ -1,4 +1,4 @@
-# Fast density clustering
+# Fast density clustering (fdc)
 Python code for clustering two dimensional data using kernel density maps to construct a density graph. Examples for gaussian mixtures and some benchmarks are provided. Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters. It uses cross-validation and is regularized by two main global parameters : a neighborhood
 size and a noise threshold measure. The later detects spurious cluster centers while the former guarantees that only local information is used to infer cluster centers (we avoid using long distance information). 
 
@@ -11,7 +11,7 @@ Clone or download this repository. Open the file and use the following command:
 ```
 pip3 install .
 ```
-That's it ! You can now import the package ```clustering``` from your python scripts. Check out the examples
+That's it ! You can now import the package ```fdc``` from your python scripts. Check out the examples
 in the file ```example``` and see if you can run the scripts provided.
 # Examples and comparison with other methods
 Check out the example for gaussian mixtures (example.py). You should be able to run it directly. It
