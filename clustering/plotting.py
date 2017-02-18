@@ -67,12 +67,21 @@ def density_map(X,z,
         top_outliers = argz[-outlier_window:]
         typical = argz[outlier_window:-outlier_window]
 
-    if label is not None:
-        plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True,label=label)
+        # plot typical
+        plt.scatter(x[typical],y[typical],c=z[typical],cmap=cmap,s=psize,alpha=1.0,rasterized=True)
+        cb=plt.colorbar()
+        # plot bot outliers (black !)
+        plt.scatter(x[bot_outliers],y[bot_outliers],c='black',s=psize,alpha=1.0,rasterized=True)
+        # plot top outliers (green !)
+        plt.scatter(x[top_outliers],y[top_outliers],c='#36DA36',s=psize,alpha=1.0,rasterized=True)
+
     else:
-        plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True)
+        if label is not None:
+            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True,label=label)
+        else:
+            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True)
     
-    cb=plt.colorbar()
+        cb=plt.colorbar()
     
     if remove_tick:
         plt.tick_params(labelbottom='off',labelleft='off')
