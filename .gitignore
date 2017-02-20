@@ -4,6 +4,7 @@ test.py
 *.
 !.gitignore
 tags
+data.txt.npy
 data
 data.dat
 result.dat

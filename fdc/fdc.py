@@ -4,7 +4,7 @@ Created on Jan 16, 2017
 @author: Alexandre Day
 
     Purpose:
-        Code for performing robust density clustering
+        Fast density clustering
 '''
 
 import numpy as np
@@ -17,31 +17,36 @@ import sys, os
 def main():
 
     '''
-        Example for gaussian mixture (the number of cluster center can be changed, but
-        adjust the parameters accordingly !)
+        Example for gaussian mixture
     '''
     from sklearn import datasets
     from special_datasets import gaussian_mixture
 
-    n_true_center = 60
-    X,y=datasets.make_blobs(10000,2,n_true_center,random_state=24)
+    n_true_center = 15
+    X,y=datasets.make_blobs(10000, 2, n_true_center, random_state=1984)
+    np.save("data.txt",X)
 
+    #exit()
     #X,y = gaussian_mixture(n_sample=10000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
     #                        pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
     #                        )#random_state = 8234)
 
-    fdc = FDC(nh_size = 20, noise_threshold=0.1)  
-    cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
-    plotting.summary(idx_centers, cluster_label, rho, n_true_center, X ,y, show=True)
+    fdc = FDC(nh_size = 15, noise_threshold=0.1)  
+    fit = fdc.fit(X) # Fitting X 
+
+    #fit.check_cluster_stability_fast(X,0.1)
+    idx_centers = fit.idx_centers
+    cluster_label = fit.cluster_label
+    rho = fit.rho
+    delta = fit.delta
+
+
+    plotting.summary(idx_centers, cluster_label, rho, X, 
+    n_true_center=n_true_center, y=y, show=True)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
     with open("result.dat", "wb") as f:
         pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
     
-
-
-############################################################################################################
-############################################################################################################
-
 class FDC:
 
     """ Fast Density Clustering via kernel density modelling 
@@ -69,17 +74,16 @@ class FDC:
 
     """
 
-    def __init__(self, nh_size=40, test_size=0.1,
-                 random_state=0, verbose=1,
-                 noise_threshold=0.4,
-                 bandwidth=None):
+    def __init__(self, nh_size=40, noise_threshold=0.4,
+                random_state=0, test_size=0.1, verbose=1, bandwidth=None):
 
         self.test_size = test_size
         self.random_state = random_state
         self.verbose = verbose
         self.nh_size = nh_size
         self.bandwidth = bandwidth
-        self.delta_rho_threshold=noise_threshold
+        self.delta_rho_threshold = noise_threshold
+
 
     def fit(self,X):
         """ Performs density clustering on given data
@@ -89,14 +93,9 @@ class FDC:
 
         X : array, (n_sample, n_feature)
             Data to cluster. 
-        Return
+        Returns
         ----------
-        tuple:
-            cluster_label, array (n_sample,)
-            idx_centers, array (n_cluster_centers,)
-            rho, (n_sample,)
-            delta, (n_sample,)
-            kdTree, sklearn.KDTree
+        self
         """
 
         if self.verbose == 0:
@@ -116,35 +115,39 @@ class FDC:
         print("--> Using bandwidth = %.3f" % bandwidthCV)
 
         print("--> Computing density ...")
-        rho, kde = compute_density(X, bandwidth=bandwidthCV)
+        self.rho, self.kde = compute_density(X, bandwidth=bandwidthCV)
 
         print("--> Finding centers ...")
-        delta, nn_delta, idx_centers, density_graph=compute_delta(X,rho,kde.tree_,cutoff=self.nh_size)
+        self.delta, self.nn_delta, self.idx_centers_unmerged, self.density_graph=compute_delta(X, self.rho, self.kde.tree_, cutoff=self.nh_size)
         
         print("--> Checking stability ...")
 
-        _, nn_list=kde.tree_.query(list(X), k=20)
-        idx_centers = check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, self.delta_rho_threshold)
+        _, self.nn_list = self.kde.tree_.query(list(X), k=20)
 
+        self.idx_centers = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
+                                                 self.rho, self.nn_list, self.idx_centers_unmerged, self.delta_rho_threshold)
         print("--> Assigning labels ...")
-        cluster_label = assign_cluster(idx_centers, nn_delta, density_graph)
+        self.cluster_label = assign_cluster(self.idx_centers, self.nn_delta, self.density_graph)
         
         print("--> Done in %.3f s" % (time.time()-start))
         
-        print("--> Found %i centers ! ..." % idx_centers.shape[0])
+        print("--> Found %i centers ! ..." % self.idx_centers.shape[0])
 
         enablePrint()
-        
-        return cluster_label, idx_centers, rho, delta, kde.tree_
+
+        return self
     
- 
+    def check_cluster_stability_fast(self, X, delta_rho_threshold):
+        self.idx_centers = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
+                                                 self.rho, self.nn_list, self.idx_centers_unmerged,  delta_rho_threshold)
+
 def bandwidth_estimate(X):
     """
     Purpose:
         Gives a rough estimate of the optimal bandwidth (based on the notion 
         of some effective neigborhood)
     """
-    nbrs = NearestNeighbors(n_neighbors=40,algorithm='kd_tree').fit(X)
+    nbrs = NearestNeighbors(n_neighbors=40, algorithm='kd_tree').fit(X)
     nn_dist,_ = nbrs.kneighbors(X)
 
     return np.median(nn_dist[:,-1]), np.mean(nn_dist[:,1])
@@ -175,6 +178,9 @@ def find_optimal_bandwidth(X,X_train,X_test):
     
     h_optimal,score_opt,_,niter=fminbound(log_likelihood_test_set,hmin,1.5*hest,args,maxfun=25,xtol=0.01,full_output=True)
     print("--> Found log-likelihood minima in %i evaluations"%niter)
+    
+    assert abs(h_optimal-1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
+    assert abs(h_optimal-1.5*hmin) > 1e-4, "Lower boundary reached for bandwidth"
 
     return h_optimal
 
@@ -189,7 +195,7 @@ def compute_density(X,bandwidth=1.0):
     kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
     kde.fit(X)
     
-    return kde.score_samples(X),kde
+    return kde.score_samples(X), kde
     
 def compute_delta(X,rho,tree,cutoff=40):
     """
@@ -221,7 +227,7 @@ def compute_delta(X,rho,tree,cutoff=40):
     
     return delta,nn_delta,idx_centers,density_graph
 
-def index_greater(array,prec=1e-8):
+def index_greater(array, prec=1e-8):
     """
     Purpose:
         Function for finding first item in an array that has a value greater than the first element in that array
