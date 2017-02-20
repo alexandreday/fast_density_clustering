@@ -39,7 +39,7 @@ plt.figure(figsize=(10, 10))
 ###################
 
 noise_threshold=1.0
-NH_size=50
+nh_size=50
 
 ##################
 #################
@@ -53,7 +53,7 @@ for i_dataset, dataset in enumerate(datasets):
 
     # create clustering estimators
 
-    fdc=FDC(noise_threshold=noise_threshold, NH_size=NH_size)
+    fdc=FDC(noise_threshold=noise_threshold, nh_size=nh_size)
     s=time.time()
     cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
     dt=time.time()-s
@@ -67,6 +67,6 @@ for i_dataset, dataset in enumerate(datasets):
                  horizontalalignment='right')
     plot_num+=1
 
-plt.suptitle("Local density clustering with \n noise threshold = %.2f and neighborhood size = %i"%(noise_threshold,NH_size))
+plt.suptitle("Local density clustering with \n noise threshold = %.2f and neighborhood size = %i"%(noise_threshold,nh_size))
 #plt.tight_layout()
 plt.show()
