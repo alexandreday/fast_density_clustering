@@ -1,5 +1,6 @@
 *.pdf
 .vscode
+info.pkl
 test.py
 *.
 !.gitignore

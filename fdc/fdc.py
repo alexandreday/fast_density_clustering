@@ -40,7 +40,6 @@ def main():
     rho = fit.rho
     delta = fit.delta
 
-
     plotting.summary(idx_centers, cluster_label, rho, X, 
     n_true_center=n_true_center, y=y, show=True)
     print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
@@ -75,7 +74,8 @@ class FDC:
     """
 
     def __init__(self, nh_size=40, noise_threshold=0.4,
-                random_state=0, test_size=0.1, verbose=1, bandwidth=None):
+                random_state=0, test_size=0.1, verbose=1, bandwidth=None,
+                no_merge=False):
 
         self.test_size = test_size
         self.random_state = random_state
@@ -83,6 +83,7 @@ class FDC:
         self.nh_size = nh_size
         self.bandwidth = bandwidth
         self.delta_rho_threshold = noise_threshold
+        self.no_merge=no_merge
 
 
     def fit(self,X):
@@ -127,7 +128,11 @@ class FDC:
         self.idx_centers = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
                                                  self.rho, self.nn_list, self.idx_centers_unmerged, self.delta_rho_threshold)
         print("--> Assigning labels ...")
-        self.cluster_label = assign_cluster(self.idx_centers, self.nn_delta, self.density_graph)
+        if self.no_merge == True:
+            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph)
+            self.idx_centers=self.idx_centers_unmerged
+        else:    
+            self.cluster_label = assign_cluster(self.idx_centers, self.nn_delta, self.density_graph)
         
         print("--> Done in %.3f s" % (time.time()-start))
         
