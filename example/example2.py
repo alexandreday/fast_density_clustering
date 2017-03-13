@@ -55,7 +55,12 @@ for i_dataset, dataset in enumerate(datasets):
 
     fdc=FDC(noise_threshold=noise_threshold, nh_size=nh_size)
     s=time.time()
-    cluster_label, idx_centers, rho, delta, kde_tree = fdc.fit(X)
+    res = fdc.fit(X)
+    cluster_label = res.cluster_label
+    idx_centers = res.idx_centers
+    rho = res.rho
+    delta= res.delta
+    kde_tree = res.kde
     dt=time.time()-s
 
     n_center=len(idx_centers)
