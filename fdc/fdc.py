@@ -148,20 +148,22 @@ class FDC:
         _, self.nn_list = self.kde.tree_.query(list(X), k=self.nh_size)
 
         print("--> Iterating ...")
-        while True:
+        self.check_cluster_stability_fast(X, self.delta_rho_threshold) # merging 'unstable' clusters
 
-            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
-            self.idx_centers, n_false_pos = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
-                                                 self.rho, self.nn_list, self.idx_centers_unmerged, self.delta_rho_threshold,
-                                                 self.cluster_label)
-            self.idx_centers_unmerged = self.idx_centers
-            if n_false_pos == 0:
-                print("--> Converged with %i true centers ..."%self.idx_centers.shape[0])
-                break
-            else:
-                print("\t --> Number of false positive = %i ..."%n_false_pos)
+        #while True:
 
-       # print("--> Assigning labels ...")
+        #    self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
+        #    self.idx_centers, n_false_pos = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
+        #                                         self.rho, self.nn_list, self.idx_centers_unmerged, self.delta_rho_threshold,
+        #                                         self.cluster_label)
+        #    self.idx_centers_unmerged = self.idx_centers
+        #    if n_false_pos == 0:
+        #        print("--> Converged with %i true centers ..."%self.idx_centers.shape[0])
+        #        break
+        #    else:
+        #        print("\t --> Number of false positive = %i ..."%n_false_pos)
+
+        # print("--> Assigning labels ...")
         
         '''     if self.no_merge == True:
             self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph)
@@ -178,8 +180,22 @@ class FDC:
         return self
     
     def check_cluster_stability_fast(self, X, delta_rho_threshold):
-        self.idx_centers = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
-                                                 self.rho, self.nn_list, self.idx_centers_unmerged,  delta_rho_threshold)
+
+        print("--> Iterating ...")
+        self.delta_rho_threshold = delta_rho_threshold 
+        while True:
+
+            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
+            self.idx_centers, n_false_pos = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
+                                                 self.rho, self.nn_list, self.idx_centers_unmerged, self.delta_rho_threshold,
+                                                 self.cluster_label)
+            self.idx_centers_unmerged = self.idx_centers
+            if n_false_pos == 0:
+                print("--> Converged with %i true centers ..."%self.idx_centers.shape[0])
+                break
+            else:
+                print("\t --> Number of false positive = %i ..."%n_false_pos)
+
 
 def bandwidth_estimate(X):
     """
