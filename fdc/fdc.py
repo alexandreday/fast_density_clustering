@@ -140,38 +140,43 @@ class FDC:
         self.rho, self.kde = compute_density(X, bandwidth=bandwidthCV)
 
         print("--> Finding centers ...")
+        # finds --- potential centers ---
         self.delta, self.nn_delta, self.idx_centers_unmerged, self.density_graph = compute_delta(X, self.rho, self.kde.tree_, cutoff=self.nh_size)
         print("--> Found %i potential centers ..."%self.idx_centers_unmerged.shape[0])
 
         print("--> Checking for false positives ...")
         _, self.nn_list = self.kde.tree_.query(list(X), k=self.nh_size)
 
-        print("--> Iterating ...")
-        self.check_cluster_stability_fast(X, self.delta_rho_threshold) # merging 'unstable' clusters
+        print("--> Mergin overlapping minimal clusters ...")
+        self.check_cluster_stability_fast(X,0.) # given 
+
+        print("--> Iterating merging up to specified noise threshold ...")
+        if self.delta_rho_threshold >= 1e-3 :
+            self.check_cluster_stability_fast(X, self.delta_rho_threshold) # merging 'unstable' clusters
 
         print("--> Done in %.3f s" % (time.time()-start))
-        
         enablePrint()
 
         return self
     
-    def check_cluster_stability_fast(self, X, delta_rho_threshold):
+    def check_cluster_stability_fast(self, X, delta_rho_threshold): # given 
+        if self.verbose == 0:
+            blockPrint()
 
-        print("--> Iterating ...")
-        self.delta_rho_threshold = delta_rho_threshold 
-        while True:
+        while True: # iterates untill number of cluster does no change ... 
 
             self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
             self.idx_centers, n_false_pos = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
-                                                 self.rho, self.nn_list, self.idx_centers_unmerged, self.delta_rho_threshold,
+                                                 self.rho, self.nn_list, self.idx_centers_unmerged, delta_rho_threshold,
                                                  self.cluster_label)
             self.idx_centers_unmerged = self.idx_centers
             if n_false_pos == 0:
-                print("--> Converged with %i true centers ..."%self.idx_centers.shape[0])
+                print("--> Converged with %i true centers ..." % self.idx_centers.shape[0])
                 break
             else:
                 print("\t --> Number of false positive = %i ..."%n_false_pos)
-
+                
+        enablePrint()
 
 def bandwidth_estimate(X):
     """
@@ -206,8 +211,8 @@ def find_optimal_bandwidth(X,X_train,X_test):
     
     args=(X_train,X_test)
     
-    # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the minima
-    
+    # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
+
     h_optimal,score_opt,_,niter=fminbound(log_likelihood_test_set,hmin,1.5*hest,args,maxfun=25,xtol=0.01,full_output=True)
     print("--> Found log-likelihood minima in %i evaluations"%niter)
     
@@ -235,23 +240,29 @@ def compute_delta(X,rho,tree,cutoff=40):
         Computes distance to nearest-neighbor with higher density
     Return:
         delta,nn_delta,idx_centers,density_graph
+
+    :delta: distance to n.n. with higher density (within some neighborhood cutoff)
+    :nn_delta: index of n.n. with ... 
+    :idx_centers: list of points that have the largest density in their neigborhood cutoff
+    :density_graph: for every point, list of points are incoming (via the density gradient)
+
     """
-    n_sample,n_feature=X.shape
+    n_sample, n_feature = X.shape
     
-    maxdist=np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
+    maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
     
-    nn_dist,nn_list=tree.query(list(X), k=cutoff)
-    delta=maxdist*np.ones(n_sample,dtype=np.float)
-    nn_delta=np.ones(n_sample,dtype=np.int)
+    nn_dist, nn_list = tree.query(list(X), k=cutoff)
+    delta = maxdist*np.ones(n_sample,dtype=np.float)
+    nn_delta = np.ones(n_sample,dtype=np.int)
     
-    density_graph=[[] for i in range(n_sample)] # store incoming leaves
+    density_graph = [[] for i in range(n_sample)] # store incoming leaves
     
     for i in range(n_sample):
-        idx=index_greater(rho[nn_list[i]])
+        idx = index_greater(rho[nn_list[i]])
         if idx:
             density_graph[nn_list[i,idx[0]]].append(i)
-            nn_delta[i]=nn_list[i,idx[0]]
-            delta[i]=nn_dist[i,idx[0]]
+            nn_delta[i] = nn_list[i,idx[0]]
+            delta[i] = nn_dist[i,idx[0]]
         else:
             nn_delta[i]=-1
     
@@ -274,21 +285,6 @@ def index_greater(array, prec=1e-8):
         if val > (item + prec):
             return idx
 
-
-def assign_cluster_deep(root,cluster_label,density_graph,label):
-    """
-    Purpose:
-        Recursive function for assigning labels for a tree graph.
-        Stopping condition is met when the root is empty (i.e. a leaf has been reached)
-    """
-    
-    if not root:  # then must be a leaf !
-        return
-    else:
-        for child in root:
-            cluster_label[child]=label
-            assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
-
 def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 20):
     """
     Purpose:
@@ -299,7 +295,7 @@ def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 2
         List of points in the neighborhood of point idx
     """
 
-    NH=set(nn_list[idx][1:])  # include minimal NH scale ?
+    NH=set(nn_list[idx][1:])  # -- minimal NH scale set by perplexity
     new_leaves=nn_list[idx][1:]
     current_label = cluster_label[idx]
     # ------------------> 
@@ -310,7 +306,7 @@ def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 2
         new_leaves=[]
 
         for leaf in leaves:
-            if cluster_label[leaf] == current_label: # search neighbors only if in current cluster 
+            if cluster_label[leaf] == current_label : # search neighbors only if in current cluster 
                 nn_leaf = nn_list[leaf][1:search_size]
                 for nn in nn_leaf:
                     if (rho[nn] > delta) & (nn not in NH):
@@ -328,27 +324,29 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
         makes sure we haven't identified spurious cluster centers w.r.t to some noise threshold (false positive).
     """
 
-    n_false_pos = 0             # -> there should be a minimal scale -> that's the big difference ?! -> then what ?
-    idx_true_centers = []       # -> there should be 
-    t = set(idx_centers)
+    n_false_pos = 0             
+    idx_true_centers = []
 
     for idx in idx_centers:
 
         rho_center = rho[idx]
         delta_rho = rho_center - threshold
-        NH = find_NH_tree_search(rho, nn_list, idx, delta_rho, cluster_label)
+        if threshold < 1e-3: # just check nn_list ...
+            NH=nn_list[idx][1:]
+        else:
+            NH = find_NH_tree_search(rho, nn_list, idx, delta_rho, cluster_label)
+
         label_centers_nn = np.unique([cluster_label[ni] for ni in NH])
+        idx_max = idx_centers[ label_centers_nn[np.argmax(rho[idx_centers[label_centers_nn]])] ]
+        rho_current = rho[idx]
 
-        idx_max = idx_centers[label_centers_nn[np.argmax(rho[idx_centers[label_centers_nn]])]]
+        if ( rho_current < rho[idx_max] ) & ( idx != idx_max ) : 
 
-        if ( rho[idx] < rho[idx_max] ) & ( idx != idx_max ) : 
-            idx_reassign = idx_max
-            nn_delta[idx] = idx_reassign
-            delta[idx] = np.linalg.norm(X[idx_reassign]-X[idx])
-            density_graph[idx_reassign].append(idx)
+            nn_delta[idx] = idx_max
+            delta[idx] = np.linalg.norm(X[idx_max]-X[idx])
+            density_graph[idx_max].append(idx)
+
             n_false_pos+=1
-            #idx_true_centers=list(t-set([idx]))
-            #break
         else:
             idx_true_centers.append(idx)
     return np.array(idx_true_centers,dtype=np.int), n_false_pos
@@ -365,10 +363,24 @@ def assign_cluster(idx_centers, nn_delta, density_graph):
     n_sample = nn_delta.shape[0]
     cluster_label = -1*np.ones(n_sample,dtype=np.int) # reinitialized every time.
     
-    for c,label in zip(idx_centers, range(n_center)):
+    for c, label in zip(idx_centers, range(n_center) ):
         cluster_label[c] = label
         assign_cluster_deep(density_graph[c], cluster_label, density_graph, label)    
     return cluster_label    
+
+def assign_cluster_deep(root,cluster_label,density_graph,label):
+    """
+    Purpose:
+        Recursive function for assigning labels for a tree graph.
+        Stopping condition is met when the root is empty (i.e. a leaf has been reached)
+    """
+    
+    if not root:  # then must be a leaf !
+        return
+    else:
+        for child in root:
+            cluster_label[child]=label
+            assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
