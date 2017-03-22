@@ -102,9 +102,8 @@ class FDC:
         self.verbose = verbose
         self.nh_size = nh_size
         self.bandwidth = bandwidth
-        self.delta_rho_threshold = noise_threshold
-        self.no_merge=no_merge
-
+        self.noise_threshold = noise_threshold
+        self.no_merge=no_merge        
 
     def fit(self,X):
         """ Performs density clustering on given data set
@@ -119,7 +118,6 @@ class FDC:
         ----------
         self
         """
-
         if self.verbose == 0:
             blockPrint()
 
@@ -127,49 +125,50 @@ class FDC:
         print("--> Starting clustering with n=%i samples..." % n_sample)
         start = time.time()
 
+        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
+        self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
+
         if self.bandwidth:
             bandwidthCV = self.bandwidth
         else:
             print("--> Finding optimal bandwidth ...")
             X_train, X_test, y_train, y_test = train_test_split(X, range(X.shape[0]), test_size=self.test_size, random_state=self.random_state)
-            bandwidthCV = find_optimal_bandwidth(X, X_train, X_test)
+            bandwidthCV = find_optimal_bandwidth(self, X, X_train, X_test)
 
         print("--> Using bandwidth = %.3f" % bandwidthCV)
 
         print("--> Computing density ...")
-        self.rho, self.kde = compute_density(X, bandwidth=bandwidthCV)
+        compute_density(self, X, bandwidth=bandwidthCV)
 
         print("--> Finding centers ...")
-        # finds --- potential centers ---
-        self.delta, self.nn_delta, self.idx_centers_unmerged, self.density_graph = compute_delta(X, self.rho, self.kde.tree_, cutoff=self.nh_size)
-        print("--> Found %i potential centers ..."%self.idx_centers_unmerged.shape[0])
-
-        print("--> Checking for false positives ...")
-        _, self.nn_list = self.kde.tree_.query(list(X), k=self.nh_size)
+        compute_delta(self, X, self.rho)
+        
+        print("--> Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
         print("--> Mergin overlapping minimal clusters ...")
-        self.check_cluster_stability_fast(X,0.) # given 
+        self.check_cluster_stability_fast(X, 0.) # given 
 
-        print("--> Iterating merging up to specified noise threshold ...")
-        if self.delta_rho_threshold >= 1e-3 :
-            self.check_cluster_stability_fast(X, self.delta_rho_threshold) # merging 'unstable' clusters
+        if self.noise_threshold >= 1e-3 :
+            print("--> Iterating merging up to specified noise threshold ...")
+            self.check_cluster_stability_fast(X, self.noise_threshold) # merging 'unstable' clusters
 
         print("--> Done in %.3f s" % (time.time()-start))
         enablePrint()
 
         return self
     
-    def check_cluster_stability_fast(self, X, delta_rho_threshold): # given 
+    def check_cluster_stability_fast(self, X, noise_threshold = None): # given 
         if self.verbose == 0:
             blockPrint()
+        if noise_threshold is None:
+            noise_threshold =  self.noise_threshold
 
         while True: # iterates untill number of cluster does no change ... 
 
             self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
-            self.idx_centers, n_false_pos = check_cluster_stability(X, self.density_graph, self.nn_delta, self.delta,
-                                                 self.rho, self.nn_list, self.idx_centers_unmerged, delta_rho_threshold,
-                                                 self.cluster_label)
+            self.idx_centers, n_false_pos = check_cluster_stability(self, X, noise_threshold) 
             self.idx_centers_unmerged = self.idx_centers
+
             if n_false_pos == 0:
                 print("--> Converged with %i true centers ..." % self.idx_centers.shape[0])
                 break
@@ -178,34 +177,35 @@ class FDC:
                 
         enablePrint()
 
-def bandwidth_estimate(X):
+def bandwidth_estimate(self, X):
     """
     Purpose:
         Gives a rough estimate of the optimal bandwidth (based on the notion 
         of some effective neigborhood)
     """
-    nbrs = NearestNeighbors(n_neighbors=40, algorithm='kd_tree').fit(X)
-    nn_dist,_ = nbrs.kneighbors(X)
+    #nbrs = NearestNeighbors(n_neighbors=40, algorithm='kd_tree').fit(X)
+    
+    #nn_dist,_ = nbrs.kneighbors(X)
 
-    return np.median(nn_dist[:,-1]), np.mean(nn_dist[:,1])
+    return np.median(self.nn_dist[:,-1]), np.mean(self.nn_dist[:,1])
   
-def log_likelihood_test_set(bandwidth,X_train,X_test):
+def log_likelihood_test_set(bandwidth, X_train, X_test):
     """
     Purpose:
         Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
     """
-    kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=0.0005, rtol=0.0005,leaf_size=40)
+    kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=0.0005, rtol=0.0005,leaf_size=40)
     kde.fit(X_train)
     return -kde.score(X_test)
 
-def find_optimal_bandwidth(X,X_train,X_test):
+def find_optimal_bandwidth(self, X, X_train, X_test):
     """
     Purpose:
         Given a training and a test set, finds the optimal bandwidth in a gaussian kernel density model
     """
     from scipy.optimize import fminbound
 
-    hest,hmin=bandwidth_estimate(X)
+    hest,hmin=bandwidth_estimate(self, X)
     
     #print("rough bandwidth ",hest,hmin)
     
@@ -221,7 +221,7 @@ def find_optimal_bandwidth(X,X_train,X_test):
 
     return h_optimal
 
-def compute_density(X,bandwidth=1.0):
+def compute_density(self, X, bandwidth=1.0):
     """
     Purpose:
         Given an array of data, computes the local density of every point using kernel density estimation
@@ -229,12 +229,13 @@ def compute_density(X,bandwidth=1.0):
     Return:
         kde.score_samples(X),kde
     """
-    kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
-    kde.fit(X)
+    self.kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
+    self.kde.fit(X)
+    self.rho = self.kde.score_samples(X)
     
-    return kde.score_samples(X), kde
-    
-def compute_delta(X,rho,tree,cutoff=40):
+    return self
+
+def compute_delta(self, X, rho = None):
     """
     Purpose:
         Computes distance to nearest-neighbor with higher density
@@ -247,28 +248,36 @@ def compute_delta(X,rho,tree,cutoff=40):
     :density_graph: for every point, list of points are incoming (via the density gradient)
 
     """
+    if rho is None:
+        rho = self.rho
+
     n_sample, n_feature = X.shape
-    
+
     maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
     
-    nn_dist, nn_list = tree.query(list(X), k=cutoff)
-    delta = maxdist*np.ones(n_sample,dtype=np.float)
-    nn_delta = np.ones(n_sample,dtype=np.int)
+    nn_dist, nn_list = self.nn_dist, self.nn_list
+    delta = maxdist*np.ones(n_sample, dtype=np.float)
+    nn_delta = np.ones(n_sample, dtype=np.int)
     
     density_graph = [[] for i in range(n_sample)] # store incoming leaves
     
     for i in range(n_sample):
         idx = index_greater(rho[nn_list[i]])
         if idx:
-            density_graph[nn_list[i,idx[0]]].append(i)
-            nn_delta[i] = nn_list[i,idx[0]]
-            delta[i] = nn_dist[i,idx[0]]
+            density_graph[nn_list[i,idx]].append(i)
+            nn_delta[i] = nn_list[i,idx]
+            delta[i] = nn_dist[i,idx]
         else:
             nn_delta[i]=-1
     
     idx_centers=np.array(range(n_sample))[delta > 0.99*maxdist]
     
-    return delta,nn_delta,idx_centers,density_graph
+    self.delta = delta
+    self.nn_delta = nn_delta
+    self.idx_centers_unmerged = idx_centers
+    self.density_graph = density_graph
+
+    return self
 
 def index_greater(array, prec=1e-8):
     """
@@ -283,7 +292,7 @@ def index_greater(array, prec=1e-8):
     item=array[0]
     for idx, val in np.ndenumerate(array):
         if val > (item + prec):
-            return idx
+            return idx[0]
 
 def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 20):
     """
@@ -315,7 +324,7 @@ def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 2
 
     return np.array(list(NH))
 
-def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx_centers, threshold, cluster_label):
+def check_cluster_stability(self, X, threshold): 
     """
     Purpose:
         Given the identified cluster centers, performs a more rigourous
@@ -323,6 +332,14 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
         This is vaguely similar to a watershed cuts in image segmentation and basically
         makes sure we haven't identified spurious cluster centers w.r.t to some noise threshold (false positive).
     """
+
+    density_graph = self.density_graph
+    nn_delta = self.nn_delta
+    delta = self.delta
+    rho = self.rho
+    nn_list = self.nn_list
+    idx_centers = self.idx_centers_unmerged 
+    cluster_label = self.cluster_label
 
     n_false_pos = 0             
     idx_true_centers = []
@@ -350,7 +367,6 @@ def check_cluster_stability(X, density_graph, nn_delta, delta, rho, nn_list, idx
         else:
             idx_true_centers.append(idx)
     return np.array(idx_true_centers,dtype=np.int), n_false_pos
-
 
 def assign_cluster(idx_centers, nn_delta, density_graph):
     """ 
