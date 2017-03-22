@@ -28,43 +28,21 @@ def main():
     
     #exit()
     X,y = gaussian_mixture(n_sample=10000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
-                            pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1],
-                            random_state = 0)
+                            pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1])
+                            #random_state = 0)
 
-    fdc = FDC(nh_size = 40, noise_threshold=1.0, test_size=0.1)  
-    fit = fdc.fit(X) # Fitting X 
+    model = FDC(nh_size = 40, noise_threshold=0.3)  
+    model.fit(X) # Fitting X -> computing density maps and graphs
 
-    #fit.check_cluster_stability_fast(X,0.1)
-    idx_centers = fit.idx_centers
-    cluster_label = fit.cluster_label
-    rho = fit.rho
-    delta = fit.delta
-    nn_list = fit.nn_list
-    '''print(cluster_label)
-    pos = np.arange(10000)[cluster_label == 6]
-    print("r = 6")
-    print(pos)
-    print(rho[pos])
-    rhosort6=(np.argsort(rho[pos]))
-    print(pos[rhosort6[-1]])
-    print(nn_list[pos[rhosort6[-1]]])
-    print(rho[nn_list[pos[rhosort6[-1]]]])
-    print(rho[8097])
-    #exit()
-    print("r = 7")
-    pos = np.arange(10000)[cluster_label == 7]
-    print(pos)
-    #print(rho[pos])
-    print(np.sort(rho[pos]))'''
-    
+    idx_centers = model.idx_centers
+    cluster_label = model.cluster_label
+    rho = model.rho
 
-    #exit()
+    plotting.summary(idx_centers, cluster_label, rho, X, n_true_center=n_true_center, y=y, show=True)
 
-    plotting.summary(idx_centers, cluster_label, rho, X, 
-    n_true_center=n_true_center, y=y, show=True)
-    print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
-    with open("result.dat", "wb") as f:
-        pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
+    #print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
+    #with open("result.dat", "wb") as f:
+    #    pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
     
 class FDC:
 
@@ -153,6 +131,7 @@ class FDC:
             self.check_cluster_stability_fast(X, self.noise_threshold) # merging 'unstable' clusters
 
         print("--> Done in %.3f s" % (time.time()-start))
+        
         enablePrint()
 
         return self
@@ -160,6 +139,7 @@ class FDC:
     def check_cluster_stability_fast(self, X, noise_threshold = None): # given 
         if self.verbose == 0:
             blockPrint()
+
         if noise_threshold is None:
             noise_threshold =  self.noise_threshold
 
@@ -170,13 +150,43 @@ class FDC:
             self.idx_centers_unmerged = self.idx_centers
 
             if n_false_pos == 0:
-                print("--> Converged with %i true centers ..." % self.idx_centers.shape[0])
+                print("--> Found %i stable centers at noise %.3f ..." % (self.idx_centers.shape[0],noise_threshold))
                 break
             else:
                 print("\t --> Number of false positive = %i ..."%n_false_pos)
                 
         enablePrint()
 
+
+    def coarse_grain(self, X, noise_threshold_i, noise_threshold_f, dnt, compute_hierarchy = False):
+        if self.verbose == 0:
+            blockPrint()
+        
+        print("--> Coarse graining until desired noise threshold ...")
+
+        noise_range = list(np.arange(noise_threshold_i, noise_threshold_f, dnt))
+        
+        hierarchy = []
+        self.max_noise = -1
+        n_cluster = 0
+        
+        for nt in noise_range:
+            self.check_cluster_stability_fast(X, noise_threshold = nt)
+            if compute_hierarchy is True:
+                hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
+                if len(self.idx_centers) != n_cluster:
+                    n_cluster = len(self.idx_centers)
+                    self.max_noise = nt
+    
+        if compute_hierarchy is True:
+            terminal_cluster = hierarchy[-1]['idx_centers'][0]
+            hierarchy.append({'idx_centers': [terminal_cluster], 'cluster_labels' : np.zeros(len(self.cluster_label),dtype=int)})
+            noise_range.append(1.5*self.max_noise)
+            self.hierarchy = hierarchy
+            self.noise_range = noise_range
+
+        enablePrint()
+        
 def bandwidth_estimate(self, X):
     """
     Purpose:

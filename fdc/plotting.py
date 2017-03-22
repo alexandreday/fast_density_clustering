@@ -160,3 +160,87 @@ def summary(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=2
         plt.show()
 
     plt.clf()
+
+
+def build_dendrogram(hierarchy, noise_range):
+    Z = []
+    initial_idx_centers = list(hierarchy[0]['idx_centers'])
+    dict_center_relative = {}
+    for idx in initial_idx_centers:
+        dict_center_relative[idx] = -1
+    
+    depth = len(hierarchy)
+    n_init_centers = len(initial_idx_centers)
+    merge_count = 0
+    member_count_dict = {}
+
+    for d in range(depth-1):
+
+        pre_idx_centers = hierarchy[d]['idx_centers']
+        cur_idx_centers = hierarchy[d+1]['idx_centers']
+
+        pre_cluster_labels = hierarchy[d]['cluster_labels']
+        cur_cluster_labels = hierarchy[d+1]['cluster_labels']
+        
+        for idx in pre_idx_centers :
+            if idx not in cur_idx_centers : # means it's been merged
+
+                i = cur_cluster_labels[idx]
+                new_idx = cur_idx_centers[i] # pic -> new_pic 
+                z = [-1,-1,-1,-1] # linkage list
+
+                if (dict_center_relative[idx] == -1) & (dict_center_relative[new_idx] == -1): # both have not been merged yet
+                    z[0] = initial_idx_centers.index(idx)
+                    z[1] = initial_idx_centers.index(new_idx)
+                    z[2] = noise_range[d+1]
+                    z[3] = 2
+                elif (dict_center_relative[idx] == -1) & (dict_center_relative[new_idx] != -1):
+                    z[0] = initial_idx_centers.index(idx)
+                    z[1] = dict_center_relative[new_idx]
+                    z[2] = noise_range[d+1]
+                    z[3] = 1 + member_count_dict[ z[1] ]
+                elif (dict_center_relative[idx] != -1) & (dict_center_relative[new_idx] == -1):
+                    z[0] = dict_center_relative[idx]
+                    z[1] = initial_idx_centers.index(new_idx)         # ~ new point
+                    z[2] = noise_range[d+1]
+                    z[3] = 1 + member_count_dict[ z[0] ]
+                else:
+                    z[0] = dict_center_relative[idx]
+                    z[1] = dict_center_relative[new_idx]
+                    z[2] = noise_range[d+1]
+                    z[3] = member_count_dict[ z[0] ] + member_count_dict[ z[1] ]
+
+                new_cluster_idx = merge_count + n_init_centers
+                dict_center_relative[idx] = new_cluster_idx
+                dict_center_relative[new_idx] = new_cluster_idx
+
+                member_count_dict[new_cluster_idx] = z[3]
+                merge_count += 1
+
+                Z.append(z)
+    
+    return Z
+
+
+def dendrogram(model, show=True, savefile=None):
+    from scipy.cluster.hierarchy import dendrogram
+    fontsize=15
+
+    hierarchy = model.hierarchy
+    noise_range = model.noise_range
+    Z = build_dendrogram(hierarchy, noise_range)
+    dendrogram(Z)
+
+    plt.ylim(0,1.2 * model.max_noise)
+
+    plt.xlabel('cluster \#',fontsize=fontsize)
+    plt.ylabel('$\delta$',fontsize=fontsize)
+    plt.title('Clustering hierarchy',fontsize=fontsize)
+    plt.tight_layout()
+
+    if show is True:
+        plt.show()
+    if savefile :
+        plt.savefig(savefile)
+
+    plt.clf()
