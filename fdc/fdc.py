@@ -113,7 +113,7 @@ class FDC:
             X_train, X_test, y_train, y_test = train_test_split(X, range(X.shape[0]), test_size=self.test_size, random_state=self.random_state)
             bandwidthCV = find_optimal_bandwidth(self, X, X_train, X_test)
 
-        print("--> Using bandwidth = %.3f" % bandwidthCV)
+        print("--> Using bandwidth = %.8f" % bandwidthCV)
 
         print("--> Computing density ...")
         compute_density(self, X, bandwidth=bandwidthCV)
@@ -150,7 +150,7 @@ class FDC:
             self.idx_centers_unmerged = self.idx_centers
 
             if n_false_pos == 0:
-                print("--> Found %i stable centers at noise %.3f ..." % (self.idx_centers.shape[0],noise_threshold))
+                print("--> Found %i stable centers at noise %.6f ..." % (self.idx_centers.shape[0],noise_threshold))
                 break
             else:
                 print("\t --> Number of false positive = %i ..."%n_false_pos)
