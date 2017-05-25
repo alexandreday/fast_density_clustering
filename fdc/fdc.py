@@ -111,15 +111,15 @@ class FDC:
         else:
             print("--> Finding optimal bandwidth ...")
             X_train, X_test, y_train, y_test = train_test_split(X, range(X.shape[0]), test_size=self.test_size, random_state=self.random_state)
-            bandwidthCV = find_optimal_bandwidth(self, X, X_train, X_test)
+            bandwidthCV = self.find_optimal_bandwidth(X, X_train, X_test)
 
         print("--> Using bandwidth = %.8f" % bandwidthCV)
 
         print("--> Computing density ...")
-        compute_density(self, X, bandwidth=bandwidthCV)
+        self.compute_density(X, bandwidth=bandwidthCV)
 
         print("--> Finding centers ...")
-        compute_delta(self, X, self.rho)
+        self.compute_delta(X, self.rho)
         
         print("--> Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
@@ -187,18 +187,99 @@ class FDC:
 
         enablePrint()
         
-def bandwidth_estimate(self, X):
-    """
-    Purpose:
-        Gives a rough estimate of the optimal bandwidth (based on the notion 
-        of some effective neigborhood)
-    """
-    #nbrs = NearestNeighbors(n_neighbors=40, algorithm='kd_tree').fit(X)
-    
-    #nn_dist,_ = nbrs.kneighbors(X)
+    def bandwidth_estimate(self, X):
+        """
+        Purpose:
+            Gives a rough estimate of the optimal bandwidth (based on the notion 
+            of some effective neigborhood)
+        """
+        #nbrs = NearestNeighbors(n_neighbors=40, algorithm='kd_tree').fit(X)
+        
+        #nn_dist,_ = nbrs.kneighbors(X)
 
-    return np.median(self.nn_dist[:,-1]), np.mean(self.nn_dist[:,1])
-  
+        return np.median(self.nn_dist[:,-1]), np.mean(self.nn_dist[:,1])
+    
+    def find_optimal_bandwidth(self, X, X_train, X_test):
+        """
+        Purpose:
+            Given a training and a test set, finds the optimal bandwidth in a gaussian kernel density model
+        """
+        from scipy.optimize import fminbound
+
+        hest,hmin=self.bandwidth_estimate(X)
+        
+        #print("rough bandwidth ",hest,hmin)
+        
+        args=(X_train,X_test)
+        
+        # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
+
+        h_optimal,score_opt,_,niter=fminbound(log_likelihood_test_set,hmin,1.5*hest,args,maxfun=25,xtol=0.01,full_output=True)
+        print("--> Found log-likelihood minima in %i evaluations"%niter)
+        
+        assert abs(h_optimal-1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
+        assert abs(h_optimal-1.5*hmin) > 1e-4, "Lower boundary reached for bandwidth"
+
+        return h_optimal
+
+    def compute_density(self, X, bandwidth=1.0):
+        """
+        Purpose:
+            Given an array of data, computes the local density of every point using kernel density estimation
+            
+        Return:
+            kde.score_samples(X),kde
+        """
+        self.kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
+        self.kde.fit(X)
+        self.rho = self.kde.score_samples(X)
+        
+        return self
+
+    def compute_delta(self, X, rho = None):
+        """
+        Purpose:
+            Computes distance to nearest-neighbor with higher density
+        Return:
+            delta,nn_delta,idx_centers,density_graph
+
+        :delta: distance to n.n. with higher density (within some neighborhood cutoff)
+        :nn_delta: index of n.n. with ... 
+        :idx_centers: list of points that have the largest density in their neigborhood cutoff
+        :density_graph: for every point, list of points are incoming (via the density gradient)
+
+        """
+        if rho is None:
+            rho = self.rho
+
+        n_sample, n_feature = X.shape
+
+        maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
+        
+        nn_dist, nn_list = self.nn_dist, self.nn_list
+        delta = maxdist*np.ones(n_sample, dtype=np.float)
+        nn_delta = np.ones(n_sample, dtype=np.int)
+        
+        density_graph = [[] for i in range(n_sample)] # store incoming leaves
+        
+        for i in range(n_sample):
+            idx = index_greater(rho[nn_list[i]])
+            if idx:
+                density_graph[nn_list[i,idx]].append(i)
+                nn_delta[i] = nn_list[i,idx]
+                delta[i] = nn_dist[i,idx]
+            else:
+                nn_delta[i]=-1
+        
+        idx_centers=np.array(range(n_sample))[delta > 0.99*maxdist]
+        
+        self.delta = delta
+        self.nn_delta = nn_delta
+        self.idx_centers_unmerged = idx_centers
+        self.density_graph = density_graph
+
+        return self
+
 def log_likelihood_test_set(bandwidth, X_train, X_test):
     """
     Purpose:
@@ -207,87 +288,6 @@ def log_likelihood_test_set(bandwidth, X_train, X_test):
     kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=0.0005, rtol=0.0005,leaf_size=40)
     kde.fit(X_train)
     return -kde.score(X_test)
-
-def find_optimal_bandwidth(self, X, X_train, X_test):
-    """
-    Purpose:
-        Given a training and a test set, finds the optimal bandwidth in a gaussian kernel density model
-    """
-    from scipy.optimize import fminbound
-
-    hest,hmin=bandwidth_estimate(self, X)
-    
-    #print("rough bandwidth ",hest,hmin)
-    
-    args=(X_train,X_test)
-    
-    # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
-
-    h_optimal,score_opt,_,niter=fminbound(log_likelihood_test_set,hmin,1.5*hest,args,maxfun=25,xtol=0.01,full_output=True)
-    print("--> Found log-likelihood minima in %i evaluations"%niter)
-    
-    assert abs(h_optimal-1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
-    assert abs(h_optimal-1.5*hmin) > 1e-4, "Lower boundary reached for bandwidth"
-
-    return h_optimal
-
-def compute_density(self, X, bandwidth=1.0):
-    """
-    Purpose:
-        Given an array of data, computes the local density of every point using kernel density estimation
-        
-    Return:
-        kde.score_samples(X),kde
-    """
-    self.kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
-    self.kde.fit(X)
-    self.rho = self.kde.score_samples(X)
-    
-    return self
-
-def compute_delta(self, X, rho = None):
-    """
-    Purpose:
-        Computes distance to nearest-neighbor with higher density
-    Return:
-        delta,nn_delta,idx_centers,density_graph
-
-    :delta: distance to n.n. with higher density (within some neighborhood cutoff)
-    :nn_delta: index of n.n. with ... 
-    :idx_centers: list of points that have the largest density in their neigborhood cutoff
-    :density_graph: for every point, list of points are incoming (via the density gradient)
-
-    """
-    if rho is None:
-        rho = self.rho
-
-    n_sample, n_feature = X.shape
-
-    maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
-    
-    nn_dist, nn_list = self.nn_dist, self.nn_list
-    delta = maxdist*np.ones(n_sample, dtype=np.float)
-    nn_delta = np.ones(n_sample, dtype=np.int)
-    
-    density_graph = [[] for i in range(n_sample)] # store incoming leaves
-    
-    for i in range(n_sample):
-        idx = index_greater(rho[nn_list[i]])
-        if idx:
-            density_graph[nn_list[i,idx]].append(i)
-            nn_delta[i] = nn_list[i,idx]
-            delta[i] = nn_dist[i,idx]
-        else:
-            nn_delta[i]=-1
-    
-    idx_centers=np.array(range(n_sample))[delta > 0.99*maxdist]
-    
-    self.delta = delta
-    self.nn_delta = nn_delta
-    self.idx_centers_unmerged = idx_centers
-    self.density_graph = density_graph
-
-    return self
 
 def index_greater(array, prec=1e-8):
     """
