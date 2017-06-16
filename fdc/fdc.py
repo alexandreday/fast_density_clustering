@@ -35,7 +35,10 @@ def main():
     model.fit(X) # Fitting X -> computing density maps and graphs
 
     idx_centers = model.idx_centers
+    #print(idx_centers)
     cluster_label = model.cluster_label
+    #print(cluster_label)
+    #exit()
     rho = model.rho
 
     plotting.summary(idx_centers, cluster_label, rho, X, n_true_center=n_true_center, y=y, show=True)
@@ -96,6 +99,7 @@ class FDC:
         ----------
         self
         """
+
         if self.verbose == 0:
             blockPrint()
 
@@ -228,13 +232,13 @@ class FDC:
             Given an array of data, computes the local density of every point using kernel density estimation
             
         Return:
-            kde.score_samples(X),kde
+            kde.score_samples(X)
         """
         self.kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
         self.kde.fit(X)
         self.rho = self.kde.score_samples(X)
         
-        return self
+        return self.rho
 
     def compute_delta(self, X, rho = None):
         """

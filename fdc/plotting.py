@@ -161,8 +161,77 @@ def summary(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=2
 
     plt.clf()
 
+def summary_v2(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=20, savefile=None, show=False):
+
+    fontsize=15
+    n_sample=X.shape[0]
+    n_center=idx_centers.shape[0]
+    palette=contrast_colors
+    #palette=sns.color_palette('Paired',n_center+10)
+    
+
+    '''plt.figure(1,figsize=(10,10))
+
+    plt.subplot(131)
+    plt.title('True labels',fontsize=fontsize)
+    print("--> Plotting summary: True clustered labels, inferred labels and density map ")
+    if y is None:
+        plt.scatter(X[:,0],X[:,1],c=palette[0],rasterized=True)
+    else:
+        for i in range(n_true_center):
+            pos=(y==i)
+            plt.scatter(X[pos,0],X[pos,1], s=psize,c=palette[i],rasterized=True)
+    '''        
+    ax = plt.subplot(111)
+    for i in range(n_center):
+        pos=(cluster_label==i)
+        plt.scatter(X[pos,0],X[pos,1],c=palette[i], s=psize, rasterized=True)
+     
+    centers = X[idx_centers]
+    for xy, i in zip(centers, range(n_center)) :
+        # Position of each label.
+        txt = ax.annotate(str(i),xy,
+        xytext=(0,0), textcoords='offset points',
+        fontsize=20,horizontalalignment='center', verticalalignment='center'
+        )
+        txt.set_path_effects([
+            PathEffects.Stroke(linewidth=5, foreground="w"),
+            PathEffects.Normal()])
+
+    #plt.title('Inferred labels',fontsize=fontsize)
+    #plt.tight_layout()
+    #plt.subplot(133)
+
+    #density_map(X,rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
+
+    if savefile:
+        plt.savefig(savefile)
+    if show is True:
+        plt.show()
+
+    plt.clf()
+
+
+
 
 def build_dendrogram(hierarchy, noise_range):
+    """Constructs the linkage matrix for plotting using the scipy.hierarchy function
+
+    Parameters
+    ----------
+    hierarchy : list of dictionaries, length = number of coarse graining steps
+        First element of the list is the dictionary specifying the clusters at the finest scale
+        Further elements of the list are coarsed grained.
+    noise_range : array-like, length = number of coarse graining steps
+        The value of the noise parameter at every scale
+    
+    Returns
+    -------
+    Z : array-like, shape=(n_coarse_grain,4) ; see scipy for more info 
+    Linkage matrix for plotting dendrogram
+    
+    """
+
     Z = []
     initial_idx_centers = list(hierarchy[0]['idx_centers'])
     dict_center_relative = {}
