@@ -16,6 +16,7 @@ n_true_center = 15
 print("------> Example with %i true cluster centers <-------"%n_true_center)
 X, y = make_blobs(10000, 2, n_true_center)
 model = FDC(noise_threshold=0.05, nh_size=40)
+
 model.fit(X)
 cluster_label, idx_centers, rho = model.cluster_label, model.idx_centers, model.rho
 

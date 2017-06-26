@@ -1,5 +1,6 @@
 '''
-Created on Jan 16, 2017
+Created : Jan 16, 2017
+Last major update : June 26, 2017
 
 @author: Alexandre Day
 
@@ -8,44 +9,10 @@ Created on Jan 16, 2017
 '''
 
 import numpy as np
-from sklearn.neighbors import KernelDensity, NearestNeighbors
 import time
-from sklearn.model_selection import train_test_split
 from numpy.random import random
 import sys, os
-
-def main():
-
-    '''
-        Example for gaussian mixture
-    '''
-    from sklearn import datasets
-    from special_datasets import gaussian_mixture
-
-    n_true_center = 10
-    #X,y=datasets.make_blobs(10000, 2, n_true_center, random_state=1984)
-    #np.save("data.txt",X)
-    
-    #exit()
-    X,y = gaussian_mixture(n_sample=10000, n_center = n_true_center, sigma_range = [0.25,0.5,1.25],
-                            pop_range = [0.1,0.02,0.1,0.1,0.3,0.1,0.08,0.02,0.08,0.1])
-                            #random_state = 0)
-
-    model = FDC(nh_size = 40, noise_threshold=0.3)  
-    model.fit(X) # Fitting X -> computing density maps and graphs
-
-    idx_centers = model.idx_centers
-    #print(idx_centers)
-    cluster_label = model.cluster_label
-    #print(cluster_label)
-    #exit()
-    rho = model.rho
-
-    plotting.summary(idx_centers, cluster_label, rho, X, n_true_center=n_true_center, y=y, show=True)
-
-    #print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
-    #with open("result.dat", "wb") as f:
-    #    pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
+from .density_estimation import KDE
     
 class FDC:
 
@@ -75,10 +42,10 @@ class FDC:
     """
 
     def __init__(self, nh_size=40, noise_threshold=0.4,
-                random_state=0, test_size=0.1, verbose=1, bandwidth=None,
+                random_state=0, test_ratio_size=0.1, verbose=1, bandwidth=None,
                 no_merge=False):
 
-        self.test_size = test_size
+        self.test_ratio_size = test_ratio_size
         self.random_state = random_state
         self.verbose = verbose
         self.nh_size = nh_size
@@ -107,27 +74,19 @@ class FDC:
         print("--> Starting clustering with n=%i samples..." % n_sample)
         start = time.time()
 
-        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
-        self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
-
-        if self.bandwidth:
-            bandwidthCV = self.bandwidth
-        else:
-            print("--> Finding optimal bandwidth ...")
-            X_train, X_test, y_train, y_test = train_test_split(X, range(X.shape[0]), test_size=self.test_size, random_state=self.random_state)
-            bandwidthCV = self.find_optimal_bandwidth(X, X_train, X_test)
-
-        print("--> Using bandwidth = %.8f" % bandwidthCV)
+        print("--> Fitting kernel model for density estimation ...")
+        self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size, nh_size=self.nh_size)
+        self.density_model.fit(X)
 
         print("--> Computing density ...")
-        self.compute_density(X, bandwidth=bandwidthCV)
+        self.rho = self.density_model.evalute_density(X)
 
         print("--> Finding centers ...")
         self.compute_delta(X, self.rho)
         
         print("--> Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
-        print("--> Mergin overlapping minimal clusters ...")
+        print("--> Merging overlapping minimal clusters ...")
         self.check_cluster_stability_fast(X, 0.) # given 
 
         if self.noise_threshold >= 1e-3 :
@@ -161,8 +120,17 @@ class FDC:
                 
         enablePrint()
 
-
     def coarse_grain(self, X, noise_threshold_i, noise_threshold_f, dnt, compute_hierarchy = False):
+        """Started from an initial noise scale, progressively merges clusters.
+        If specified, saves the cluster assignments at every level of the coarse graining if specified.
+
+        Parameters
+        -----------
+        compute_hierarchy : bool
+            Specifies if hierarchy should be stored (list of cluster assignments at all steps)
+            If True, hierarchy is stores in self.hierarchy
+        """
+
         if self.verbose == 0:
             blockPrint()
         
@@ -190,56 +158,7 @@ class FDC:
             self.noise_range = noise_range
 
         enablePrint()
-        
-    def bandwidth_estimate(self, X):
-        """
-        Purpose:
-            Gives a rough estimate of the optimal bandwidth (based on the notion 
-            of some effective neigborhood)
-        """
-        #nbrs = NearestNeighbors(n_neighbors=40, algorithm='kd_tree').fit(X)
-        
-        #nn_dist,_ = nbrs.kneighbors(X)
-
-        return np.median(self.nn_dist[:,-1]), np.mean(self.nn_dist[:,1])
-    
-    def find_optimal_bandwidth(self, X, X_train, X_test):
-        """
-        Purpose:
-            Given a training and a test set, finds the optimal bandwidth in a gaussian kernel density model
-        """
-        from scipy.optimize import fminbound
-
-        hest,hmin=self.bandwidth_estimate(X)
-        
-        #print("rough bandwidth ",hest,hmin)
-        
-        args=(X_train,X_test)
-        
-        # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
-
-        h_optimal,score_opt,_,niter=fminbound(log_likelihood_test_set,hmin,1.5*hest,args,maxfun=25,xtol=0.01,full_output=True)
-        print("--> Found log-likelihood minima in %i evaluations"%niter)
-        
-        assert abs(h_optimal-1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
-        assert abs(h_optimal-1.5*hmin) > 1e-4, "Lower boundary reached for bandwidth"
-
-        return h_optimal
-
-    def compute_density(self, X, bandwidth=1.0):
-        """
-        Purpose:
-            Given an array of data, computes the local density of every point using kernel density estimation
-            
-        Return:
-            kde.score_samples(X)
-        """
-        self.kde=KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
-        self.kde.fit(X)
-        self.rho = self.kde.score_samples(X)
-        
-        return self.rho
-
+ 
     def compute_delta(self, X, rho = None):
         """
         Purpose:
@@ -260,7 +179,8 @@ class FDC:
 
         maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
         
-        nn_dist, nn_list = self.nn_dist, self.nn_list
+
+        nn_dist, nn_list = self.density_model.nn_dist, self.density_model.nn_list
         delta = maxdist*np.ones(n_sample, dtype=np.float)
         nn_delta = np.ones(n_sample, dtype=np.int)
         
@@ -284,14 +204,12 @@ class FDC:
 
         return self
 
-def log_likelihood_test_set(bandwidth, X_train, X_test):
-    """
-    Purpose:
-        Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
-    """
-    kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=0.0005, rtol=0.0005,leaf_size=40)
-    kde.fit(X_train)
-    return -kde.score(X_test)
+
+#####################################################
+#####################################################
+############ utility functions below ################
+#####################################################
+#####################################################
 
 def index_greater(array, prec=1e-8):
     """
@@ -310,12 +228,13 @@ def index_greater(array, prec=1e-8):
 
 def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 20):
     """
-    Purpose:
-        Function for searching for nearest neighbors within
-        some density threshold. 
-        NH should be an empty set for the inital function call.
-    Return:
-        List of points in the neighborhood of point idx
+    Function for searching for nearest neighbors within
+    some density threshold. 
+    NH should be an empty set for the inital function call.
+    
+    Returns
+    -----------
+    List of points in the neighborhood of point idx : 1D array
     """
 
     NH=set(nn_list[idx][1:])  # -- minimal NH scale set by perplexity
@@ -340,18 +259,17 @@ def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 2
 
 def check_cluster_stability(self, X, threshold): 
     """
-    Purpose:
-        Given the identified cluster centers, performs a more rigourous
-        neighborhood search (based on some noise threshold) for points with higher densities.
-        This is vaguely similar to a watershed cuts in image segmentation and basically
-        makes sure we haven't identified spurious cluster centers w.r.t to some noise threshold (false positive).
+    Given the identified cluster centers, performs a more rigourous
+    neighborhood search (based on some noise threshold) for points with higher densities.
+    This is vaguely similar to a watershed cuts in image segmentation and basically
+    makes sure we haven't identified spurious cluster centers w.r.t to some noise threshold (false positive).
     """
 
     density_graph = self.density_graph
     nn_delta = self.nn_delta
     delta = self.delta
     rho = self.rho
-    nn_list = self.nn_list
+    nn_list = self.density_model.nn_list
     idx_centers = self.idx_centers_unmerged 
     cluster_label = self.cluster_label
 
@@ -384,9 +302,8 @@ def check_cluster_stability(self, X, threshold):
 
 def assign_cluster(idx_centers, nn_delta, density_graph):
     """ 
-    Purpose:
-        Given the cluster centers and the local gradients (nn_delta) assign to every
-        point a cluster label
+    Given the cluster centers and the local gradients (nn_delta) assign to every
+    point a cluster label
     """
     
     n_center = idx_centers.shape[0]
@@ -400,9 +317,8 @@ def assign_cluster(idx_centers, nn_delta, density_graph):
 
 def assign_cluster_deep(root,cluster_label,density_graph,label):
     """
-    Purpose:
-        Recursive function for assigning labels for a tree graph.
-        Stopping condition is met when the root is empty (i.e. a leaf has been reached)
+    Recursive function for assigning labels for a tree graph.
+    Stopping condition is met when the root is empty (i.e. a leaf has been reached)
     """
     
     if not root:  # then must be a leaf !
@@ -413,17 +329,9 @@ def assign_cluster_deep(root,cluster_label,density_graph,label):
             assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
 
 def blockPrint():
+    """Blocks printing to screen"""
     sys.stdout = open(os.devnull, 'w')
 
 def enablePrint():
+    """Enables printing to screen"""
     sys.stdout = sys.__stdout__
-
-if __name__=="__main__":
-
-    from matplotlib import pyplot as plt
-    import seaborn as sns
-    import plotting
-    from special_datasets import gaussian_mixture
-    import pickle
-
-    main()
