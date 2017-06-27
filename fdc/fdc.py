@@ -5,7 +5,7 @@ Last major update : June 26, 2017
 @author: Alexandre Day
 
     Purpose:
-        Fast density clusterin#
+        Fast density clustering
 '''
 
 import numpy as np
