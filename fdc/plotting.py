@@ -6,10 +6,12 @@ Created on Jan 16, 2017
 
 import numpy as np
 from matplotlib import pyplot as plt
-font = {'family' : 'serif', 'size'   : 18}
-plt.rc('font', **font)
 import matplotlib.patheffects as PathEffects
 from .mycolors import my_color_palette
+
+def set_nice_font(size = 18):
+    font = {'family' : 'serif', 'size'   : size}
+    plt.rc('font', **font)
 
 def set_latex():
     import latex
@@ -279,7 +281,7 @@ def dendrogram(model, show=True, savefile=None):
 
     plt.ylim(0,1.2 * model.max_noise)
 
-    plt.xlabel('cluster \#',fontsize=fontsize)
+    plt.xlabel('cluster $\#$',fontsize=fontsize)
     plt.ylabel('$\delta$',fontsize=fontsize)
     plt.title('Clustering hierarchy',fontsize=fontsize)
     plt.tight_layout()

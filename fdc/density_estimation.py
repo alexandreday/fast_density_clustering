@@ -61,7 +61,7 @@ class KDE():
 
         h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=25, xtol=0.01, full_output=True)
         
-        print("--> Found log-likelihood minima in %i evaluations"%niter)
+        print("      --> Found log-likelihood minima in %i evaluations"%niter)
         
         assert abs(h_optimal - 1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
         assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"

@@ -41,7 +41,7 @@ def main():
 
     plotting.dendrogram(model, show=True)
 
-    #print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
+    #print("[fdc] Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
     #with open("result.dat", "wb") as f:
     #    pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
 

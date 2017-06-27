@@ -5,7 +5,7 @@ Last major update : June 26, 2017
 @author: Alexandre Day
 
     Purpose:
-        Fast density clustering
+        Fast density clusterin#
 '''
 
 import numpy as np
@@ -25,19 +25,29 @@ class FDC:
         Neighborhood size. This is related to the perplexity (in t-SNE)
         and is an effective scale that defines the number of neighbors of each data point.
         Larger datasets usually require a larger perplexity/nh_size. Consider selecting a value
-        between 20 and 100. 
+        between 20 and 100.
+    
+    noise_threshold : float, optional (default : 0.4)
+        Used to determined the extended neighborhood of cluster centers. Points
+        that have a relative density difference of less than "noise_threshold" and 
+        that are density-reachable, are part of the extended neighborhood.
 
     random_state: int, optional (default: 0)
         Random number for seeding random number generator. By default, the
         method generates the same results. This random is used to seed
         the cross-validation (set partitions) which will in turn affect the bandwitdth value
 
+    test_ratio_size: float, optional (default: 0.1)
+        Ratio size of the test set used when performing maximum likehood estimation.
+
     verbose: int, optional (default: 1)
         Set to 0 if you don't want to see print to screen.
 
-    bandwidth: str, optional (default: 'auto')
-        If you want the bandwidth to be set automatically or want to set it yourself.
-        Valid options = {'auto' | 'manual'}
+    bandwidth: float, optional (default: None)
+        If you want the bandwidth for kernel density to be set automatically or want to set it yourself.
+        By default it is set automatically.
+    
+    no_merge: bool,
 
     """
 
@@ -71,29 +81,29 @@ class FDC:
             blockPrint()
 
         n_sample = X.shape[0]
-        print("--> Starting clustering with n=%i samples..." % n_sample)
+        print("[fdc] Starting clustering with n=%i samples..." % n_sample)
         start = time.time()
 
-        print("--> Fitting kernel model for density estimation ...")
+        print("[fdc] Fitting kernel model for density estimation ...")
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size, nh_size=self.nh_size)
         self.density_model.fit(X)
 
-        print("--> Computing density ...")
+        print("[fdc] Computing density ...")
         self.rho = self.density_model.evalute_density(X)
 
-        print("--> Finding centers ...")
+        print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
         
-        print("--> Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
+        print("[fdc] Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
-        print("--> Merging overlapping minimal clusters ...")
+        print("[fdc] Merging overlapping minimal clusters ...")
         self.check_cluster_stability_fast(X, 0.) # given 
 
         if self.noise_threshold >= 1e-3 :
-            print("--> Iterating merging up to specified noise threshold ...")
+            print("[fdc] Iterating merging up to specified noise threshold ...")
             self.check_cluster_stability_fast(X, self.noise_threshold) # merging 'unstable' clusters
 
-        print("--> Done in %.3f s" % (time.time()-start))
+        print("[fdc] Done in %.3f s" % (time.time()-start))
         
         enablePrint()
 
@@ -113,10 +123,8 @@ class FDC:
             self.idx_centers_unmerged = self.idx_centers
 
             if n_false_pos == 0:
-                print("--> Found %i stable centers at noise %.6f ..." % (self.idx_centers.shape[0],noise_threshold))
+                print("      # of stable clusters with noise %.6f : %i" % (noise_threshold, self.idx_centers.shape[0]))
                 break
-            else:
-                print("\t --> Number of false positive = %i ..."%n_false_pos)
                 
         enablePrint()
 
@@ -134,7 +142,7 @@ class FDC:
         if self.verbose == 0:
             blockPrint()
         
-        print("--> Coarse graining until desired noise threshold ...")
+        print("[fdc] Coarse graining until desired noise threshold ...")
 
         noise_range = list(np.arange(noise_threshold_i, noise_threshold_f, dnt))
         
