@@ -50,7 +50,7 @@ def density_map(X,z,
         typical = argz[outlier_window:-outlier_window]
 
         # plot typical
-        plt.scatter(x[typical],y[typical],c=z[typical],cmap=cmap,s=psize,alpha=1.0,rasterized=True)
+        plt.scatter(x[typical],y[typical],c=z[typical],cmap=cmap,s=psize, alpha=1.0,rasterized=True)
         cb=plt.colorbar()
         # plot bot outliers (black !)
         plt.scatter(x[bot_outliers],y[bot_outliers],c='black',s=psize,alpha=1.0,rasterized=True)

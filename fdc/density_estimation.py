@@ -23,7 +23,7 @@ class KDE():
         
         self.kde.fit(X)
 
-    def evalute_density(self, X, bandwidth=1.0):
+    def evaluate_density(self, X, bandwidth=1.0):
         """Given an array of data, computes the local density of every point using kernel density estimation
 
         Input
