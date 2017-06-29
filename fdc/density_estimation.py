@@ -6,11 +6,34 @@ class KDE():
     """Kernel density estimation (KDE) for accurate local density estimation.
     This is achieved by using maximum-likelihood estimation of the generative kernel density model
     which is regularized using cross-validation.
+
+
+    Parameters
+    ----------
+    bandwidth: float, optional
+        bandwidth for the kernel density estimation. If not specified, will be determined automatically using
+        maximum likelihood on a test-set.
+
+    nh_size: int, optional
+        number of points in a typical neighborhood... only relevant for evaluating
+        a crude estimate of the bandwidth. If run in combination with t-SNE, should be on
+        the order of the perplexity.
+
+    xtol,atol,rtol: float, optional
+        precision parameters for kernel density estimates and bandwidth optimization determination.
+
+    test_ratio_size: float, optional
+        ratio of the test size for determining the bandwidth.
     """
-    def __init__(self, bandwidth = None, test_ratio_size = 0.1, nh_size = 40):
+
+
+    def __init__(self, bandwidth = None, test_ratio_size = 0.1, nh_size = 40, xtol = 0.01, atol=0.000005, rtol=0.00005):
         self.bandwidth = bandwidth
         self.test_ratio_size = test_ratio_size
         self.nh_size = nh_size
+        self.xtol = xtol
+        self.atol = atol
+        self.rtol = rtol
     
     def fit(self, X):
         """Fit kernel model to X"""
@@ -19,7 +42,7 @@ class KDE():
             self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
             self.bandwidth = self.find_optimal_bandwidth(X)
         else:
-            self.kde=KernelDensity(bandwidth=self.bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=0.000005, rtol=0.00005, breadth_first=True, leaf_size=40)
+            self.kde=KernelDensity(bandwidth=self.bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=self.atol, rtol=self.rtol, breadth_first=True, leaf_size=40)
         
         self.kde.fit(X)
 
@@ -59,7 +82,7 @@ class KDE():
 
         # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
 
-        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=25, xtol=0.01, full_output=True)
+        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=25, xtol=self.xtol, full_output=True)
         
         print("      --> Found log-likelihood minima in %i evaluations"%niter)
         
@@ -71,6 +94,6 @@ class KDE():
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
         """
-        self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=0.0005, rtol=0.0005,leaf_size=40)
+        self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40)
         self.kde.fit(X_train) 
         return -self.kde.score(X_test)

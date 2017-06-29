@@ -8,6 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.patheffects as PathEffects
 from .mycolors import my_color_palette
+from .fdc import FDC
 
 def set_nice_font(size = 18):
     font = {'family' : 'serif', 'size'   : size}
@@ -20,8 +21,12 @@ def density_map(X,z,
                 xlabel=None,ylabel=None,zlabel=None,label=None,
                 centers=None,
                 psize=20,
-                out_file=None,title=None,show=True,cmap='coolwarm',remove_tick=False,
-                use_perc=False):
+                out_file=None,title=None,show=True,cmap='coolwarm',
+                remove_tick=False,
+                use_perc=False,
+                rasterized = True,
+                fontsize = 15
+                ):
     """Plots a 2D density map given x,y coordinates and an intensity z for
     every data point
 
@@ -38,7 +43,7 @@ def density_map(X,z,
     """
     x, y = X[:,0], X[:,1]
     
-    fontsize = 15
+    fontsize = fontsize
 
     if use_perc :
         n_sample = len(x)
@@ -50,18 +55,18 @@ def density_map(X,z,
         typical = argz[outlier_window:-outlier_window]
 
         # plot typical
-        plt.scatter(x[typical],y[typical],c=z[typical],cmap=cmap,s=psize, alpha=1.0,rasterized=True)
+        plt.scatter(x[typical],y[typical],c=z[typical],cmap=cmap,s=psize, alpha=1.0,rasterized=rasterized)
         cb=plt.colorbar()
         # plot bot outliers (black !)
-        plt.scatter(x[bot_outliers],y[bot_outliers],c='black',s=psize,alpha=1.0,rasterized=True)
+        plt.scatter(x[bot_outliers],y[bot_outliers],c='black',s=psize,alpha=1.0,rasterized=rasterized)
         # plot top outliers (green !)
-        plt.scatter(x[top_outliers],y[top_outliers],c='#36DA36',s=psize,alpha=1.0,rasterized=True)
+        plt.scatter(x[top_outliers],y[top_outliers],c='#36DA36',s=psize,alpha=1.0,rasterized=rasterized)
 
     else:
         if label is not None:
-            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True,label=label)
+            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=rasterized,label=label)
         else:
-            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=True)
+            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=rasterized)
     
         cb=plt.colorbar()
     
@@ -140,6 +145,63 @@ def summary(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=2
         plt.show()
 
     plt.clf()
+
+def cluster_w_label(X, model:FDC,
+                xlabel=None,ylabel=None,zlabel=None,label=None, 
+                psize=20,
+                out_file=None,title=None,
+                show=True,
+                remove_tick=False):
+
+    """Plots the data point X colored with the clustering assignment found by FDC class
+
+    """
+    
+    fontsize = 15
+
+    n_center = len(model.idx_centers)
+    cluster_label = model.cluster_label
+    idx_centers = model.idx_centers
+    palette=my_color_palette()
+
+    ax = plt.subplot(111)
+    
+    for i in range(n_center):
+        pos = (cluster_label==i)
+        plt.scatter(X[pos,0], X[pos,1], c=palette[i], s=psize, rasterized=True)
+    
+    centers = X[idx_centers]
+    for xy, i in zip(centers, range(n_center)) :
+        # Position of each label.
+        txt = ax.annotate(str(i),xy,
+        xytext=(0,0), textcoords='offset points',
+        fontsize=20, horizontalalignment='center', verticalalignment='center'
+        )
+        txt.set_path_effects([
+            PathEffects.Stroke(linewidth=5, foreground="w"),
+            PathEffects.Normal()])
+
+    if remove_tick:
+        plt.tick_params(labelbottom='off',labelleft='off')
+    
+    if xlabel is not None:
+        plt.xlabel(xlabel,fontsize=fontsize)
+    if ylabel is not None:
+        plt.ylabel(ylabel,fontsize=fontsize)
+    if zlabel is not None:
+        cb.set_label(label=zlabel,labelpad=10)
+    if title is not None:
+        plt.title(title,fontsize=fontsize)
+    if label is not None:
+        plt.legend(loc='best')
+            
+    plt.tight_layout()
+
+    if out_file is not None:
+        plt.savefig(out_file)
+    if show:
+        plt.show()
+    
 
 def summary_v2(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=20, savefile=None, show=False):
 

@@ -28,9 +28,10 @@ class FDC:
         between 20 and 100.
     
     noise_threshold : float, optional (default : 0.4)
-        Used to determined the extended neighborhood of cluster centers. Points
-        that have a relative density difference of less than "noise_threshold" and 
-        that are density-reachable, are part of the extended neighborhood.
+        Used to merge clusters. This is done by quenching directly to the specified noise threshold
+        (as opposed to progressively coarse-graining). The noise threshold determines the extended 
+        neighborhood of cluster centers. Points that have a relative density difference of less than 
+        "noise_threshold" and that are density-reachable, are part of the extended neighborhood.
 
     random_state: int, optional (default: 0)
         Random number for seeding random number generator. By default, the
@@ -47,13 +48,28 @@ class FDC:
         If you want the bandwidth for kernel density to be set automatically or want to set it yourself.
         By default it is set automatically.
     
-    no_merge: bool,
-
+    merge: bool, optinal (default: True)
+        Optional merging at zero noise threshold, merges overlapping minimal clusters
+    
+    atol: float, optional (default: 0.000005)
+        kernel density estimate precision parameter. determines the precision used for kde.
+        smaller values leads to slower execution but better precision
+    
+    rtol: float, optional (default: 0.00005)
+        kernel density estimate precision parameter. determines the precision used for kde.
+        smaller values leads to slower execution but better precision
+    
+    xtol: float, optional (default: 0.01)
+        precision parameter for optimizing the bandwidth using maximum likelihood on a test set
+    
     """
 
     def __init__(self, nh_size=40, noise_threshold=0.4,
                 random_state=0, test_ratio_size=0.1, verbose=1, bandwidth=None,
-                no_merge=False):
+                merge=True,
+                atol=0.000005,
+                rtol=0.00005,
+                xtol=0.01):
 
         self.test_ratio_size = test_ratio_size
         self.random_state = random_state
@@ -61,7 +77,10 @@ class FDC:
         self.nh_size = nh_size
         self.bandwidth = bandwidth
         self.noise_threshold = noise_threshold
-        self.no_merge=no_merge        
+        self.merge=merge
+        self.atol 
+        self.rtol
+        self.xtol        
 
     def fit(self,X):
         """ Performs density clustering on given data set
@@ -89,15 +108,16 @@ class FDC:
         self.density_model.fit(X)
 
         print("[fdc] Computing density ...")
-        self.rho = self.density_model.evalute_density(X)
+        self.rho = self.density_model.evaluate_density(X)
 
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
         
         print("[fdc] Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
-        print("[fdc] Merging overlapping minimal clusters ...")
-        self.check_cluster_stability_fast(X, 0.) # given 
+        if self.merge: # usually by default one should perform this minimal merging .. 
+            print("[fdc] Merging overlapping minimal clusters ...")
+            self.check_cluster_stability_fast(X, 0.) # given 
 
         if self.noise_threshold >= 1e-3 :
             print("[fdc] Iterating merging up to specified noise threshold ...")
