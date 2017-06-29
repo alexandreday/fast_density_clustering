@@ -14,15 +14,14 @@ import pickle
 
 n_true_center = 15
 print("------> Example with %i true cluster centers <-------"%n_true_center)
-X, y = make_blobs(10000, 2, n_true_center)
-model = FDC(noise_threshold=0.05, nh_size=40)
+X, y = make_blobs(10000, 2, n_true_center) # Generating random gaussian mixture
 
-model.fit(X)
-cluster_label, idx_centers, rho = model.cluster_label, model.idx_centers, model.rho
+model = FDC(noise_threshold=0.05, nh_size=40) # specifying density clustering parameters
 
-plotting.summary(idx_centers, cluster_label, rho, X, n_true_center, y, savefile="result.png",show=True)
+model.fit(X) # performing the clustering
 
-#print("--> Saving in result.dat with format [idx_centers, cluster_label, rho, n_true_center, X, y, delta]")
-#with open("result.dat", "wb") as f:
-#    pickle.dump([idx_centers, cluster_label, rho, n_true_center, X, y, delta],f)
+cluster_label, idx_centers, rho = model.cluster_label, model.idx_centers, model.rho # extracting information for plotting
 
+plotting.set_nice_font() # nicer plotting font !
+
+plotting.summary(idx_centers, cluster_label, rho, X, n_true_center, y, savefile="result.png",show=True) # plotting clusters
