@@ -65,7 +65,7 @@ for i_dataset, dataset in enumerate(datasets):
                  horizontalalignment='right',zorder=2)
     plot_num+=1
 
-plt.suptitle("Local density clustering with \n noise threshold = %.2f and neighborhood size = %i"%(noise_threshold,nh_size))
+plt.suptitle("Local density clustering with noise threshold = %.2f \n and neighborhood size = %i. Number of data points = %i"%(noise_threshold,nh_size,n_samples))
 
 plt.savefig("sklearn_datasets.png")
 #plt.tight_layout()
