@@ -1,6 +1,6 @@
 '''
 Created : Jan 16, 2017
-Last major update : June 26, 2017
+Last major update : June 29, 2017
 
 @author: Alexandre Day
 
@@ -21,45 +21,45 @@ class FDC:
     Parameters
     ----------
 
-    nh_size : int, optional (default: 40)
+    nh_size : int, optional (default = 40)
         Neighborhood size. This is related to the perplexity (in t-SNE)
         and is an effective scale that defines the number of neighbors of each data point.
         Larger datasets usually require a larger perplexity/nh_size. Consider selecting a value
         between 20 and 100.
     
-    noise_threshold : float, optional (default : 0.4)
+    noise_threshold : float, optional (default = 0.4)
         Used to merge clusters. This is done by quenching directly to the specified noise threshold
         (as opposed to progressively coarse-graining). The noise threshold determines the extended 
         neighborhood of cluster centers. Points that have a relative density difference of less than 
         "noise_threshold" and that are density-reachable, are part of the extended neighborhood.
 
-    random_state: int, optional (default: 0)
+    random_state: int, optional (default = 0)
         Random number for seeding random number generator. By default, the
         method generates the same results. This random is used to seed
         the cross-validation (set partitions) which will in turn affect the bandwitdth value
 
-    test_ratio_size: float, optional (default: 0.1)
+    test_ratio_size: float, optional (default = 0.1)
         Ratio size of the test set used when performing maximum likehood estimation.
 
-    verbose: int, optional (default: 1)
+    verbose: int, optional (default = 1)
         Set to 0 if you don't want to see print to screen.
 
-    bandwidth: float, optional (default: None)
+    bandwidth: float, optional (default = None)
         If you want the bandwidth for kernel density to be set automatically or want to set it yourself.
         By default it is set automatically.
     
-    merge: bool, optinal (default: True)
+    merge: bool, optinal (default = True)
         Optional merging at zero noise threshold, merges overlapping minimal clusters
     
-    atol: float, optional (default: 0.000005)
+    atol: float, optional (default = 0.000005)
         kernel density estimate precision parameter. determines the precision used for kde.
         smaller values leads to slower execution but better precision
     
-    rtol: float, optional (default: 0.00005)
+    rtol: float, optional (default = 0.00005)
         kernel density estimate precision parameter. determines the precision used for kde.
         smaller values leads to slower execution but better precision
     
-    xtol: float, optional (default: 0.01)
+    xtol: float, optional (default = 0.01)
         precision parameter for optimizing the bandwidth using maximum likelihood on a test set
     
     """
@@ -78,9 +78,9 @@ class FDC:
         self.bandwidth = bandwidth
         self.noise_threshold = noise_threshold
         self.merge=merge
-        self.atol 
-        self.rtol
-        self.xtol        
+        self.atol = atol
+        self.rtol = rtol
+        self.xtol = xtol 
 
     def fit(self,X):
         """ Performs density clustering on given data set
@@ -104,7 +104,9 @@ class FDC:
         start = time.time()
 
         print("[fdc] Fitting kernel model for density estimation ...")
-        self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size, nh_size=self.nh_size)
+        self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size, nh_size=80,
+            atol=self.atol,rtol=self.rtol,xtol=self.xtol
+        ) # ...
         self.density_model.fit(X)
 
         print("[fdc] Computing density ...")
@@ -169,9 +171,11 @@ class FDC:
         hierarchy = []
         self.max_noise = -1
         n_cluster = 0
+        self.clustering_history = {}
         
         for nt in noise_range:
             self.check_cluster_stability_fast(X, noise_threshold = nt)
+            self.clustering_history[round(nt,3)] = (self.cluster_label,self.idx_centers) # storing for later plotting ... 
             if compute_hierarchy is True:
                 hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
                 if len(self.idx_centers) != n_cluster:
@@ -207,19 +211,24 @@ class FDC:
 
         maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
         
+        if self.density_model.nh_size >= self.nh_size:
+            self.nn_dist, self.nn_list = self.density_model.nn_dist[:,:self.nh_size], self.density_model.nn_list[:,:self.nh_size]
+        else:
+            from sklearn.neighbors import NearestNeighbors
+            self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
+            self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
 
-        nn_dist, nn_list = self.density_model.nn_dist, self.density_model.nn_list
         delta = maxdist*np.ones(n_sample, dtype=np.float)
         nn_delta = np.ones(n_sample, dtype=np.int)
         
         density_graph = [[] for i in range(n_sample)] # store incoming leaves
         
         for i in range(n_sample):
-            idx = index_greater(rho[nn_list[i]])
+            idx = index_greater(rho[self.nn_list[i]])
             if idx:
-                density_graph[nn_list[i,idx]].append(i)
-                nn_delta[i] = nn_list[i,idx]
-                delta[i] = nn_dist[i,idx]
+                density_graph[self.nn_list[i,idx]].append(i)
+                nn_delta[i] = self.nn_list[i,idx]
+                delta[i] = self.nn_dist[i,idx]
             else:
                 nn_delta[i]=-1
         
@@ -297,7 +306,7 @@ def check_cluster_stability(self, X, threshold):
     nn_delta = self.nn_delta
     delta = self.delta
     rho = self.rho
-    nn_list = self.density_model.nn_list
+    nn_list = self.nn_list
     idx_centers = self.idx_centers_unmerged 
     cluster_label = self.cluster_label
 

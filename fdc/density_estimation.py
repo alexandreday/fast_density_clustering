@@ -42,7 +42,8 @@ class KDE():
             self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
             self.bandwidth = self.find_optimal_bandwidth(X)
         else:
-            self.kde=KernelDensity(bandwidth=self.bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean', atol=self.atol, rtol=self.rtol, breadth_first=True, leaf_size=40)
+            self.kde=KernelDensity(bandwidth=self.bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean',
+            atol=self.atol, rtol=self.rtol, breadth_first=True, leaf_size=40)
         
         self.kde.fit(X)
 
@@ -82,7 +83,7 @@ class KDE():
 
         # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
 
-        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=25, xtol=self.xtol, full_output=True)
+        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=100, xtol=self.xtol, full_output=True)
         
         print("      --> Found log-likelihood minima in %i evaluations"%niter)
         
