@@ -338,16 +338,38 @@ def build_dendrogram(hierarchy, noise_range):
     return Z
 
 
+def compute_linkage_matrix(model):
+    from copy import deepcopy
+    
+    assert type(model) == type(FDC()), 'wrong type !'
+    
+    hierarchy = deepcopy(model.hierarchy)
+    noise_range = deepcopy(model.noise_range)
+
+    # ---- PADDING trick --- for plotting purposes  ... 
+    n_elem = len(hierarchy[-1]['cluster_labels'])
+    terminal_cluster = hierarchy[-1]['idx_centers'][0]
+    hierarchy.append({'idx_centers': [terminal_cluster], 'cluster_labels' : np.zeros(n_elem,dtype=int)})
+    noise_range.append(1.5*model.max_noise)
+
+    # -------------------------------------------
+    # -------------------------------------------
+
+    Z = build_dendrogram(hierarchy, noise_range)
+
+    return Z
+
+
+
 def dendrogram(model, show=True, savefile=None):
-    from scipy.cluster.hierarchy import dendrogram
+    from scipy.cluster.hierarchy import dendrogram as scipydendro
+    
     fontsize=15
 
-    hierarchy = model.hierarchy
-    noise_range = model.noise_range
-    Z = build_dendrogram(hierarchy, noise_range)
-    dendrogram(Z)
+    Z = compute_linkage_matrix(model)
+    scipydendro(Z)
 
-    plt.ylim(0,1.2 * model.max_noise)
+    plt.ylim(0, 1.2 * model.max_noise)
 
     plt.xlabel('cluster $\#$',fontsize=fontsize)
     plt.ylabel('$\delta$',fontsize=fontsize)

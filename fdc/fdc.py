@@ -150,7 +150,7 @@ class FDC:
                 
         enablePrint()
 
-    def coarse_grain(self, X, noise_threshold_i, noise_threshold_f, dnt, compute_hierarchy = False):
+    def coarse_grain(self, X, noise_threshold_i, noise_threshold_f, dnt):
         """Started from an initial noise scale, progressively merges clusters.
         If specified, saves the cluster assignments at every level of the coarse graining if specified.
 
@@ -176,18 +176,14 @@ class FDC:
         for nt in noise_range:
             self.check_cluster_stability_fast(X, noise_threshold = nt)
             self.clustering_history[round(nt,3)] = (self.cluster_label,self.idx_centers) # storing for later plotting ... 
-            if compute_hierarchy is True:
-                hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
-                if len(self.idx_centers) != n_cluster:
-                    n_cluster = len(self.idx_centers)
-                    self.max_noise = nt
-    
-        if compute_hierarchy is True:
-            terminal_cluster = hierarchy[-1]['idx_centers'][0]
-            hierarchy.append({'idx_centers': [terminal_cluster], 'cluster_labels' : np.zeros(len(self.cluster_label),dtype=int)})
-            noise_range.append(1.5*self.max_noise)
-            self.hierarchy = hierarchy
-            self.noise_range = noise_range
+            
+            hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
+            if len(self.idx_centers) != n_cluster:
+                n_cluster = len(self.idx_centers)
+                self.max_noise = nt
+
+        self.hierarchy = hierarchy
+        self.noise_range = noise_range
 
         enablePrint()
  
