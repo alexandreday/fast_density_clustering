@@ -7,6 +7,7 @@ def main():
     import sys
     #import plotting # custom plotting functions
     from fdc.special_datasets import gaussian_mixture
+    from fdc.hierarchy import compute_linkage_matrix
     import fdc.plotting as plotting
     from sklearn import datasets
     import pickle
@@ -35,6 +36,13 @@ def main():
 
     f=open('model.pkl','rb')
     model = pickle.load(f)
+
+    rho = model.rho
+    Z = compute_linkage_matrix(model)
+
+    ### LEFT IT HERE ... WITH Z AND HIERARCHY, CAN BUILD CLASSIFICATION TREE
+
+    print(Z)
     
     #print(model.hierarchy[-2])
     #exit()
@@ -44,9 +52,9 @@ def main():
 
     #print(cluster_label)
     #exit()
-    rho = model.rho
+    #rho = model.rho
     #plotting.density_map(X,rho)
-    plotting.dendrogram(model)
+    #plotting.dendrogram(model)
     #print(plotting.dendrogram(model.hierarchy,np.arange(0.01,0.2,0.01)))
 
     # build a tree, where each cell contains a classifier --> 
