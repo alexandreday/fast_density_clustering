@@ -46,7 +46,8 @@ def main():
     #exit()
     rho = model.rho
     #plotting.density_map(X,rho)
-    print(plotting.build_dendrogram(model.hierarchy,np.arange(0.01,0.2,0.01)))
+    plotting.dendrogram(model)
+    #print(plotting.dendrogram(model.hierarchy,np.arange(0.01,0.2,0.01)))
 
     # build a tree, where each cell contains a classifier --> 
     exit()
