@@ -14,4 +14,4 @@ linkage.txt
 test2.py
 .DS_Store
 __pycache__/
-testing/*
+fdc/testing/*
