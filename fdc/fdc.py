@@ -172,6 +172,8 @@ class FDC:
         self.max_noise = -1
         n_cluster = 0
         self.clustering_history = {}
+
+        # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
         
         for nt in noise_range:
             self.check_cluster_stability_fast(X, noise_threshold = nt)
