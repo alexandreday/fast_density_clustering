@@ -96,6 +96,8 @@ class FDC:
         self
         """
 
+        self.X = X  # shallow copy 
+
         if self.verbose == 0:
             blockPrint()
 

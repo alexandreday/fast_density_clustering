@@ -99,14 +99,15 @@ def scatter_w_label(x,y,z,psize=20):
         plt.scatter(x[pos],y[pos],s=psize,c=contrast_colors(i), rasterized=True)
     plt.show()
 
-def summary(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=20, savefile=None, show=False):
+def summary(idx_centers, cluster_label, rho, X, delta = None, n_true_center=1, y=None, psize=20, savefile=None, show=False):
+    """ Summary plots : original labels (if available), inferred labels and density map used for clustering """
 
     fontsize=15
     n_sample=X.shape[0]
     n_center=idx_centers.shape[0]
     palette=my_color_palette()
     
-    plt.figure(1,figsize=(20,10))
+    plt.figure(1,figsize=(22,10))
 
     plt.subplot(131)
     plt.title('True labels',fontsize=fontsize)
@@ -133,7 +134,19 @@ def summary(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=2
         txt.set_path_effects([
             PathEffects.Stroke(linewidth=5, foreground="w"),
             PathEffects.Normal()])
+    
+    xmin,xmax = plt.xlim()
+    ymin,ymax = plt.ylim()
+    dx = xmax - xmin
+    dy = ymax - ymin
 
+    if delta is not None: # displaying delta parameter
+        txt = ax.annotate("$\delta=%.2f$"%delta,[xmin+0.15*dx,ymin+0.05*dy], xytext=(0,0), textcoords='offset points',
+        fontsize=20,horizontalalignment='center', verticalalignment='center')
+        txt.set_path_effects([
+            PathEffects.Stroke(linewidth=5, foreground="w"),
+            PathEffects.Normal()])
+    
     plt.title('Inferred labels',fontsize=fontsize)
     plt.tight_layout()
     plt.subplot(133)
@@ -145,6 +158,23 @@ def summary(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=2
         plt.show()
 
     plt.clf()
+
+def summary_model(model, delta= None, show=True, savefile = None):
+    """ Summary figure passing in only an FDC object (model), noise can be specified via the delta parameter """
+    
+    if delta is None:
+        delta_ = model.noise_range[-1]
+        idx_centers = model.idx_centers
+        cluster_label = model.cluster_label
+    else:
+        pos = np.argmin(np.abs(np.array(model.noise_range)-delta))
+        delta_ = model.noise_range[pos]
+        idx_centers = model.hierarchy[pos]['idx_centers']
+        cluster_label = model.hierarchy[pos]['cluster_labels']
+
+    rho = model.rho
+    X = model.X
+    summary(idx_centers, cluster_label, rho, X, delta = delta_, show=show, savefile=savefile)
 
 def cluster_w_label(X, model:FDC,
                 xlabel=None,ylabel=None,zlabel=None,label=None, 
@@ -210,6 +240,7 @@ def cluster_w_label(X, model:FDC,
     
 
 def summary_v2(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=20, savefile=None, show=False):
+    """ Summary plots w/o density map """
 
     fontsize=15
     n_sample=X.shape[0]
