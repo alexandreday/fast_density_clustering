@@ -55,6 +55,7 @@ def main():
     #fopen = open('model_2.pkl','wb')
     #pickle.dump(model,fopen)
     #exit()
+
     fopen = open('model_2.pkl','rb')
     model = pickle.load(fopen)
     model.X = X
@@ -74,8 +75,22 @@ def main():
     merger_to_mathematica(mergers, out_file = 'test.txt')
     exit()
 
+def sample_root_labels(root, model):
+    childs = root.get_child()
+    n_sample = len(model.X)
+    y = -1*np.ones(n_sample,dtype=np.int)
+    y_init = model.hierarchy[0]['cluster_labels']
+
+    for i, c in enumerate(childs):
+        init_c = find_idx_cluster_in_root(model, c)
+        for ic in init_c:
+            y[y_init == ic] = i # assigns arbitray label, just set by ordering of the childrens.
+
+    return y
+    
 
 def find_mergers(hierarchy , noise_range):
+
     """ Determines the list of merges that are made during the coarse-graining """
     
     n_depth = len(noise_range)
@@ -128,8 +143,23 @@ def find_mergers(hierarchy , noise_range):
     return merger_record
 
 def build_tree(model):
-    """ Given hierachy, builds a tree of the clusterings 
-        The nodes are class objects define in the class TreeNode
+    """Given hierachy, builds a tree of the clusterings. The nodes are class objects define in the class TreeNode
+
+    Parameters
+    ---------
+    model : object from the FDC class
+        contains the fitted hierarchy produced via the coarse_graining() method
+    
+    Returns
+    ---------
+    tuple = (root, node_dict, mergers)
+
+    root : TreeNode class object
+        root of the tree
+    node_dict : dictionary of TreeNode objects. 
+        Objects are stored by their merger ID
+    mergers :
+        list of nodes being merged with the corresponding scale of merging
     """
 
     mergers = find_mergers(model.hierarchy , model.noise_range)
