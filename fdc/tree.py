@@ -1,12 +1,11 @@
-from fdc import FDC
+from .fdc import FDC
+import classify
 import numpy as np
-from sklearn.datasets import make_blobs
-from fdc import plotting
+from .fdc import plotting
 import pickle
 from scipy.cluster.hierarchy import dendrogram as scipydendro
-from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import to_tree
-from fdc.hierarchy import compute_linkage_matrix
+from .fdc.hierarchy import compute_linkage_matrix
 
 class TreeNode:
 
@@ -21,8 +20,13 @@ class TreeNode:
     def is_leaf(self):
         return len(self.child) == 0
 
-    def get_child(self):
-        return self.child
+    def get_child(self, id = None):
+        if id is None:
+            return self.child
+        else:
+            for c in self.child:
+                if c.get_id() == id:
+                    return c
 
     def get_scale(self):
         return self.scale
@@ -38,44 +42,39 @@ class TreeNode:
         child.reverse()
         return child 
 
-def main():
+def score_merge(root, model, X, n_average = 10):
+    """ Using a logistic regression multi-class classifier, determines the merges that are statistically
+    signicant based on a CV prediction score. Returns a robust clustering in the original space.
+    """
 
-    #X,y = make_blobs(n_samples=10000, centers = 20, random_state=0)
+    y = tree.classification_labels(root, model)
+
+    pos_subset =  (y != -1)
+    Xsubset = X[pos_subset] # original space coordinates
+    ysubset = y[pos_subset] # labels
+
+    results = classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
+
+    return results['mean_score']
     
-    
-    f = open('/Users/robertday/Dropbox/Work/Project_PHD/Immunology/analysis/scripts/tsne/tsne.pkl','rb')
-    #print('Final score is : ', model_tsne.KLscore_[-1])
-    [score, X] = pickle.load(f)
-    #plt.scatter(X[:,0],X[:,1])
 
-    #model = FDC(noise_threshold=0.0, nh_size = 40, test_ratio_size = 0.2, xtol = 0.001, atol=0.0000005, rtol=0.0000005)
-    #model.fit(X)
-    #model.coarse_grain(X,0.0,3.5,0.01)
+def classification_labels(root, model):
+    """ Returns a list of labels for the original data according to the classification
+    given at root. root is a TreeNode object which contains childrens. Each children (and the data it contains)
+    is assigned an arbitrary integer label. Data points not contained in that node are labelled as -1.
 
-    #fopen = open('model_2.pkl','wb')
-    #pickle.dump(model,fopen)
-    #exit()
+    Parameters
+    -------
+    root : TreeNode
 
-    fopen = open('model_2.pkl','rb')
-    model = pickle.load(fopen)
-    model.X = X
-    #plotting.dendrogram(model)
-    #plotting.summary_model(model, delta = 1.5)
-    print(len(model.hierarchy[0]['idx_centers']))
-    
-    root, node_dict, mergers  = build_tree(model)  ## --- starting from root , perform classification with soft-max ?
-    #print(mergers) # classify each mergers !
-    print(mergers[0])
-    print(find_idx_cluster_in_root(model, node_dict[mergers[0][0][5]]))
+    model : FDC object
 
-    #print(find_idx_cluster_in_root(model, root.get_child()[0]))
+    Returns
+    --------
+    1D array of labels
 
-    ########### --------- ################# ----------------- ##########
+    """
 
-    merger_to_mathematica(mergers, out_file = 'test.txt')
-    exit()
-
-def sample_root_labels(root, model):
     childs = root.get_child()
     n_sample = len(model.X)
     y = -1*np.ones(n_sample,dtype=np.int)
@@ -87,7 +86,6 @@ def sample_root_labels(root, model):
             y[y_init == ic] = i # assigns arbitray label, just set by ordering of the childrens.
 
     return y
-    
 
 def find_mergers(hierarchy , noise_range):
 
@@ -268,5 +266,3 @@ def merger_to_mathematica(mergers, out_file = None):
                 if p != pointers[-1]: 
                     f.write(',')
         f.close()
-if __name__=="__main__":
-    main()
