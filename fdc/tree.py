@@ -48,23 +48,26 @@ def identify_robust_merge(model, X, n_average = 10, score_threshold = 0.5):
     stack = [root]
     node_list = []
 
-    # breath-first search
+    # breath-first search from the root
     while stack:
         current_node = stack[0]
         stack = stack[1:]
-        if not current_node.is_leaf():
+        if current_node.is_leaf():
+            score = 1.0
+        else:
             score = score_merge(current_node, model, X, n_average = n_average)
-            if score > score_threshold: # --- search stops if --- # --- # --- #
-                node_list.append(current_node.get_id())
+        
+        if score > score_threshold: # --- search stops if --- # --- # --- #
+            node_list.append([current_node.get_id(), score])
 
-                if not current_node.is_leaf():
-                    for node in current_node.get_child():
-                        stack.append(node)
-            else:
-                print("node ", current_node.get_id(), " below threshold")
+            if not current_node.is_leaf():
+                for node in current_node.get_child():
+                    stack.append(node)
+        else:
+            print("node ", current_node.get_id(), " below threshold")
 
     if len(node_list) == 0:
-        return [root.get_id()], root, node_dict, mergers
+        return [[root.get_id(), -1]], root, node_dict, mergers
     else:
         return node_list, root, node_dict, mergers
 
@@ -73,36 +76,45 @@ def find_robust_labelling(model, X, n_average = 10, score_threshold = 0.5):
     and relabels the data accordingly
     """
 
-    node_list, root, node_dict, mergers = identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
-
+    node_info_list, root, node_dict, mergers = identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
+    merger_to_mathematica(mergers, out_graph_file="graph.txt")
+    
     robust_terminal_node = []
-    print(node_list)
+    node_list = []
+    for n in node_info_list:
+        node_list.append(n[0])
 
     for node_id in node_list:
-        print(node_id)
         node = node_dict[node_id]
-        child_list = breath_first_search(node)
-        print(child_list)
-        print("-----")
-        if set(child_list[1:]).isdisjoint(set(node_list)):
+        if node.is_leaf():
             robust_terminal_node.append(node_id)
-
+        else:
+            for c in node.get_child():
+                if c.get_id() not in node_list:
+                    robust_terminal_node.append(c.get_id())
+    
     cluster_n = 0
     n_sample = len(model.X)
     y_robust = -1*np.ones(n_sample,dtype=np.int)
+    y_original = model.hierarchy[0]['cluster_labels']
+    #print(np.unique(model.hierarchy[0]['cluster_labels']) # using this info complete the labelling for the leaves !
 
     for node_id in robust_terminal_node:
+        print("node = ", node_id)
         node = node_dict[node_id]
         y_node = classification_labels(node, model)
-        #pos = (y_node != -1)
-        #y_sub = y_node[pos]
-        n_unique = len(node.get_child())
-        for i in range(n_unique):
-            pos = (y_node == i)
+        if node.is_leaf():
+            pos = (y_node == 0)
             y_robust[pos] = cluster_n
             cluster_n +=1
-
-    return y_robust, robust_terminal_node
+        else:
+            n_unique = len(node.get_child())
+            for i in range(n_unique):
+                pos = (y_node == i)
+                y_robust[pos] = cluster_n
+                cluster_n +=1
+            
+    return y_robust, robust_terminal_node, node_list
 
 def check_all_merge(model, X, n_average = 10):
     root, node_dict, mergers  = build_tree(model)  ## ---> starting from root , perform classification with soft-max <---
@@ -160,11 +172,14 @@ def classification_labels(root, model):
     y = -1*np.ones(n_sample,dtype=np.int)
     y_init = model.hierarchy[0]['cluster_labels']
 
-    for i, c in enumerate(childs):
-        init_c = find_idx_cluster_in_root(model, c)
-        for ic in init_c:
-            y[y_init == ic] = i # assigns arbitray label, just set by ordering of the childrens.
-
+    if root.is_leaf():
+        init_c = root.get_id()
+        y[y_init == init_c] = 0
+    else:
+        for i, c in enumerate(childs):
+            init_c = find_idx_cluster_in_root(model, c)
+            for ic in init_c:
+                y[y_init == ic] = i # assigns arbitray label, just set by ordering of the childrens.
     return y
 
 def find_mergers(hierarchy , noise_range):
