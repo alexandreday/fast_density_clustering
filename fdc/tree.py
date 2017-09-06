@@ -8,11 +8,11 @@ from .hierarchy import compute_linkage_matrix
 
 class TreeNode:
 
-    def __init__(self, id = -1, child = [], scale = -1):
+    def __init__(self, id = -1, parent = None, child = [], scale = -1):
         self.child = child # has to be list of TreeNode
         self.scale = scale
+        self.parent = parent
         self.id = id
-
     def __repr__(self):
         return ("Node: [%s] @ s = %.3f" % (self.id,self.scale))
 
@@ -41,143 +41,215 @@ class TreeNode:
         child.reverse()
         return child 
 
-
-def identify_robust_merge(model, X, n_average = 10, score_threshold = 0.5):
-    """Starting from the root, goes down the tree and evaluates which clustering node are robust
-    It returns a list of the nodes for which their corresponding clusters are well defined according to 
-    a logistic regression and a score_threshold given by the user
+class TreeStructure:
+    """ Contains all the hierachy and information concerning the clustering
     """
+    def __init__(self, root = None, shallow_copy = None):
+        self.root = root
+        self.node_dict = None
+        self.mergers = None
+        self.robust_node = None
+        self.new_cluster_label = None
+        self.robust_terminal_node = None
+        self.clf_node_info = None
+        self.new_idx_centers = None
+        self.tree_constructed = False
 
-    root, node_dict, mergers  = build_tree(model)  # Extracts all the information from model and outputs a tree
-    
-    stack = [root]
-    node_list = []
-    result = {}
+    def build_tree(self, model):
+        """Given hierachy, builds a tree of the clusterings. The nodes are class objects define in the class TreeNode
 
-    # breath-first search from the root
-    while stack:
-        current_node = stack[0]
-        stack = stack[1:]
-        if current_node.is_leaf():
-            score = 1.0
-        else:
-            result = score_merge(current_node, model, X, n_average = n_average)
-            score = result['mean_score']
+        Parameters
+        ---------
+        model : object from the FDC class
+            contains the fitted hierarchy produced via the coarse_graining() method
         
-        if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-            node_list.append([current_node.get_id(), score, result]) # result contains the info for the gates
+        Returns
+        ---------
+        tuple = (root, node_dict, mergers)
 
+        root : TreeNode class object
+            root of the tree
+        node_dict : dictionary of TreeNode objects. 
+            Objects are stored by their merger ID
+        mergers :
+            list of nodes being merged with the corresponding scale of merging
+        """
+        if self.tree_constructed is True:
+            return
+
+        mergers = find_mergers(model.hierarchy , model.noise_range)
+        mergers.reverse()
+        
+        node_dict = {}
+        
+        m = mergers[0]
+        root = TreeNode(id = m[1], scale = m[2])
+        node_dict[root.get_id()] = root
+        
+        for m in mergers:
+            for mc in m[0]:
+                c_node = TreeNode(id = mc, parent = node_dict[m[1]], child = [], scale = -1)
+                node_dict[m[1]].add_child(c_node)
+                node_dict[c_node.get_id()] = c_node
+            node_dict[m[1]].scale = m[2]
+
+        self.root = root
+        self.node_dict = node_dict
+        self.mergers = mergers
+        self.tree_constructed = True
+
+    def identify_robust_merge(self, model, X, n_average = 10, score_threshold = 0.5):
+        """Starting from the root, goes down the tree and evaluates which clustering node are robust
+        It returns a list of the nodes for which their corresponding clusters are well defined according to 
+        a logistic regression and a score_threshold given by the user
+        """
+
+        self.build_tree(model)  # Extracts all the information from model and outputs a tree    
+
+        root, node_dict, mergers = self.root, self.node_dict, self.mergers
+
+        stack = [root]
+        node_list = []
+        result = {}
+
+        # breath-first search from the root
+        while stack:
+            current_node = stack[0]
+            stack = stack[1:]
             if not current_node.is_leaf():
-                for node in current_node.get_child():
-                    stack.append(node)
-        else:
-            print("node ", current_node.get_id(), " below threshold")
-
-    result = {'robust_node': node_list, 'root': root, 'node_dict': node_dict, 'mergers': mergers}
+                result_classify = score_merge(current_node, model, X, n_average = n_average)
+                score = result_classify['mean_score']
+                
+                if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+                    node_list.append([current_node.get_id(), score, result_classify]) # result contains the info for the gates
+                    for node in current_node.get_child():
+                        stack.append(node)
+                else:
+                    print("[tree.py] : node ", current_node.get_id()," %.4f < %.4f"%(score, score_threshold))
+            else:
+                node_list.append([current_node.get_id(), 1.0, -1.0])
     
-    if len(node_list) == 0:
-        node_list = [[root.get_id(), -1]]
-    
-    return result
+        if len(node_list) == 0:
+            node_list = [[root.get_id(), -1]]
 
-def find_robust_labelling(model, X, n_average = 10, score_threshold = 0.5):
-    """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
-    and relabels the data accordingly
-    """
+        self.robust_node = node_list 
 
-    result = identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
-    
-    node_info_list = result['robust_node']
-    root = result['root']
-    node_dict = result['node_dict']
-    mergers = result['mergers']
-    
-    merger_to_mathematica(mergers, out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
-    
-    robust_terminal_node = [] # we want to remove ancestors and only keep the finest scales possible
-    node_list = []
-    for n in node_info_list:
-        node_list.append(n[0])
+        
+    def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
+        """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
+        and relabels the data accordingly
+        """
 
-    for node_id in node_list:
-        node = node_dict[node_id]
-        if node.is_leaf():
-            robust_terminal_node.append(node_id)
-        else:
-            for c in node.get_child():
-                if c.get_id() not in node_list:
-                    robust_terminal_node.append(c.get_id())
-    
-    ###################
-    ###################
-    # RELABELLING DATA !
-    ###################
-    ###################
+        self.identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
+        
+        root = self.root
+        node_dict = self.node_dict
+        mergers = self.mergers
+        
+        merger_to_mathematica(mergers, out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
+        
+        robust_terminal_node = [] # we want to remove ancestors and only keep the finest scales possible
 
-    cluster_n = 0
-    n_sample = len(model.X)
-    y_robust = -1*np.ones(n_sample,dtype=np.int)
-    y_original = model.hierarchy[0]['cluster_labels']
+        node_list = []
+        result_list = []
 
-    for node_id in robust_terminal_node:
-        node = node_dict[node_id]
-        y_node = classification_labels(node, model)
-        if node.is_leaf():
-            pos = (y_node == 0)
-            y_robust[pos] = cluster_n
-            cluster_n +=1
-        else:
-            n_unique = len(node.get_child())
-            for i in range(n_unique):
-                pos = (y_node == i)
+        for e in self.robust_node:
+            node_list.append(e[0])
+            result_list.append(e[-1])
+        
+        for node_id in node_list:
+            node = node_dict[node_id]
+            if node.is_leaf():
+                robust_terminal_node.append(node_id)
+            else:
+                for c in node.get_child():
+                    if c.get_id() not in node_list:
+                        robust_terminal_node.append(c.get_id())
+        
+        ###################
+        ###################
+        # RELABELLING DATA !
+        ###################
+        ###################
+
+        cluster_n = 0
+        n_sample = len(model.X)
+        y_robust = -1*np.ones(n_sample,dtype=np.int)
+        y_original = model.hierarchy[0]['cluster_labels']
+
+        for node_id in robust_terminal_node:
+            node = node_dict[node_id]
+            y_node = classification_labels(node, model)
+            if node.is_leaf():
+                pos = (y_node == 0)
                 y_robust[pos] = cluster_n
                 cluster_n +=1
-    
-    new_idx_centers = []
-    
-    all_idx = np.arange(0,model.X.shape[0],dtype=int)
-    for i in range(cluster_n):
-        pos_i = (y_robust == i)
-        max_rho = np.argmax(model.rho[y_robust == i])
-        idx_i = all_idx[pos_i][max_rho]
-        new_idx_centers.append(idx_i)
+            else:
+                n_unique = len(node.get_child())
+                for i in range(n_unique):
+                    pos = (y_node == i)
+                    y_robust[pos] = cluster_n
+                    cluster_n +=1
 
-    return y_robust, robust_terminal_node, node_list, np.array(new_idx_centers,dtype=int)
+        if len(robust_terminal_node) == 0:
+            y_robust *= 0 # only one coloring !
+            cluster_n = 1
+        
+        new_idx_centers = []
+        
+        all_idx = np.arange(0,model.X.shape[0],dtype=int)
+        for i in range(cluster_n):
+            pos_i = (y_robust == i)
+            max_rho = np.argmax(model.rho[y_robust == i])
+            idx_i = all_idx[pos_i][max_rho]
+            new_idx_centers.append(idx_i)
 
-def check_all_merge(model, X, n_average = 10):
-    root, node_dict, mergers  = build_tree(model)  ## ---> starting from root , perform classification with soft-max <---
-    #mergers.reverse() # starts from the coarse grain scale
-    #print(mergers)
-    for merger in mergers :
-        node_id = merger[1]
-        node = node_dict[node_id]
+        self.new_cluster_label = y_robust
+        self.robust_terminal_node = robust_terminal_node
+        self.clf_node_info = dict(zip(node_list,result_list))
+        self.new_idx_centers = np.array(new_idx_centers,dtype=int)
 
-        y = classification_labels(node, model)
-        pos_subset =  (y != -1)
-        Xsubset = X[pos_subset]
-        ysubset = y[pos_subset]
+    def check_all_merge(self, model, X, n_average = 10):
+        from copy import deepcopy
 
-        results = classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0) # contains the information about the gates 
-        merger.append(results['mean_score']) ## ---> adding classification score to nodes
+        self.build_tree(model)
+        root = self.root
+        node_dict = self.node_dict
+        mergers = deepcopy(self.mergers)
+        node_list = []
+        
+        for merger in mergers :
+            node_id = merger[1]
+            node = node_dict[node_id]
 
-        merger_to_mathematica(mergers, out_graph_file="graph.txt", out_score_file = 'score.txt') # for visualizing, just run the attached mathematica file
+            y = classification_labels(node, model)
+            pos_subset =  (y != -1)
+            Xsubset = X[pos_subset]
+            ysubset = y[pos_subset]
 
-    return root, node_dict, mergers, results 
+            results = classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0) # contains the information about the gates 
+            merger.append(results['mean_score']) ## ---> adding classification score to nodes
+            node_list.append([node_id,results['mean_score'], results])
+
+            merger_to_mathematica(mergers, out_graph_file='graph.txt', out_score_file = 'score.txt') # for visualizing, just run the attached mathematica file
+
+        self.all_nodes = node_list # full classifcation results
 
 def score_merge(root, model, X, n_average = 10):
     """ Using a logistic regression multi-class classifier, determines the merges that are statistically
     signicant based on a CV prediction score. Returns a robust clustering in the original space.
     """
-    #print(root.get_id())
+    
 
     y = classification_labels(root, model)
+    
 
     pos_subset =  (y != -1)
     Xsubset = X[pos_subset] # original space coordinates
     ysubset = y[pos_subset] # labels
 
     results = classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
-
+    
     return results
   
 def classification_labels(root, model):
@@ -196,8 +268,8 @@ def classification_labels(root, model):
     1D array of labels
 
     """
-
     childs = root.get_child()
+    
     n_sample = len(model.X)
     y = -1*np.ones(n_sample,dtype=np.int)
     y_init = model.hierarchy[0]['cluster_labels']
@@ -265,49 +337,14 @@ def find_mergers(hierarchy , noise_range):
 
     return merger_record
 
-def build_tree(model):
-    """Given hierachy, builds a tree of the clusterings. The nodes are class objects define in the class TreeNode
 
-    Parameters
-    ---------
-    model : object from the FDC class
-        contains the fitted hierarchy produced via the coarse_graining() method
-    
-    Returns
-    ---------
-    tuple = (root, node_dict, mergers)
 
-    root : TreeNode class object
-        root of the tree
-    node_dict : dictionary of TreeNode objects. 
-        Objects are stored by their merger ID
-    mergers :
-        list of nodes being merged with the corresponding scale of merging
-    """
+########################################################################################
+########################################################################################
+################################# UTILITY FUNCTIONS ####################################
+########################################################################################
+########################################################################################
 
-    mergers = find_mergers(model.hierarchy , model.noise_range)
-    mergers.reverse()
-    
-    node_dict = {}
-
-    m = mergers[0]
-
-    child_list = [TreeNode(id = mc, child = [], scale = -1) for mc in m[0]]
-    root = TreeNode(id = m[1], child = child_list, scale=m[2])
-    
-    node_dict[root.get_id()] = root
-
-    for c in root.get_child():
-        node_dict[c.get_id()] = c
-
-    for m in mergers[1:]:
-        child_list = [TreeNode(id = mc, child = [], scale = -1) for mc in m[0]]
-        node_dict[m[1]].child = child_list
-        node_dict[m[1]].scale = m[2]
-        for c in child_list:
-            node_dict[c.get_id()] = c
-
-    return root, node_dict, mergers 
 
 def apply_map(mapdict, k):
     old_idx = k
