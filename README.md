@@ -1,9 +1,12 @@
 # Fast density clustering (fdc)
-Python code for clustering two dimensional data using kernel density maps to construct a density graph. Examples for gaussian mixtures and some benchmarks are provided. Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters. It uses cross-validation and is regularized by two main global parameters : a neighborhood
+Python package for clustering two dimensional data using kernel density maps to construct a density graph. Examples for gaussian mixtures and some benchmarks are provided. Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters. It uses cross-validation and is regularized by two main global parameters : a neighborhood
 size and a noise threshold measure. The later detects spurious cluster centers while the former guarantees that only local information is used to infer cluster centers (we avoid using long distance information). 
 
 The underlying code is based on fast KD-trees for nearest-neighbor searches O(n log n). While the algorithm is well suited for small datasets with meaningful densities, it works quite well on large datasets 
 (c.g. for N=10000, run time is a few seconds).
+
+  # High-dimensional data clustering
+  Our approach can be combined with high-dimensional data. Density maps are estimated on a projected or a low dimensional representation of the high-dimensional data. The statistical significance of each clusters (wether it is noise or not) is then evaluated using multi-class logistic regression. Example of the full method coming soon !
 
 # Running
 NOTE: you will need a python3 version to run this code.
