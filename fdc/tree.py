@@ -43,10 +43,16 @@ class TreeNode:
 
 
 def identify_robust_merge(model, X, n_average = 10, score_threshold = 0.5):
+    """Starting from the root, goes down the tree and evaluates which clustering node are robust
+    It returns a list of the nodes for which their corresponding clusters are well defined according to 
+    a logistic regression and a score_threshold given by the user
+    """
 
-    root, node_dict, mergers  = build_tree(model)  ## ---> starting from root , perform classification with soft-max <---
+    root, node_dict, mergers  = build_tree(model)  # Extracts all the information from model and outputs a tree
+    
     stack = [root]
     node_list = []
+    result = {}
 
     # breath-first search from the root
     while stack:
@@ -55,10 +61,11 @@ def identify_robust_merge(model, X, n_average = 10, score_threshold = 0.5):
         if current_node.is_leaf():
             score = 1.0
         else:
-            score = score_merge(current_node, model, X, n_average = n_average)
+            result = score_merge(current_node, model, X, n_average = n_average)
+            score = result['mean_score']
         
-        if score > score_threshold: # --- search stops if --- # --- # --- #
-            node_list.append([current_node.get_id(), score])
+        if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+            node_list.append([current_node.get_id(), score, result]) # result contains the info for the gates
 
             if not current_node.is_leaf():
                 for node in current_node.get_child():
@@ -66,20 +73,28 @@ def identify_robust_merge(model, X, n_average = 10, score_threshold = 0.5):
         else:
             print("node ", current_node.get_id(), " below threshold")
 
+    result = {'robust_node': node_list, 'root': root, 'node_dict': node_dict, 'mergers': mergers}
+    
     if len(node_list) == 0:
-        return [[root.get_id(), -1]], root, node_dict, mergers
-    else:
-        return node_list, root, node_dict, mergers
+        node_list = [[root.get_id(), -1]]
+    
+    return result
 
 def find_robust_labelling(model, X, n_average = 10, score_threshold = 0.5):
     """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
     and relabels the data accordingly
     """
 
-    node_info_list, root, node_dict, mergers = identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
-    merger_to_mathematica(mergers, out_graph_file="graph.txt")
+    result = identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
     
-    robust_terminal_node = []
+    node_info_list = result['robust_node']
+    root = result['root']
+    node_dict = result['node_dict']
+    mergers = result['mergers']
+    
+    merger_to_mathematica(mergers, out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
+    
+    robust_terminal_node = [] # we want to remove ancestors and only keep the finest scales possible
     node_list = []
     for n in node_info_list:
         node_list.append(n[0])
@@ -93,14 +108,18 @@ def find_robust_labelling(model, X, n_average = 10, score_threshold = 0.5):
                 if c.get_id() not in node_list:
                     robust_terminal_node.append(c.get_id())
     
+    ###################
+    ###################
+    # RELABELLING DATA !
+    ###################
+    ###################
+
     cluster_n = 0
     n_sample = len(model.X)
     y_robust = -1*np.ones(n_sample,dtype=np.int)
     y_original = model.hierarchy[0]['cluster_labels']
-    #print(np.unique(model.hierarchy[0]['cluster_labels']) # using this info complete the labelling for the leaves !
 
     for node_id in robust_terminal_node:
-        print("node = ", node_id)
         node = node_dict[node_id]
         y_node = classification_labels(node, model)
         if node.is_leaf():
@@ -113,8 +132,17 @@ def find_robust_labelling(model, X, n_average = 10, score_threshold = 0.5):
                 pos = (y_node == i)
                 y_robust[pos] = cluster_n
                 cluster_n +=1
-            
-    return y_robust, robust_terminal_node, node_list
+    
+    new_idx_centers = []
+    
+    all_idx = np.arange(0,model.X.shape[0],dtype=int)
+    for i in range(cluster_n):
+        pos_i = (y_robust == i)
+        max_rho = np.argmax(model.rho[y_robust == i])
+        idx_i = all_idx[pos_i][max_rho]
+        new_idx_centers.append(idx_i)
+
+    return y_robust, robust_terminal_node, node_list, np.array(new_idx_centers,dtype=int)
 
 def check_all_merge(model, X, n_average = 10):
     root, node_dict, mergers  = build_tree(model)  ## ---> starting from root , perform classification with soft-max <---
@@ -129,16 +157,18 @@ def check_all_merge(model, X, n_average = 10):
         Xsubset = X[pos_subset]
         ysubset = y[pos_subset]
 
-        results = classify.fit_logit(Xsubset, ysubset, C = 1.0)
+        results = classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0) # contains the information about the gates 
         merger.append(results['mean_score']) ## ---> adding classification score to nodes
 
-    return root, node_dict, mergers
+        merger_to_mathematica(mergers, out_graph_file="graph.txt", out_score_file = 'score.txt') # for visualizing, just run the attached mathematica file
+
+    return root, node_dict, mergers, results 
 
 def score_merge(root, model, X, n_average = 10):
     """ Using a logistic regression multi-class classifier, determines the merges that are statistically
     signicant based on a CV prediction score. Returns a robust clustering in the original space.
     """
-    print(root.get_id())
+    #print(root.get_id())
 
     y = classification_labels(root, model)
 
@@ -148,7 +178,7 @@ def score_merge(root, model, X, n_average = 10):
 
     results = classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
 
-    return results['mean_score']
+    return results
   
 def classification_labels(root, model):
     """ Returns a list of labels for the original data according to the classification
