@@ -175,7 +175,7 @@ def summary_model(model, delta= None, show=True, savefile = None, delta_show = T
 
     rho = model.rho
     X = model.X
-    summary(idx_centers, cluster_label, rho, X, delta = delta_, show=show, savefile=savefile)
+    summary(idx_centers, cluster_label, rho, X, delta = delta_, show=show, savefile=savefile, delta_show=delta_show)
 
 def cluster_w_label(X, model:FDC,
                 xlabel=None,ylabel=None,zlabel=None,label=None, 

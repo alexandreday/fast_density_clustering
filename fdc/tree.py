@@ -146,7 +146,7 @@ class TreeStructure:
         node_dict = self.node_dict
         mergers = self.mergers
         
-        merger_to_mathematica(mergers, out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
+        self.write_graph_to_mathematica(out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
         
         robust_terminal_node = [] # we want to remove ancestors and only keep the finest scales possible
 
@@ -176,6 +176,7 @@ class TreeStructure:
         n_sample = len(model.X)
         y_robust = -1*np.ones(n_sample,dtype=np.int)
         y_original = model.hierarchy[0]['cluster_labels']
+        cluster_to_node_id = {}
 
         for node_id in robust_terminal_node:
             node = node_dict[node_id]
@@ -183,12 +184,14 @@ class TreeStructure:
             if node.is_leaf():
                 pos = (y_node == 0)
                 y_robust[pos] = cluster_n
+                cluster_to_node_id[cluster_n] = node_id
                 cluster_n +=1
             else:
                 n_unique = len(node.get_child())
                 for i in range(n_unique):
                     pos = (y_node == i)
                     y_robust[pos] = cluster_n
+                    cluster_to_node_id[cluster_n] = node_id
                     cluster_n +=1
 
         if len(robust_terminal_node) == 0:
@@ -208,6 +211,7 @@ class TreeStructure:
         self.robust_terminal_node = robust_terminal_node
         self.clf_node_info = dict(zip(node_list,result_list))
         self.new_idx_centers = np.array(new_idx_centers,dtype=int)
+        self.cluster_to_node_id = cluster_to_node_id
 
     def check_all_merge(self, model, X, n_average = 10):
         from copy import deepcopy
@@ -231,9 +235,51 @@ class TreeStructure:
             merger.append(results['mean_score']) ## ---> adding classification score to nodes
             node_list.append([node_id,results['mean_score'], results])
 
-            merger_to_mathematica(mergers, out_graph_file='graph.txt', out_score_file = 'score.txt') # for visualizing, just run the attached mathematica file
+            tmp = deepcopy(self.robust_node)
+            self.robust_node = node_list
+            self.write_graph_to_mathematica(out_graph_file='graph.txt', out_score_file = 'score.txt') # for visualizing, just run the attached mathematica file
+            self.robust_node = tmp
 
         self.all_nodes = node_list # full classifcation results
+
+    def write_graph_to_mathematica(self, out_graph_file = None, out_score_file = None, robust = False):
+        """ Creates a graph output for direct plotting in mathematica """
+        
+        mergers = self.mergers
+        pointers = []
+        
+        if robust is True:
+            robust_graph_node = [elem[0] for elem in self.robust_node]
+            for m in mergers:
+                if m[1] in robust_graph_node:
+                    for m0 in m[0]:
+                        pointers.append("%i -> %i"%(m0,m[1]))
+        else:
+            for m in mergers:
+                for m0 in m[0]:
+                    pointers.append("%i -> %i"%(m0,m[1]))
+
+        if out_graph_file is not None:
+            with open(out_graph_file,'w') as f:
+                for p in pointers:
+                    f.write(p)
+                    if p != pointers[-1]: 
+                        f.write(',')
+            f.close()
+
+        all_robust_node = [n[0] for n in self.robust_node]
+        if out_score_file is not None:
+            with open(out_score_file,'w') as f:
+                for m in mergers:
+                    node_id = m[1]
+                    if node_id in all_robust_node:
+                        idx = all_robust_node.index(node_id)
+                        f.write("%i -> %.4f"%(node_id,self.robust_node[idx][1]))
+                        f.write(',')
+            f.close()
+            #### Run through mergers, if part of robust nodes, write them up ####
+
+
 
 def score_merge(root, model, X, n_average = 10):
     """ Using a logistic regression multi-class classifier, determines the merges that are statistically
@@ -411,27 +457,3 @@ def find_idx_cluster_in_root(model, root):
     node_list = np.array(breath_first_search(root))
     n_initial_cluster = len(model.hierarchy[0]['idx_centers'])
     return np.sort(node_list[node_list < n_initial_cluster])
-
-def merger_to_mathematica(mergers, out_graph_file = None, out_score_file = None):
-    """ Creates a graph output for ez plotting in mathematica """
-
-    pointers = []
-    for m in mergers:
-        for m0 in m[0]:
-            pointers.append("%i -> %i"%(m0,m[1]))
-
-    if out_graph_file is not None:
-        with open(out_graph_file,'w') as f:
-            for p in pointers:
-                f.write(p)
-                if p != pointers[-1]: 
-                    f.write(',')
-        f.close()
-
-    if out_score_file is not None:
-        with open(out_score_file,'w') as f:
-            for m in mergers:
-                f.write("%i -> %.4f"%(m[1],m[-1]))
-                if m != mergers[-1]:
-                    f.write(',')
-        f.close()
