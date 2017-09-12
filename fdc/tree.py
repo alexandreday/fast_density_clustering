@@ -50,8 +50,10 @@ class TreeStructure:
         self.mergers = None
         self.robust_node = None
         self.new_cluster_label = None
-        self.robust_terminal_node = None
-        self.clf_node_info = None
+        self.robust_terminal_node = None #list of the terminal robust nodes
+        self.robust_clf_node = None # full information about classification is recorded here, keys of dict are the classifying nodes 
+        self.all_robust_node = None # list of all nodes in the robust tree (classifying nodes and leaf nodes)
+
         self.new_idx_centers = None
         self.tree_constructed = False
 
@@ -113,6 +115,8 @@ class TreeStructure:
         result = {}
 
         # breath-first search from the root
+        # --------
+
         while stack:
             current_node = stack[0]
             stack = stack[1:]
@@ -126,15 +130,35 @@ class TreeStructure:
                         stack.append(node)
                 else:
                     print("[tree.py] : node ", current_node.get_id()," %.4f < %.4f"%(score, score_threshold))
+                    node_list.append([current_node.get_id(), -1.0, -1.0])
             else:
-                node_list.append([current_node.get_id(), 1.0, -1.0])
+                node_list.append([current_node.get_id(), -1.0, -1.0])
     
         if len(node_list) == 0:
             node_list = [[root.get_id(), -1]]
 
-        self.robust_node = node_list 
+        self.robust_terminal_node = [] #list of the terminal robust nodes
+        self.robust_clf_node = {} # dictionary of the nodes where a partition is made (non-leaf nodes)
 
+        for n in node_list:
+            node_id = n[0]
+            if n[1] < 0. :
+                self.robust_terminal_node.append(n[0])
+            else:
+                self.robust_clf_node[n[0]] = n[2] # full information about classification is recorded here
         
+        all_node_list = []
+
+        for node_id in self.robust_terminal_node:
+            current_node = node_dict[node_id]
+            p = current_node.parent
+            while p != None:
+                all_node_list.append(current_node.get_id())
+                current_node = p
+                p = current_node.parent
+
+        self.all_robust_node = all_node_list # list of all nodes in the robust tree (classifying nodes and leaf nodes)
+
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
         """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
         and relabels the data accordingly
@@ -145,62 +169,35 @@ class TreeStructure:
         root = self.root
         node_dict = self.node_dict
         mergers = self.mergers
+        robust_terminal_node = self.robust_terminal_node
         
-        self.write_graph_to_mathematica(out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
-        
-        robust_terminal_node = [] # we want to remove ancestors and only keep the finest scales possible
-
-        node_list = []
-        result_list = []
-
-        for e in self.robust_node:
-            node_list.append(e[0])
-            result_list.append(e[-1])
-        
-        for node_id in node_list:
-            node = node_dict[node_id]
-            if node.is_leaf():
-                robust_terminal_node.append(node_id)
-            else:
-                for c in node.get_child():
-                    if c.get_id() not in node_list:
-                        robust_terminal_node.append(c.get_id())
-        
+        #self.write_graph_to_mathematica(out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
+    
         ###################
         ###################
         # RELABELLING DATA !
         ###################
         ###################
 
-        cluster_n = 0
+        cluster_n = len(robust_terminal_node)
         n_sample = len(model.X)
         y_robust = -1*np.ones(n_sample,dtype=np.int)
         y_original = model.hierarchy[0]['cluster_labels']
         cluster_to_node_id = {}
 
-        for node_id in robust_terminal_node:
-            node = node_dict[node_id]
-            y_node = classification_labels(node, model)
-            if node.is_leaf():
-                pos = (y_node == 0)
-                y_robust[pos] = cluster_n
-                cluster_to_node_id[cluster_n] = node_id
-                cluster_n +=1
-            else:
-                n_unique = len(node.get_child())
-                for i in range(n_unique):
-                    pos = (y_node == i)
-                    y_robust[pos] = cluster_n
-                    cluster_to_node_id[cluster_n] = node_id
-                    cluster_n +=1
+        y_node = classification_labels([node_dict[i] for i in robust_terminal_node], model)
+        for i, v in enumerate(robust_terminal_node):
+            node_id = v
+            pos = (y_node == i)
+            y_robust[pos] = i
+            cluster_to_node_id[i] = v
 
         if len(robust_terminal_node) == 0:
             y_robust *= 0 # only one coloring !
-            cluster_n = 1
         
         new_idx_centers = []
-        
         all_idx = np.arange(0,model.X.shape[0],dtype=int)
+        
         for i in range(cluster_n):
             pos_i = (y_robust == i)
             max_rho = np.argmax(model.rho[y_robust == i])
@@ -209,7 +206,6 @@ class TreeStructure:
 
         self.new_cluster_label = y_robust
         self.robust_terminal_node = robust_terminal_node
-        self.clf_node_info = dict(zip(node_list,result_list))
         self.new_idx_centers = np.array(new_idx_centers,dtype=int)
         self.cluster_to_node_id = cluster_to_node_id
 
@@ -279,16 +275,12 @@ class TreeStructure:
             f.close()
             #### Run through mergers, if part of robust nodes, write them up ####
 
-
-
 def score_merge(root, model, X, n_average = 10):
     """ Using a logistic regression multi-class classifier, determines the merges that are statistically
     signicant based on a CV prediction score. Returns a robust clustering in the original space.
     """
     
-
-    y = classification_labels(root, model)
-    
+    y = classification_labels(root.get_child(), model)
 
     pos_subset =  (y != -1)
     Xsubset = X[pos_subset] # original space coordinates
@@ -298,7 +290,7 @@ def score_merge(root, model, X, n_average = 10):
     
     return results
   
-def classification_labels(root, model):
+def classification_labels(node_list, model):
     """ Returns a list of labels for the original data according to the classification
     given at root. root is a TreeNode object which contains childrens. Each children (and the data it contains)
     is assigned an arbitrary integer label. Data points not contained in that node are labelled as -1.
@@ -314,20 +306,16 @@ def classification_labels(root, model):
     1D array of labels
 
     """
-    childs = root.get_child()
     
     n_sample = len(model.X)
     y = -1*np.ones(n_sample,dtype=np.int)
     y_init = model.hierarchy[0]['cluster_labels']
 
-    if root.is_leaf():
-        init_c = root.get_id()
-        y[y_init == init_c] = 0
-    else:
-        for i, c in enumerate(childs):
-            init_c = find_idx_cluster_in_root(model, c)
-            for ic in init_c:
-                y[y_init == ic] = i # assigns arbitray label, just set by ordering of the childrens.
+    for i, node in enumerate(node_list):
+        init_c = find_idx_cluster_in_root(model, node)
+        for ic in init_c:
+            y[y_init == ic] = i
+
     return y
 
 def find_mergers(hierarchy , noise_range):
