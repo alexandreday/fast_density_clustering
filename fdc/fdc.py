@@ -243,7 +243,7 @@ class FDC:
 
         return self
 
-    def cluster_label(delta = None):
+    def get_cluster_label(delta = None):
         if delta is None:
             return self.cluster_label
         else:
