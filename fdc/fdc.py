@@ -81,6 +81,7 @@ class FDC:
         self.atol = atol
         self.rtol = rtol
         self.xtol = xtol 
+        self.cluster_label = None
 
     def fit(self,X):
         """ Performs density clustering on given data set
@@ -93,7 +94,8 @@ class FDC:
 
         Returns
         ----------
-        self
+        self : fdc object
+            To obtain new cluster labels use self.cluster_label
         """
 
         self.X = X  # shallow copy 
@@ -152,7 +154,7 @@ class FDC:
                 
         enablePrint()
 
-    def coarse_grain(self, X, noise_threshold_i, noise_threshold_f, dnt):
+    def coarse_grain(self, noise_threshold_i, noise_threshold_f, dnt):
         """Started from an initial noise scale, progressively merges clusters.
         If specified, saves the cluster assignments at every level of the coarse graining if specified.
 
@@ -240,6 +242,16 @@ class FDC:
         self.density_graph = density_graph
 
         return self
+
+    def cluster_label(delta = None):
+        if delta is None:
+            return self.cluster_label
+        else:
+            pos = np.argmin(np.abs(np.array(self.noise_range)-delta))
+            #delta_ = self.noise_range[pos]
+            #idx_centers = self.hierarchy[pos]['idx_centers']
+            cluster_label = self.hierarchy[pos]['cluster_labels']
+            return cluster_label
 
 
 #####################################################

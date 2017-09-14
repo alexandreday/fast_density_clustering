@@ -53,6 +53,7 @@ class TreeStructure:
         self.robust_terminal_node = None #list of the terminal robust nodes
         self.robust_clf_node = None # full information about classification is recorded here, keys of dict are the classifying nodes 
         self.all_robust_node = None # list of all nodes in the robust tree (classifying nodes and leaf nodes)
+        self.cluster_to_node_id = None # dictionary mapping cluster labels (displayed on plot) with node id
 
         self.new_idx_centers = None
         self.tree_constructed = False
@@ -197,7 +198,7 @@ class TreeStructure:
         
         new_idx_centers = []
         all_idx = np.arange(0,model.X.shape[0],dtype=int)
-        
+
         for i in range(cluster_n):
             pos_i = (y_robust == i)
             max_rho = np.argmax(model.rho[y_robust == i])
