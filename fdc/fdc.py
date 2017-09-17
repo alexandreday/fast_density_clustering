@@ -243,16 +243,22 @@ class FDC:
 
         return self
 
-    def get_cluster_label(self, delta = None):
+    def get_cluster_info(self, delta = None):
+        """ Returns (cluster_label, idx_center) """
+
         if delta is None:
-            return self.cluster_label
+            return self.cluster_label, self.idx_centers
         else:
             pos = np.argmin(np.abs(np.array(self.noise_range)-delta))
             #delta_ = self.noise_range[pos]
             #idx_centers = self.hierarchy[pos]['idx_centers']
             cluster_label = self.hierarchy[pos]['cluster_labels']
-            return cluster_label
+            idx_center = self.hierarchy[pos]['idx_centers']
+            return cluster_label, idx_center
 
+    def update_labels(self, idx_centers, cluster_label):
+        self.idx_centers = idx_centers
+        self.cluster_label = cluster_label
 
 #####################################################
 #####################################################

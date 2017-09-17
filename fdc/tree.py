@@ -1,5 +1,5 @@
 from .fdc import FDC
-import classify
+from . import classify
 import numpy as np
 import pickle
 from scipy.cluster.hierarchy import dendrogram as scipydendro
@@ -241,42 +241,105 @@ class TreeStructure:
 
         self.all_nodes = node_list # full classifcation results
 
-    def write_graph_to_mathematica(self, out_graph_file = None, out_score_file = None, robust = False):
-        """ Creates a graph output for direct plotting in mathematica """
-        
-        mergers = self.mergers
-        pointers = []
-        
-        if robust is True:
-            robust_graph_node = [elem[0] for elem in self.robust_node]
-            for m in mergers:
-                if m[1] in robust_graph_node:
-                    for m0 in m[0]:
-                        pointers.append("%i -> %i"%(m0,m[1]))
-        else:
-            for m in mergers:
-                for m0 in m[0]:
-                    pointers.append("%i -> %i"%(m0,m[1]))
 
-        if out_graph_file is not None:
-            with open(out_graph_file,'w') as f:
-                for p in pointers:
-                    f.write(p)
-                    if p != pointers[-1]: 
-                        f.write(',')
-            f.close()
+    def write_result_mathematica(self, model, marker) : # graph should be a dict of list
+        """ 
+        -> Saves results in .txt files, which are easily read with a Mathematica
+        script for ez plotting ...
+        """
 
-        all_robust_node = [n[0] for n in self.robust_node]
-        if out_score_file is not None:
-            with open(out_score_file,'w') as f:
-                for m in mergers:
-                    node_id = m[1]
-                    if node_id in all_robust_node:
-                        idx = all_robust_node.index(node_id)
-                        f.write("%i -> %.4f"%(node_id,self.robust_node[idx][1]))
-                        f.write(',')
-            f.close()
-            #### Run through mergers, if part of robust nodes, write them up ####
+        self.gate_dict = self.find_full_gate(model)
+
+        my_graph = {}
+        my_graph_score = {}
+        for e,v in self.robust_clf_node.items():
+            my_graph[e] = []
+            my_graph_score[e] = v['mean_score']
+            for c in self.node_dict[e].child:
+                my_graph[e].append(c.get_id())
+        
+        self.graph = my_graph
+        self.graph_score = my_graph_score
+
+        self.write_graph_mathematica()
+        self.write_graph_score_mathematica()
+        self.write_gate_mathematica(self.gate_dict, marker)
+        self.write_cluster_label_mathematica()
+
+        
+    def write_graph_mathematica(self, out_file = "graph.txt"):
+        f = open(out_file,'w')
+        my_string_list = []
+        for node_id, node_childs in self.graph.items(): # v is a list
+            for child in node_childs :
+                my_string_list.append("%i -> %i"%(node_id, child))
+        f.write(",".join(my_string_list))
+        f.close()
+
+    def write_graph_score_mathematica(self, out_file = "graph_score.txt"):
+        f = open(out_file, 'w')
+        string_list = []
+        for k, v in self.graph_score.items():
+            string_list.append('%i -> % .5f'%(k,v))
+        f.write(','.join(string_list))
+        f.close()
+
+    def write_gate_mathematica(self, gate_dict, marker, out_file = "gate.txt"):
+        f = open(out_file, 'w')
+        string_list = []
+        for k, g in gate_dict.items():
+            string_list.append("{%i -> %i, \"%s\"}"%(k[0],k[1],str_gate(marker[g[0][0]],g[1][0])))
+        f.write("{")
+        f.write(','.join(string_list))
+        f.write("}")
+        f.close()
+
+    def write_cluster_label_mathematica(self, out_file = "n_to_c.txt"): # cton is a dictionary of clusters to node id
+        f = open(out_file, 'w')
+        string_list = []
+        
+        for k, v in self.cluster_to_node_id.items():
+            string_list.append("{%i -> %i}"%(v,k))
+        f.write("<|")
+        f.write(','.join(string_list))
+        f.write("|>")
+        f.close()
+
+    def find_gate(self, node_id):
+        """ Return the most important gates, sorted by amplitude. One set of gate per category (class)
+        """
+        import copy
+        clf_info = self.robust_clf_node[node_id]
+        n_class = len(self.node_dict[node_id].child)
+
+        weights = clf_info['coeff'] # weights should be sorted by amplitude for now, those are the most important for the scoring function
+        gate_array = []
+
+        for i, w in enumerate(weights):
+            argsort_w = np.argsort(np.abs(w))[::-1] # ordering (largest to smallest) -> need also to get the signs
+            sign = np.sign(w[argsort_w])
+            gate_array.append([argsort_w, sign])
+
+        if n_class == 2: # for binary classfication the first class as a negative score ... for all other cases the classes have positive scores
+            gate_array.append(copy.deepcopy(gate_array[-1]))
+            gate_array[0][1]*=-1
+            
+        return gate_array
+    
+    def find_full_gate(self, model):
+        """ Determines the most relevant gates which specify each partition 
+        """
+        gate_dict = {} # (tuple to gate ... (clf_node, child_node) -> gate (ordered in magnitude))
+
+        for node_id, info in self.robust_clf_node.items():
+
+            childs = self.node_dict[node_id].child
+            gates = self.find_gate(node_id)
+
+            for c, g in zip(childs, gates):
+                gate_dict[(node_id, c.get_id())] = g # storing gate info 
+
+        return gate_dict
 
 def score_merge(root, model, X, n_average = 10):
     """ Using a logistic regression multi-class classifier, determines the merges that are statistically
@@ -320,6 +383,10 @@ def classification_labels(node_list, model):
             y[y_init == ic] = i
 
     return y
+
+
+
+
 
 def find_mergers(hierarchy , noise_range):
 
@@ -382,6 +449,11 @@ def find_mergers(hierarchy , noise_range):
 ########################################################################################
 ########################################################################################
 
+def str_gate(marker, sign):
+    if sign < 0. :
+        return marker+"-"
+    else:
+        return marker+"+"
 
 def apply_map(mapdict, k):
     old_idx = k
