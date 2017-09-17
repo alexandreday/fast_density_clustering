@@ -210,6 +210,8 @@ class TreeStructure:
         self.new_idx_centers = np.array(new_idx_centers,dtype=int)
         self.cluster_to_node_id = cluster_to_node_id
 
+        return self
+
     def check_all_merge(self, model, X, n_average = 10):
         from copy import deepcopy
 

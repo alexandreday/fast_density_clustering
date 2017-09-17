@@ -10,14 +10,16 @@ def gates(W, n_g=2):
     """
     g_list = []
     for i, w in enumerate(W):
-
         wsort = np.sort(np.abs(w))
         best_amp = wsort[-n_g:]
         best_gates = []
         for ba in best_amp:
-            best_gates.append(np.argmin(np.abs(np.abs(w)-ba)))
+            pos = np.argmin(np.abs(np.abs(w)-ba))
+            best_gates.append(pos)
+            if w[pos] < 0: # stores position and sign of the gate for now
+                best_gates[-1] *= -1
         g_list.append(best_gates)
-    
+
     return g_list
 
 def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
@@ -39,9 +41,9 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     W_list = []
     b_list = []
     total_score_list = []
-    accuracy_sample = {}
+    accuracy_sample = {} 
     clf_list = []
-    n_unique = len(np.unique(y))
+    n_unique = len(np.unique(y)) # need to standardize the data ... 
 
     for i in range(n_unique):
         accuracy_sample[i] = []
@@ -49,6 +51,9 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     for _ in range(n_average):
         
         ytrain, ytest, xtrain, xtest = train_test_split(y, X, test_size=0.2)
+        mu, inv_sigma = np.mean(xtrain, axis=0), 1./np.std(xtrain, axis = 0)
+        xtrain = (xtrain - mu)*inv_sigma
+
         unique_ytrain = np.unique(ytrain)
 
         logreg = LogisticRegression(C=C, solver = 'lbfgs', multi_class='multinomial', class_weight='balanced', max_iter=n_iter_max)
@@ -58,7 +63,7 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         W_list.append(logreg.coef_)
         b_list.append(logreg.intercept_)
 
-        total_score = logreg.score(xtest, ytest) # predict on test set
+        total_score = logreg.score(inv_sigma*(xtest-mu), ytest) # predict on test set
         total_score_list.append(total_score)
 
         ypred = logreg.predict(xtest) # check performand per 
@@ -83,7 +88,7 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
 
     best = np.argmax(total_score_list)
 
-    print('Best score = ', total_score_list[best])
+    #print('Score for %i = '%, total_score_list[best])
 
     results = {
         'mean_score' : np.mean(total_score_list),
@@ -91,7 +96,9 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         'var_score_cluster' : std_accuracy,
         'coeff' : W_list[best],
         'intercept' : b_list[best],
-        'clf': clf_list[best]
+        'clf': clf_list[best],
+        'mean_xtrain' : mu,
+        'inv_std_xtrain' : inv_sigma
     }
     
     return results

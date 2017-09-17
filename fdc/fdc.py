@@ -180,7 +180,7 @@ class FDC:
         # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
         
         for nt in noise_range:
-            self.check_cluster_stability_fast(X, noise_threshold = nt)
+            self.check_cluster_stability_fast(self.X, noise_threshold = nt)
             self.clustering_history[round(nt,3)] = (self.cluster_label,self.idx_centers) # storing for later plotting ... 
             
             hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
@@ -243,7 +243,7 @@ class FDC:
 
         return self
 
-    def get_cluster_label(delta = None):
+    def get_cluster_label(self, delta = None):
         if delta is None:
             return self.cluster_label
         else:
