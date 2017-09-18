@@ -82,10 +82,14 @@ class KDE():
         args = (X_train, X_test)
 
         # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
+        if self.xtol > hmin:
+            tmp = round_float(hmin)
+            print('      --> Bandwidth tolerance (xtol) greater than minimum bound, adjusting xtol: %.5f -> %.5f'%(self.xtol, tmp))
+            self.xtol = tmp
 
         h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=100, xtol=self.xtol, full_output=True)
         
-        print("      --> Found log-likelihood minima in %i evaluations"%niter)
+        print("      --> Found log-likelihood minima in %i evaluations, h = %.5f"%(niter, h_optimal))
         
         assert abs(h_optimal - 1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
         assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"
@@ -98,3 +102,19 @@ class KDE():
         self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40)
         self.kde.fit(X_train) 
         return -self.kde.score(X_test)
+
+def round_float(x):
+    """ Rounds a float to it's first significant digit
+    """
+    a = list(str(x))
+    for i, e in enumerate(a):
+        if e != '.':
+            if e != '0':
+                pos = i
+                a[i] = '1'
+                break
+    return float("".join(a[:pos+1]))
+
+
+
+
