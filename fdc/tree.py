@@ -385,9 +385,6 @@ def classification_labels(node_list, model):
     return y
 
 
-
-
-
 def find_mergers(hierarchy , noise_range):
 
     """ Determines the list of merges that are made during the coarse-graining """
