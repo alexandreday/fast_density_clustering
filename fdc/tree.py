@@ -126,11 +126,12 @@ class TreeStructure:
                 score = result_classify['mean_score']
                 
                 if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+                    print("[tree.py] : robust node ", current_node.get_id()," %.4f > %.4f"%(score, score_threshold))
                     node_list.append([current_node.get_id(), score, result_classify]) # result contains the info for the gates
                     for node in current_node.get_child():
                         stack.append(node)
                 else:
-                    print("[tree.py] : node ", current_node.get_id()," %.4f < %.4f"%(score, score_threshold))
+                    print("[tree.py] : reject node ", current_node.get_id()," %.4f < %.4f"%(score, score_threshold))
                     node_list.append([current_node.get_id(), -1.0, -1.0])
             else:
                 node_list.append([current_node.get_id(), -1.0, -1.0])
@@ -211,6 +212,13 @@ class TreeStructure:
         self.cluster_to_node_id = cluster_to_node_id
 
         return self
+
+    def predict(self, X):
+        """ Given find_robust_labelling was performed, new data from X can be classified using self.robust_clf_node 
+        """
+        print(self.robust_clf_node)
+
+        exit()
 
     def check_all_merge(self, model, X, n_average = 10):
         from copy import deepcopy
