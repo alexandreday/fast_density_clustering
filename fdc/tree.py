@@ -294,6 +294,8 @@ class TreeStructure:
         -> Saves results in .txt files, which are easily read with a Mathematica
         script for ez plotting ...
         """
+        if self.robust_clf_node is None :
+            assert False, "Model not yet fitted !"
 
         self.gate_dict = self.find_full_gate(model)
 
@@ -315,6 +317,7 @@ class TreeStructure:
 
         
     def write_graph_mathematica(self, out_file = "graph.txt"):
+        """ Writes graph in mathematica readable format """
         f = open(out_file,'w')
         my_string_list = []
         for node_id, node_childs in self.graph.items(): # v is a list
@@ -324,6 +327,7 @@ class TreeStructure:
         f.close()
 
     def write_graph_score_mathematica(self, out_file = "graph_score.txt"):
+        """ Writes scores of classification for every division node """
         f = open(out_file, 'w')
         string_list = []
         for k, v in self.graph_score.items():
@@ -332,6 +336,7 @@ class TreeStructure:
         f.close()
 
     def write_gate_mathematica(self, gate_dict, marker, out_file = "gate.txt"):
+        """ Writes most important gates for discriminating data in a classification """
         f = open(out_file, 'w')
         string_list = []
         for k, g in gate_dict.items():
@@ -342,6 +347,7 @@ class TreeStructure:
         f.close()
 
     def write_cluster_label_mathematica(self, out_file = "n_to_c.txt"): # cton is a dictionary of clusters to node id
+        """ Node id to cluster labels """
         f = open(out_file, 'w')
         string_list = []
         
