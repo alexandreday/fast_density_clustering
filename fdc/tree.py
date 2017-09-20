@@ -167,7 +167,7 @@ class TreeStructure:
                     self.robust_terminal_node.append(current_node.get_id())
         
             if len(node_list) == 0:
-                assert False, "check this case, not sure what it means""
+                assert False, "check this case, not sure what it means"
                 #node_list = [[root.get_id(), -1]]
         
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -184,7 +184,6 @@ class TreeStructure:
 
         self.all_robust_node = list(all_robust_node)
         
-    
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
         """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
         and relabels the data accordingly
@@ -237,20 +236,18 @@ class TreeStructure:
         return self
 
     def check_all_merge(self, model, X, n_average = 10):
-        """ Goes over all classification nodes and evaluates classification scores """ 
 
+        """ Goes over all classification nodes and evaluates classification scores """ 
         self.build_tree(model)
         self.all_clf_node = {}
         
-        for merger in mergers : # don't need to go through the whole hierachy, since we're checking everything
-            
+        for merger in self.mergers : # don't need to go through the whole hierarchy, since we're checking everything
             node_id = merger[1]
-            node = self.node_dict[node_id]
+            result_classify = score_merge(self.node_dict[node_id], model, X, n_average = n_average)
+            print("[tree.py] : ", node_id, "accuracy : %.3f"%result_classify['mean_score'], "sample_size : %i"%result_classify['n_sample'],sep='\t')
 
-            score_merge(current_node, model, X, n_average = n_average)
-            result_classify = score_merge(current_node, model, X, n_average = n_average)
             self.all_clf_node[node_id] = result_classify
-
+    
     def predict(self, X):
         """ Given find_robust_labelling was performed, new data from X can be classified using self.robust_clf_node
         returns the terminal "cluster" label (not the node !)
@@ -403,6 +400,16 @@ class TreeStructure:
 def score_merge(root, model, X, n_average = 10):
     """ Using a logistic regression multi-class classifier, determines the merges that are statistically
     signicant based on a CV prediction score. Returns a robust clustering in the original space.
+
+    Returns
+    ---------
+
+    classifier_info : dict
+        Keys of dict are ['mean_score', 'mean_score_cluster', 
+        'var_score_cluster', 'coeff', 
+        'intercept', 'clf', 'mean_xtrain',
+         'inv_std_xtrain', 'n_sample']
+
     """
     
     y = classification_labels(root.get_child(), model)
@@ -411,10 +418,8 @@ def score_merge(root, model, X, n_average = 10):
     Xsubset = X[pos_subset] # original space coordinates
     ysubset = y[pos_subset] # labels
 
-    results = classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
-    
-    return results
-  
+    return classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
+
 def classification_labels(node_list, model):
     """ Returns a list of labels for the original data according to the classification
     given at root. root is a TreeNode object which contains childrens. Each children (and the data it contains)

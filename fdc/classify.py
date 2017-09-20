@@ -36,6 +36,13 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         Contains the cluster label for every data point
     C : float (optional, default=1.0) 
         Inverse of regularization parameter strength
+
+    Returns
+    ----------
+    results : dict
+        Contains all the classifier info; 
+        Keys: ['mean_score', 'mean_score_cluster', 'var_score_cluster', 'coeff', 'intercept', 'clf', 'mean_xtrain', 'inv_std_xtrain', 'n_sample']
+    
     """
 
     W_list = []
@@ -44,6 +51,7 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     accuracy_sample = {} 
     clf_list = []
     n_unique = len(np.unique(y)) # need to standardize the data ... 
+    n_sample = X.shape[0]
 
     for i in range(n_unique):
         accuracy_sample[i] = []
@@ -98,7 +106,8 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         'intercept' : b_list[best],
         'clf': clf_list[best],
         'mean_xtrain' : mu,
-        'inv_std_xtrain' : inv_sigma
+        'inv_std_xtrain' : inv_sigma,
+        'n_sample': n_sample # number of samples used for training -> !
     }
     
     return results
