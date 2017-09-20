@@ -111,9 +111,9 @@ class TreeStructure:
 
         root, node_dict, mergers = self.root, self.node_dict, self.mergers
 
-        print("2 few layers")
-        print("Root :", root)
-        print("Root's childs :", root.get_child())
+        print("---> 2 top layers")
+        print("---> Root :", root)
+        print("---> Root's childs :", root.get_child())
 
         stack = [root]
         node_list = []
@@ -177,8 +177,6 @@ class TreeStructure:
         mergers = self.mergers
         robust_terminal_node = self.robust_terminal_node
         
-        #self.write_graph_to_mathematica(out_graph_file="graph.txt") # for visualizing, just run the attached mathematica file
-    
         ###################
         ###################
         # RELABELLING DATA !
@@ -218,47 +216,6 @@ class TreeStructure:
 
         return self
 
-    def predict(self, X):
-        """ Given find_robust_labelling was performed, new data from X can be classified using self.robust_clf_node 
-        returns the terminal "cluster" label (not the node !)
-        """
-        #uprint(self.robust_clf_node)
-        y_pred = -1 * np.ones(X.shape[0], dtype=int)
-        terminal_nodes = set(self.robust_terminal_node)
-        node_to_cluster = self.node_to_cluster_id
-
-        for i, x in enumerate(X):
-            current_clf_node = self.root
-            while True:
-                if current_clf_node.get_id() in terminal_nodes: # robust terminal node reached !
-                    y_pred[i] = node_to_cluster[current_clf_node.get_id()]
-                    break
-                
-                child_list = current_clf_node.child
-                info = self.robust_clf_node[current_clf_node.get_id()]
-                W,b,mu,std = info['coeff'], info['intercept'], info['mean_xtrain'], info['inv_std_xtrain']
-                y = self.classify_point(std*(x-mu), W, b)
-                #print('child_pos =', y)
-                current_clf_node = child_list[y]
-        
-        return y_pred
-
-    def classify_point(self, x, W, b):
-        n_class = len(b)
-        
-        if n_class == 1: # binary classification
-            f = (np.dot(x,W[0]) + b)[0]
-            if f > 0.:
-                return 1
-            else:
-                return 0
-        else:
-            score_per_class = []
-            for i, w in enumerate(W):
-                score_per_class.append(np.dot(x,w)+b[i])
-            #print(score_per_class)
-            return np.argmax(score_per_class)
-
     def check_all_merge(self, model, X, n_average = 10):
         from copy import deepcopy
 
@@ -288,6 +245,49 @@ class TreeStructure:
 
         self.all_nodes = node_list # full classifcation results
 
+    def predict(self, X):
+        """ Given find_robust_labelling was performed, new data from X can be classified using self.robust_clf_node 
+        returns the terminal "cluster" label (not the node !)
+        """
+        #uprint(self.robust_clf_node)
+        y_pred = -1 * np.ones(X.shape[0], dtype=int)
+        terminal_nodes = set(self.robust_terminal_node)
+        node_to_cluster = self.node_to_cluster_id
+
+        for i, x in enumerate(X):
+            current_clf_node = self.root
+            while True:
+                if current_clf_node.get_id() in terminal_nodes: # robust terminal node reached !
+                    y_pred[i] = node_to_cluster[current_clf_node.get_id()]
+                    break
+                
+                child_list = current_clf_node.child
+                info = self.robust_clf_node[current_clf_node.get_id()]
+                W,b,mu,std = info['coeff'], info['intercept'], info['mean_xtrain'], info['inv_std_xtrain']
+                y = self.classify_point(std*(x-mu), W, b)
+                #print('child_pos =', y)
+                current_clf_node = child_list[y]
+        
+        return y_pred
+
+    def classify_point(self, x, W, b):
+        """ Given weight matrix and intercept (bias), classifies point x 
+        w.r.t to a linear classifier """
+
+        n_class = len(b)
+        
+        if n_class == 1: # binary classification
+            f = (np.dot(x,W[0]) + b)[0]
+            if f > 0.:
+                return 1
+            else:
+                return 0
+        else:
+            score_per_class = []
+            for i, w in enumerate(W):
+                score_per_class.append(np.dot(x,w)+b[i])
+            #print(score_per_class)
+            return np.argmax(score_per_class)
 
     def write_result_mathematica(self, model, marker) : # graph should be a dict of list
         """ 
