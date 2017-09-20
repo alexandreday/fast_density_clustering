@@ -99,27 +99,22 @@ def scatter_w_label(x,y,z,psize=20):
         plt.scatter(x[pos],y[pos],s=psize,c=contrast_colors(i), rasterized=True)
     plt.show()
 
-def summary(idx_centers, cluster_label, rho, X, delta = None, delta_show = True, n_true_center=1, y=None, psize=20, savefile=None, show=False):
-    """ Summary plots : original labels (if available), inferred labels and density map used for clustering """
 
-    fontsize=15
-    n_sample=X.shape[0]
-    n_center=idx_centers.shape[0]
-    palette=my_color_palette()
-    
-    plt.figure(1,figsize=(22,10))
-
-    plt.subplot(131)
-    plt.title('True labels',fontsize=fontsize)
+def plot_true_label(X, palette, y=None, fontsize = 15, psize = 20):
+    plt.title('True labels', fontsize=fontsize)
     print("--> Plotting summary: True clustered labels, inferred labels and density map ")
     if y is None:
         plt.scatter(X[:,0],X[:,1],c=palette[0],rasterized=True)
     else:
-        for i in range(n_true_center):
-            pos=(y==i)
-            plt.scatter(X[pos,0],X[pos,1], s=psize,c=palette[i],rasterized=True)
-            
-    ax = plt.subplot(132)
+        y_unique = np.unique(y)
+        for i, yu in enumerate(y_unique):
+            pos=(y==yu)
+            plt.scatter(X[pos,0],X[pos,1], s=psize, c=palette[i],rasterized=True)
+
+def plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = 20, delta = None, delta_show = True, fontsize=15):
+    
+    n_center = len(idx_centers)
+
     for i in range(n_center):
         pos=(cluster_label==i)
         plt.scatter(X[pos,0],X[pos,1],c=palette[i], s=psize, rasterized=True)
@@ -150,6 +145,26 @@ def summary(idx_centers, cluster_label, rho, X, delta = None, delta_show = True,
     
     plt.title('Inferred labels',fontsize=fontsize)
     plt.tight_layout()
+
+
+def summary(idx_centers, cluster_label, rho, X, delta = None, delta_show = True, y=None, psize=20, savefile=None, show=False,
+plot_to_show = None
+):
+    """ Summary plots : original labels (if available), inferred labels and density map used for clustering """
+
+    fontsize=15
+    n_sample=X.shape[0]
+    n_center=idx_centers.shape[0]
+    palette=my_color_palette()
+    
+    plt.figure(1,figsize=(22,10))
+
+    plt.subplot(131)
+    plot_true_label(X, palette, y=y,fontsize=fontsize, psize = psize)
+
+    ax = plt.subplot(132)
+    plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize =psize, delta = delta, delta_show = delta_show, fontsize=fontsize)
+
     plt.subplot(133)
     density_map(X,rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
 
@@ -160,7 +175,7 @@ def summary(idx_centers, cluster_label, rho, X, delta = None, delta_show = True,
 
     plt.clf()
 
-def summary_model(model, delta= None, show=True, savefile = None, delta_show = True):
+def summary_model(model, delta=None, show=True, savefile = None, delta_show = True):
     """ Summary figure passing in only an FDC object (model), noise can be specified via the delta parameter """
     
     if delta is None:
@@ -176,6 +191,37 @@ def summary_model(model, delta= None, show=True, savefile = None, delta_show = T
     rho = model.rho
     X = model.X
     summary(idx_centers, cluster_label, rho, X, delta = delta_, show=show, savefile=savefile, delta_show=delta_show)
+
+def inferred_label(model, delta=None, show=True, savefile = None, delta_show = True, fontsize =15, psize = 20):
+
+    if delta is None:
+        delta_ = model.noise_range[-1]
+        idx_centers = model.idx_centers
+        cluster_label = model.cluster_label
+    else:
+        pos = np.argmin(np.abs(np.array(model.noise_range)-delta))
+        delta_ = model.noise_range[pos]
+        idx_centers = model.hierarchy[pos]['idx_centers']
+        cluster_label = model.hierarchy[pos]['cluster_labels']
+
+    rho = model.rho
+    X = model.X
+
+    n_sample=X.shape[0]
+    n_center=idx_centers.shape[0]
+    palette=my_color_palette()
+    
+    plt.figure(1,figsize=(10,10))
+    ax = plt.subplot(111)
+    plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = psize, delta = delta_, delta_show = delta_show, fontsize=fontsize)
+
+    if savefile is not None:
+        plt.savefig(savefile)
+
+    if show is True:
+        plt.show()
+
+    plt.clf()
 
 def cluster_w_label(X, model:FDC,
                 xlabel=None,ylabel=None,zlabel=None,label=None, 
