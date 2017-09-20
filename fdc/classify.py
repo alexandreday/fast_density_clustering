@@ -64,7 +64,8 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
 
         unique_ytrain = np.unique(ytrain)
 
-        logreg = LogisticRegression(C=C, solver = 'lbfgs', multi_class='multinomial', class_weight='balanced', max_iter=n_iter_max)
+        logreg = LogisticRegression(penalty = 'l2', C=C, solver = 'lbfgs', multi_class='multinomial', class_weight='balanced', max_iter=n_iter_max)
+        #logreg = LogisticRegression(penalty = 'l1', C=C, solver = 'saga', multi_class='multinomial', class_weight='balanced', max_iter=n_iter_max)
         logreg.fit(xtrain, ytrain)
         clf_list.append(logreg)
 

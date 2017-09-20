@@ -128,11 +128,21 @@ class TreeStructure:
         self.robust_terminal_node = [] #list of the terminal robust nodes
         self.robust_clf_node = {} # dictionary of the nodes where a partition is made (non-leaf nodes)
 
+        if self.all_clf_node is not None: # meaning, the nodes have already been checked for classification
+            res = self.all_clf_node[root.get_id()]
+            if res['mean_score'] > score_threshold:
+                self.robust_clf_node[root.get_id()] = res
 
-        if self.all_clf_node is not None: # meaning, the nodes have already been checked for classification 
-            for k, v in self.all_clf_node.items():
-                if v['mean_score'] > score_threshold:
-                    self.robust_clf_node[k] = v
+            stack = [root]
+            while stack:
+                current_node = stack[0]
+                for c in current_node.child:
+                    if c.get_id() in self.all_clf_node.keys():
+                        res = self.all_clf_node[c.get_id()]
+                        if res['mean_score'] > score_threshold:
+                            self.robust_clf_node[c.get_id()] = res
+                            stack.append(c)
+                stack = stack[1:]
 
             for k, v in self.robust_clf_node.items(): # identify terminal nodes (leaves)
                 c_node = node_dict[k]
@@ -175,7 +185,7 @@ class TreeStructure:
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # Listing all nodes in the robust tree ...
-
+        all_robust_node = set([])
         for k, _ in self.robust_clf_node.items():
             all_robust_node.add(k)
             current_node = node_dict[k]
@@ -183,6 +193,11 @@ class TreeStructure:
                 all_robust_node.add(c.get_id())
 
         self.all_robust_node = list(all_robust_node)
+
+        #print(self.all_robust_node)
+        #print(self.robust_terminal_node)
+        #print(self.robust_clf_node.keys())
+
         
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
         """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
@@ -209,6 +224,7 @@ class TreeStructure:
         cluster_to_node_id = {}
 
         y_node = classification_labels([node_dict[i] for i in robust_terminal_node], model)
+
         for i, v in enumerate(robust_terminal_node):
             node_id = v
             pos = (y_node == i)
@@ -244,9 +260,11 @@ class TreeStructure:
         for merger in self.mergers : # don't need to go through the whole hierarchy, since we're checking everything
             node_id = merger[1]
             result_classify = score_merge(self.node_dict[node_id], model, X, n_average = n_average)
-            print("[tree.py] : ", node_id, "accuracy : %.3f"%result_classify['mean_score'], "sample_size : %i"%result_classify['n_sample'],sep='\t')
+            print("[tree.py] : ", node_id, "accuracy : %.3f"%result_classify['mean_score'], "sample_size : %i"%result_classify['n_sample'], sep='\t')
 
             self.all_clf_node[node_id] = result_classify
+
+        return self
     
     def predict(self, X):
         """ Given find_robust_labelling was performed, new data from X can be classified using self.robust_clf_node
@@ -370,17 +388,58 @@ class TreeStructure:
 
         weights = clf_info['coeff'] # weights should be sorted by amplitude for now, those are the most important for the scoring function
         gate_array = []
+        gate_weights = []
 
         for i, w in enumerate(weights):
             argsort_w = np.argsort(np.abs(w))[::-1] # ordering (largest to smallest) -> need also to get the signs
             sign = np.sign(w[argsort_w])
             gate_array.append([argsort_w, sign])
+            gate_weights.append(w)
 
-        if n_class == 2: # for binary classfication the first class as a negative score ... for all other cases the classes have positive scores
+        if n_class == 2: # for binary classfication the first class (0) has a negative score ... for all other cases the classes have positive scores
             gate_array.append(copy.deepcopy(gate_array[-1]))
-            gate_array[0][1]*=-1
-            
-        return gate_array
+            gate_array[0][1] *= -1
+            gate_weights.append(copy.deepcopy(w))
+            gate_weights[0] *= -1
+        
+        gate_weights = np.array(gate_weights)
+
+        return gate_array, gate_weights
+
+    def print_clf_weight(self, markers=None, file='weight.txt'):
+
+        weight_summary = {}
+        for node_id, info in self.robust_clf_node.items():
+            node = self.node_dict[node_id]
+            _, gate_weights = self.find_gate(node_id)
+            for i,c in enumerate(node.child):
+                weight_summary[(node_id, c.get_id())] = gate_weights[i]
+        
+        fout = open(file, 'w')
+
+        fout.write('n1\tn2\t')
+        n_feature = len(gate_weights[0])
+        if markers is not None:
+            for m in markers:
+                fout.write(m+'\t')
+        else:
+            for i in range(n_feature):
+                fout.write(str(i)+'\t')
+        fout.write('\n')
+
+        for k, v in weight_summary.items():
+            k0 = k[0]
+            k1 = k[1]
+            if k[0] in self.node_to_cluster_id.keys():
+                k0 = self.node_to_cluster_id[k[0]]
+            if k[1] in self.node_to_cluster_id.keys():
+                k1 = self.node_to_cluster_id[k[1]]
+            fout.write('%i\t%i\t'%(k0,k1))
+
+            for w in v:
+                fout.write('%.3f\t'%w)
+            fout.write('\n')
+    
     
     def find_full_gate(self, model):
         """ Determines the most relevant gates which specify each partition 
@@ -390,11 +449,11 @@ class TreeStructure:
         for node_id, info in self.robust_clf_node.items():
 
             childs = self.node_dict[node_id].child
-            gates = self.find_gate(node_id)
+            gates, _ = self.find_gate(node_id)
 
             for c, g in zip(childs, gates):
-                gate_dict[(node_id, c.get_id())] = g # storing gate info 
-
+                gate_dict[(node_id, c.get_id())] = g # storing gate info
+        
         return gate_dict
 
 def score_merge(root, model, X, n_average = 10):
@@ -427,7 +486,7 @@ def classification_labels(node_list, model):
 
     Parameters
     -------
-    root : TreeNode
+    node_list : list of nodes 
 
     model : FDC object
 
@@ -501,7 +560,6 @@ def find_mergers(hierarchy , noise_range):
     merger_record.append([mapped_u, current_merge_idx, 1.5*(merger_record[-1][2])])
 
     return merger_record
-
 
 
 ########################################################################################
@@ -580,4 +638,4 @@ def find_leaves(cluster_n, Z, n_init_cluster): # find the leafs of a cluster a g
 def find_idx_cluster_in_root(model, root):
     node_list = np.array(breath_first_search(root))
     n_initial_cluster = len(model.hierarchy[0]['idx_centers'])
-    return np.sort(node_list[node_list < n_initial_cluster])
+    return np.sort(node_list[node_list < n_initial_cluster]) # subset of initial clusters contained in the subtree starting at tree.
