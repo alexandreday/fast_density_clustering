@@ -27,7 +27,10 @@ class KDE():
     """
 
 
-    def __init__(self, bandwidth = None, test_ratio_size = 0.1, nh_size = 40, xtol = 0.01, atol=0.000005, rtol=0.00005, extreme_dist = False):
+    def __init__(self, bandwidth = None, test_ratio_size = 0.1, nh_size = 40, 
+                xtol = 0.01, atol=0.000005, rtol=0.00005, extreme_dist = False,
+                nn_dist = None, nn_list = None
+    ):
         self.bandwidth = bandwidth
         self.test_ratio_size = test_ratio_size
         self.nh_size = nh_size
@@ -35,12 +38,12 @@ class KDE():
         self.atol = atol
         self.rtol = rtol
         self.extreme_dist = extreme_dist
+        self.nn_dist = nn_dist
+        self.nn_list = nn_list
     
     def fit(self, X):
         """Fit kernel model to X"""
         if self.bandwidth is None:
-            self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
-            self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
             self.bandwidth = self.find_optimal_bandwidth(X)
         else:
             self.kde=KernelDensity(bandwidth=self.bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean',
@@ -70,7 +73,16 @@ class KDE():
         ---------
         bandwidth estimate, minimum possible value : tuple, shape(2)
         """
-        return np.median(self.nn_dist[:,-1]), np.mean(self.nn_dist[:,1])
+        if self.nn_dist is None:
+            nn = NearestNeighbors(n_neighbors=5,algorithm='kd_tree')
+            nn_dist, _ = nn.kneighbors(X, n_neighbors=2, return_distance=True)
+        else:
+            nn_dist = self.nn_dist
+
+        h_min = np.mean(nn_dist[:,1])
+        h_max = 5*h_min # heuristic bound !! careful !!
+
+        return h_max, h_min
     
     def find_optimal_bandwidth(self, X):
         """Performs maximum likelihood estimation on a test set of the density model fitted on a training set
@@ -94,10 +106,42 @@ class KDE():
         print("[kde] Found log-likelihood minima in %i evaluations, h = %.5f"%(niter, h_optimal))
         
         if self.extreme_dist is False: # in the case of distribution with extreme variances in density, these bounds will fail ...
-            assert abs(h_optimal - 2.0*hest) > 1e-4, "Upper boundary reached for bandwidth"
+            assert abs(h_optimal - 1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
             assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"
 
         return h_optimal
+
+    def find_nh_size(self, X, h_optimal = None, n_estimate = 100):
+        """ Given the optimal bandwidth from the CV score, finds the nh_size (using a binary search) which yield h_opt according 
+        to the formula np.median(dist_to_nth_neighor) = h_opt
+        """
+        if h_optimal is None:
+            h_optimal = self.bandwidth # should trigger a bug if this is not defined !
+
+        nn = NearestNeighbors(n_neighbors = n_estimate, algorithm='kd_tree').fit(X)
+        nn_dist, _ = self.nbrs.kneighbors(X, n_neighbors = 3*n_estimate)
+        max_n = 3*n_estimate
+        min_n = 0
+
+        n_var = n_estimate
+        while True: # performs binary search until convergence !
+            h_est = np.median(nn_dist[:,n_var])
+            print(n_var,'\t', h_est)
+            if h_est > h_optimal:
+                max_n = n_var
+                change = round(0.5*(max_n - min_n))+min_n
+                if change != n_var:
+                    n_var = change
+                else:
+                    break 
+            else:
+                min_n = n_var
+                change = round(0.5*(max_n - min_n))+min_n
+                if change != n_var:
+                    n_var = change
+                else:
+                    break
+        return n_var
 
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set

@@ -112,6 +112,7 @@ class FDC:
             atol=self.atol,rtol=self.rtol,xtol=self.xtol
         ) # ...
         self.density_model.fit(X)
+        self.bandwidth = self.density_model.bandwidth
 
         print("[fdc] Computing density ...")
         self.rho = self.density_model.evaluate_density(X)
@@ -213,9 +214,11 @@ class FDC:
 
         maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
         
-        if self.density_model.nh_size >= self.nh_size:
+        if self.density_model.nh_size >= self.nh_size: 
             self.nn_dist, self.nn_list = self.density_model.nn_dist[:,:self.nh_size], self.density_model.nn_list[:,:self.nh_size]
+            self.extended_nn_dist, self.extended_nn_list = self.density_model.nn_dist, self.density_model.nn_list
         else:
+            assert False
             from sklearn.neighbors import NearestNeighbors
             self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
             self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
@@ -286,6 +289,8 @@ def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 2
     Function for searching for nearest neighbors within
     some density threshold. 
     NH should be an empty set for the inital function call.
+
+    Note to myself : lots of optimization, this is pretty time consumming !
     
     Returns
     -----------
@@ -304,7 +309,8 @@ def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 2
 
         for leaf in leaves:
             if cluster_label[leaf] == current_label : # search neighbors only if in current cluster 
-                nn_leaf = nn_list[leaf][1:search_size]
+                nn_leaf = nn_list[leaf][1:search_size] # note that this is limited by prior computation of nh_size !!!
+
                 for nn in nn_leaf:
                     if (rho[nn] > delta) & (nn not in NH):
                         NH.add(nn)
