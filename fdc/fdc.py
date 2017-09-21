@@ -61,6 +61,9 @@ class FDC:
     xtol: float, optional (default = 0.01)
         precision parameter for optimizing the bandwidth using maximum likelihood on a test set
     
+    search_size int, optional (default = 20)
+        when performing search over neighborhoods, size of each local neighborhood to check when
+        expanding. This drastically slows the coarse-graining if chosen to be too big !
     """
 
     def __init__(self, nh_size=40, noise_threshold=0.4,
@@ -68,7 +71,9 @@ class FDC:
                 merge=True,
                 atol=0.000005,
                 rtol=0.00005,
-                xtol=0.01):
+                xtol=0.01,
+                search_size = 20
+                ):
 
         self.test_ratio_size = test_ratio_size
         self.random_state = random_state
@@ -81,6 +86,7 @@ class FDC:
         self.rtol = rtol
         self.xtol = xtol 
         self.cluster_label = None
+        self.search_size = search_size
 
     def fit(self,X):
         """ Performs density clustering on given data set
@@ -267,7 +273,7 @@ class FDC:
         self.cluster_label = cluster_label
 
 
-    def find_NH_tree_search(self, idx, delta, cluster_label, search_size = 20):
+    def find_NH_tree_search(self, idx, delta, cluster_label):
         """
         Function for searching for nearest neighbors within
         some density threshold. 
@@ -295,7 +301,7 @@ class FDC:
 
             for leaf in leaves:
                 if cluster_label[leaf] == current_label : # search neighbors only if in current cluster 
-                    nn_leaf = nn_list[leaf][1:search_size] # note, this search_size can be greater than self.nh_size !
+                    nn_leaf = nn_list[leaf][1:self.search_size] # note, this search_size can be greater than self.nh_size !
 
                     for nn in nn_leaf:
                         if (rho[nn] > delta) & (nn not in NH):

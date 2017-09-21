@@ -122,7 +122,6 @@ class TreeStructure:
         print("---> Root's childs :", root.get_child())
 
         stack = [root]
-        node_list = []
         result = {}
 
         self.robust_terminal_node = [] #list of the terminal robust nodes
@@ -175,10 +174,6 @@ class TreeStructure:
                         self.robust_terminal_node.append(current_node.get_id())
                 else:
                     self.robust_terminal_node.append(current_node.get_id())
-        
-            if len(node_list) == 0:
-                assert False, "check this case, not sure what it means"
-                #node_list = [[root.get_id(), -1]]
         
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
