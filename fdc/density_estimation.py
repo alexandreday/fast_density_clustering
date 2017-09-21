@@ -27,13 +27,14 @@ class KDE():
     """
 
 
-    def __init__(self, bandwidth = None, test_ratio_size = 0.1, nh_size = 40, xtol = 0.01, atol=0.000005, rtol=0.00005):
+    def __init__(self, bandwidth = None, test_ratio_size = 0.1, nh_size = 40, xtol = 0.01, atol=0.000005, rtol=0.00005, extreme_dist = False):
         self.bandwidth = bandwidth
         self.test_ratio_size = test_ratio_size
         self.nh_size = nh_size
         self.xtol = xtol
         self.atol = atol
         self.rtol = rtol
+        self.extreme_dist = extreme_dist
     
     def fit(self, X):
         """Fit kernel model to X"""
@@ -77,6 +78,7 @@ class KDE():
         from scipy.optimize import fminbound
 
         hest, hmin = self.bandwidth_estimate(X)
+        print("[kde] Minimum bound = %.4f \t Rough estimate of h = %.4f"%(hmin, hest))
 
         X_train, X_test = train_test_split(X, test_size = self.test_ratio_size)
         args = (X_train, X_test)
@@ -84,15 +86,16 @@ class KDE():
         # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
         if self.xtol > hmin:
             tmp = round_float(hmin)
-            print('      --> Bandwidth tolerance (xtol) greater than minimum bound, adjusting xtol: %.5f -> %.5f'%(self.xtol, tmp))
+            print('[kde] Bandwidth tolerance (xtol) greater than minimum bound, adjusting xtol: %.5f -> %.5f'%(self.xtol, tmp))
             self.xtol = tmp
 
         h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=100, xtol=self.xtol, full_output=True)
         
-        print("      --> Found log-likelihood minima in %i evaluations, h = %.5f"%(niter, h_optimal))
+        print("[kde] Found log-likelihood minima in %i evaluations, h = %.5f"%(niter, h_optimal))
         
-        assert abs(h_optimal - 1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
-        assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"
+        if self.extreme_dist is False: # in the case of distribution with extreme variances in density, these bounds will fail ...
+            assert abs(h_optimal - 2.0*hest) > 1e-4, "Upper boundary reached for bandwidth"
+            assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"
 
         return h_optimal
 
