@@ -7,7 +7,7 @@ Created on Jan 16, 2017
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.patheffects as PathEffects
-from .mycolors import my_color_palette
+from .mycolors import COLOR_PALETTE
 from .fdc import FDC
 
 def set_nice_font(size = 18):
@@ -155,7 +155,7 @@ plot_to_show = None
     fontsize=15
     n_sample=X.shape[0]
     n_center=idx_centers.shape[0]
-    palette=my_color_palette()
+    palette=COLOR_PALETTE()
     
     plt.figure(1,figsize=(22,10))
 
@@ -179,7 +179,7 @@ def summary_model(model, delta=None, show=True, savefile = None, delta_show = Tr
     """ Summary figure passing in only an FDC object (model), noise can be specified via the delta parameter """
     
     if delta is None:
-        delta_ = model.noise_range[-1]
+        delta_ = model.noise_threshold
         idx_centers = model.idx_centers
         cluster_label = model.cluster_label
     else:
@@ -209,7 +209,7 @@ def inferred_label(model, delta=None, show=True, savefile = None, delta_show = T
 
     n_sample=X.shape[0]
     n_center=idx_centers.shape[0]
-    palette=my_color_palette()
+    palette=COLOR_PALETTE()
     
     plt.figure(1,figsize=(10,10))
     ax = plt.subplot(111)
@@ -243,7 +243,7 @@ def cluster_w_label(X, model:FDC,
     n_center = len(model.idx_centers)
     cluster_label = model.cluster_label
     idx_centers = model.idx_centers
-    palette=my_color_palette()
+    palette=COLOR_PALETTE()
 
     ax = plt.subplot(111)
     
@@ -292,7 +292,7 @@ def summary_v2(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psiz
     fontsize=15
     n_sample=X.shape[0]
     n_center=idx_centers.shape[0]
-    palette=my_color_palette()
+    palette=COLOR_PALETTE()
 
     '''plt.figure(1,figsize=(10,10))
 

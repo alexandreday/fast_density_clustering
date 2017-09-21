@@ -27,19 +27,17 @@ class KDE():
     """
 
 
-    def __init__(self, bandwidth = None, test_ratio_size = 0.1, nh_size = 40, 
+    def __init__(self, bandwidth = None, test_ratio_size = 0.1,
                 xtol = 0.01, atol=0.000005, rtol=0.00005, extreme_dist = False,
-                nn_dist = None, nn_list = None
-    ):
+                nn_dist = None):
+                
         self.bandwidth = bandwidth
         self.test_ratio_size = test_ratio_size
-        self.nh_size = nh_size
         self.xtol = xtol
         self.atol = atol
         self.rtol = rtol
         self.extreme_dist = extreme_dist
         self.nn_dist = nn_dist
-        self.nn_list = nn_list
     
     def fit(self, X):
         """Fit kernel model to X"""
@@ -74,7 +72,7 @@ class KDE():
         bandwidth estimate, minimum possible value : tuple, shape(2)
         """
         if self.nn_dist is None:
-            nn = NearestNeighbors(n_neighbors=5,algorithm='kd_tree')
+            nn = NearestNeighbors(n_neighbors=2,algorithm='kd_tree')
             nn_dist, _ = nn.kneighbors(X, n_neighbors=2, return_distance=True)
         else:
             nn_dist = self.nn_dist
@@ -111,7 +109,7 @@ class KDE():
 
         return h_optimal
 
-    def find_nh_size(self, X, h_optimal = None, n_estimate = 100):
+    '''  def find_nh_size(self, X, h_optimal = None, n_estimate = 100):
         """ Given the optimal bandwidth from the CV score, finds the nh_size (using a binary search) which yield h_opt according 
         to the formula np.median(dist_to_nth_neighor) = h_opt
         """
@@ -141,7 +139,8 @@ class KDE():
                     n_var = change
                 else:
                     break
-        return n_var
+        return n_var 
+    '''
 
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set

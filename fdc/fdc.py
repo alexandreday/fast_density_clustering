@@ -22,10 +22,9 @@ class FDC:
     ----------
 
     nh_size : int, optional (default = 40)
-        Neighborhood size. This is related to the perplexity (in t-SNE)
-        and is an effective scale that defines the number of neighbors of each data point.
-        Larger datasets usually require a larger perplexity/nh_size. Consider selecting a value
-        between 20 and 100.
+        Neighborhood size. This is the scale used for identifying modes in the density distribution.
+        If a point has the maximum density among it's nh_size neighbors, it is marked as 
+        a potential cluster center.
     
     noise_threshold : float, optional (default = 0.4)
         Used to merge clusters. This is done by quenching directly to the specified noise threshold
@@ -97,8 +96,16 @@ class FDC:
         self : fdc object
             To obtain new cluster labels use self.cluster_label
         """
+        from sklearn.neighbors import NearestNeighbors
 
-        self.X = X  # shallow copy 
+        self.X = X  # shallow copy
+
+        if self.nh_size < 100 :
+            self.nbrs = NearestNeighbors(n_neighbors = 100, algorithm='kd_tree').fit(X)
+        else:
+            self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)    
+
+        self.nn_dist, self.nn_list = self.nbrs.kneighbors(X) # this scales like X.shape[0] * self.nh_size 
 
         if self.verbose == 0:
             blockPrint()
@@ -108,9 +115,9 @@ class FDC:
         start = time.time()
 
         print("[fdc] Fitting kernel model for density estimation ...")
-        self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size, nh_size=80,
-            atol=self.atol,rtol=self.rtol,xtol=self.xtol
-        ) # ...
+        self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
+            atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
+
         self.density_model.fit(X)
         self.bandwidth = self.density_model.bandwidth
 
@@ -191,6 +198,7 @@ class FDC:
 
         self.hierarchy = hierarchy
         self.noise_range = noise_range
+        self.noise_threshold = noise_range[-1]
 
         enablePrint()
  
@@ -207,32 +215,27 @@ class FDC:
         :density_graph: for every point, list of points are incoming (via the density gradient)
 
         """
+
         if rho is None:
             rho = self.rho
 
         n_sample, n_feature = X.shape
 
         maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
-        
-        if self.density_model.nh_size >= self.nh_size: 
-            self.nn_dist, self.nn_list = self.density_model.nn_dist[:,:self.nh_size], self.density_model.nn_list[:,:self.nh_size]
-            self.extended_nn_dist, self.extended_nn_list = self.density_model.nn_dist, self.density_model.nn_list
-        else:
-            assert False
-            from sklearn.neighbors import NearestNeighbors
-            self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
-            self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
-
         delta = maxdist*np.ones(n_sample, dtype=np.float)
         nn_delta = np.ones(n_sample, dtype=np.int)
         
         density_graph = [[] for i in range(n_sample)] # store incoming leaves
         
+        ### ----------->
+        nn_list = self.nn_list[:,:self.nh_size] # restricted over neighborhood defined by user !
+        ### ----------->
+
         for i in range(n_sample):
-            idx = index_greater(rho[self.nn_list[i]])
+            idx = index_greater(rho[nn_list[i]])
             if idx:
-                density_graph[self.nn_list[i,idx]].append(i)
-                nn_delta[i] = self.nn_list[i,idx]
+                density_graph[nn_list[i,idx]].append(i)
+                nn_delta[i] = nn_list[i,idx]
                 delta[i] = self.nn_dist[i,idx]
             else:
                 nn_delta[i]=-1
@@ -263,6 +266,45 @@ class FDC:
         self.idx_centers = idx_centers
         self.cluster_label = cluster_label
 
+
+    def find_NH_tree_search(self, idx, delta, cluster_label, search_size = 20):
+        """
+        Function for searching for nearest neighbors within
+        some density threshold. 
+        NH should be an empty set for the inital function call.
+
+        Note to myself : lots of optimization, this is pretty time consumming !
+        
+        Returns
+        -----------
+        List of points in the neighborhood of point idx : 1D array
+        """
+        rho = self.rho
+        nn_list = self.nn_list
+
+        
+        new_leaves=nn_list[idx][1:self.nh_size]
+        NH=set(nn_list[idx][1:self.nh_size])  # starts from the initial minimal neighborhood set by user 
+        current_label = cluster_label[idx]
+
+        while True:
+            if len(new_leaves) == 0: 
+                break
+            leaves=new_leaves
+            new_leaves=[]
+
+            for leaf in leaves:
+                if cluster_label[leaf] == current_label : # search neighbors only if in current cluster 
+                    nn_leaf = nn_list[leaf][1:search_size] # note, this search_size can be greater than self.nh_size !
+
+                    for nn in nn_leaf:
+                        if (rho[nn] > delta) & (nn not in NH):
+                            NH.add(nn)
+                            new_leaves.append(nn)
+
+        return np.array(list(NH))
+
+
 #####################################################
 #####################################################
 ############ utility functions below ################
@@ -283,40 +325,6 @@ def index_greater(array, prec=1e-8):
     for idx, val in np.ndenumerate(array):
         if val > (item + prec):
             return idx[0]
-
-def find_NH_tree_search(rho, nn_list, idx, delta, cluster_label, search_size = 20):
-    """
-    Function for searching for nearest neighbors within
-    some density threshold. 
-    NH should be an empty set for the inital function call.
-
-    Note to myself : lots of optimization, this is pretty time consumming !
-    
-    Returns
-    -----------
-    List of points in the neighborhood of point idx : 1D array
-    """
-
-    NH=set(nn_list[idx][1:])  # -- minimal NH scale set by perplexity
-    new_leaves=nn_list[idx][1:]
-    current_label = cluster_label[idx]
-    # ------------------> 
-    while True:
-        if len(new_leaves) == 0: 
-            break
-        leaves=new_leaves
-        new_leaves=[]
-
-        for leaf in leaves:
-            if cluster_label[leaf] == current_label : # search neighbors only if in current cluster 
-                nn_leaf = nn_list[leaf][1:search_size] # note that this is limited by prior computation of nh_size !!!
-
-                for nn in nn_leaf:
-                    if (rho[nn] > delta) & (nn not in NH):
-                        NH.add(nn)
-                        new_leaves.append(nn)
-
-    return np.array(list(NH))
 
 def check_cluster_stability(self, X, threshold): 
     """
@@ -344,7 +352,7 @@ def check_cluster_stability(self, X, threshold):
         if threshold < 1e-3: # just check nn_list ...
             NH=nn_list[idx][1:]
         else:
-            NH = find_NH_tree_search(rho, nn_list, idx, delta_rho, cluster_label)
+            NH = self.find_NH_tree_search(idx, delta_rho, cluster_label)
 
         label_centers_nn = np.unique([cluster_label[ni] for ni in NH])
         idx_max = idx_centers[ label_centers_nn[np.argmax(rho[idx_centers[label_centers_nn]])] ]
