@@ -162,7 +162,7 @@ class FDC:
                 
         enablePrint()
 
-    def coarse_grain(self, noise_threshold_i, noise_threshold_f, dnt):
+    def coarse_grain(self, noise_iterable):
         """Started from an initial noise scale, progressively merges clusters.
         If specified, saves the cluster assignments at every level of the coarse graining if specified.
 
@@ -178,8 +178,8 @@ class FDC:
         
         print("[fdc] Coarse graining until desired noise threshold ...")
 
-        noise_range = list(np.arange(noise_threshold_i, noise_threshold_f, dnt))
-        
+        noise_range = [n for n in noise_iterable]
+            
         hierarchy = []
         self.max_noise = -1
         n_cluster = 0
