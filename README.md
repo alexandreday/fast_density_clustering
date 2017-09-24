@@ -9,7 +9,7 @@ The underlying code is based on fast KD-trees for nearest-neighbor searches O(n 
   Our approach can be combined with high-dimensional data. Density maps are estimated on a projected or a low dimensional representation of the high-dimensional data. The statistical significance of each clusters (wether it is noise or not) is then evaluated using multi-class logistic regression. Example of the full method coming soon !
 
 # Installing
-I suggest you install the code using ```pip``` from an Anaconda Python 3 environment. From that environment:
+I suggest you install the code using ```pip``` from an [Anaconda](https://conda.io/docs/user-guide/tasks/manage-environments.html) Python 3 environment. From that environment:
 ```
 git clone https://github.com/alexandreday/fast_density_clustering.git
 cd fast_density_clustering
