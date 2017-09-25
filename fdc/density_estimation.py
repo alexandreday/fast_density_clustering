@@ -44,8 +44,12 @@ class KDE():
         if self.bandwidth is None:
             self.bandwidth = self.find_optimal_bandwidth(X)
         else:
-            self.kde=KernelDensity(bandwidth=self.bandwidth, algorithm='kd_tree', kernel='gaussian', metric='euclidean',
-            atol=self.atol, rtol=self.rtol, breadth_first=True, leaf_size=40)
+            self.kde=KernelDensity(
+                bandwidth=self.bandwidth, algorithm='kd_tree', 
+                kernel='gaussian', metric='euclidean',
+                atol=self.atol, rtol=self.rtol, 
+                breadth_first=True, leaf_size=40
+            )
         
         self.kde.fit(X)
 
@@ -73,6 +77,7 @@ class KDE():
         """
         if self.nn_dist is None:
             nn = NearestNeighbors(n_neighbors=2,algorithm='kd_tree')
+            nn.fit(X)
             nn_dist, _ = nn.kneighbors(X, n_neighbors=2, return_distance=True)
         else:
             nn_dist = self.nn_dist
