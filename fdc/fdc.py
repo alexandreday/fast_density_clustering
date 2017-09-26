@@ -178,7 +178,6 @@ class FDC:
             Specifies if hierarchy should be stored (list of cluster assignments at all steps)
             If True, hierarchy is stores in self.hierarchy
         """
-
         if self.verbose == 0:
             blockPrint()
         

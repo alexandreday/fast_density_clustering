@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 import matplotlib.patheffects as PathEffects
 from .mycolors import COLOR_PALETTE
 from .fdc import FDC
+import math
 
 def set_nice_font(size = 18):
     font = {'family' : 'serif', 'size'   : size}
@@ -354,7 +355,113 @@ def dendrogram(model, show=True, savefile=None):
 
     if show is True:
         plt.show()
-    if savefile :
+    if savefile is not None:
         plt.savefig(savefile)
 
     plt.clf()
+
+def viSNE(X_2D, X_original, markers, show=True, savefig=None, col_index = None, col_wrap = 4, downsample = None):
+    import pandas as pd
+    """Plots intensity on top of data.
+
+    Parameters
+    ------------
+
+    X_2D : coordinates of the data points (2d points)   
+
+    X_original : original marker intensity
+
+    makers : list of str, list of names of the markers (for showing as titles)
+
+    savefig : str, if u want to save figure, should be the name of the output file
+
+    downsample : int, number of data points in a random sample of the original data
+
+    show : bool, if u want to see the plots
+
+    """
+
+    X = X_2D
+    if col_index is not None:
+        z_df = pd.DataFrame(X_original[:,col_index], columns=[markers[i] for i in col_index])
+    else:
+        z_df = pd.DataFrame(X_original, columns=markers)
+
+    facegrid(X[:,0], X[:,1], z_df, show=show, savefig=savefig, downsample = downsample, col_wrap=col_wrap)
+
+
+def facegrid(x, y, z_df, col_wrap = 4, downsample = None, show=True, savefig = None):
+
+    n_sample = x.shape[0]
+    if downsample is not None:
+        random_sub = np.random.choice(np.arange(0, n_sample, dtype=int), downsample, replace=False)
+        xnew = x[random_sub]
+        ynew = y[random_sub]
+        znew = z_df.iloc[random_sub]
+   
+    n_plot = z_df.shape[1]
+
+    assert len(x) == len(y) and len(x) == len(z_df)
+
+    n_row = math.ceil(n_plot / col_wrap)
+    
+    xfig = 12
+    yfig = 8
+    xper_graph = xfig/col_wrap
+    yper_graph = yfig/n_row
+
+    if n_row >= col_wrap:
+        xper_graph = yper_graph
+    else:
+        yper_graph = xper_graph
+
+    plt.figure(figsize=(xper_graph*col_wrap,yper_graph*n_row))
+
+    col_names = z_df.columns.values
+
+    for i in range(n_plot):
+        ax = plt.subplot(n_row, col_wrap, i+1)
+        my_scatter(xnew, ynew, znew.iloc[:,i].as_matrix(), ax)
+        ax.set_title(col_names[i])
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    plt.tight_layout()
+
+    if show is True:
+        plt.show()
+
+    if savefig is True:
+        plt.savefig(savefig)
+
+def my_scatter(x, y, z, ax):
+
+    cmap = plt.get_cmap('coolwarm')
+    
+    argz = np.argsort(z)
+
+    #zmin, zmax = z[argz[0]], z[argz[-1]]
+    #ztmp = (z+zmin)*(1./zmax)
+
+    n_sample = len(x)
+    bot_5 = round(n_sample*0.05)
+    top_5 = round(n_sample*0.95)
+    mid = argz[bot_5:top_5]
+    bot = argz[:bot_5]
+    top = argz[top_5:]
+
+    x_mid = x[mid]
+    y_mid = y[mid]
+    z_mid = z[mid]
+
+    x_bot = x[bot]
+    y_bot = y[bot]
+    z_bot = z[bot]
+
+    x_top = x[top]
+    y_top = y[top]
+    z_top = z[top]
+
+    ax.scatter(x_mid, y_mid, c = z_mid, cmap = cmap, s=6)
+    ax.scatter(x_bot, y_bot, c = "purple", s=4)
+    ax.scatter(x_top, y_top, c = "#00FF00",s=4)
