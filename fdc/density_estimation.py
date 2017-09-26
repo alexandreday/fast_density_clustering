@@ -26,7 +26,6 @@ class KDE():
         ratio of the test size for determining the bandwidth.
     """
 
-
     def __init__(self, bandwidth = None, test_ratio_size = 0.1,
                 xtol = 0.01, atol=0.000005, rtol=0.00005, extreme_dist = False,
                 nn_dist = None):

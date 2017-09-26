@@ -53,13 +53,12 @@ for i_dataset, dataset in enumerate(datasets):
     model=FDC(noise_threshold=noise_threshold, nh_size=nh_size)
     s=time.time()
     model.fit(X)
-    cluster_label, idx_centers, rho = model.cluster_label, model.idx_centers, model.rho
     dt=time.time()-s
 
-    n_center=len(idx_centers)
+    n_center=len(model.idx_centers)
 
     plt.subplot(2,2,plot_num)
-    plt.scatter(X[:, 0], X[:, 1], color=colors[cluster_label].tolist(), s=10,zorder=1)
+    plt.scatter(X[:, 0], X[:, 1], color=colors[model.cluster_label].tolist(), s=10,zorder=1)
     plt.text(.99, .01, ('%.2fs' % (dt)).lstrip('0'),
                  transform=plt.gca().transAxes, size=25,
                  horizontalalignment='right',zorder=2)

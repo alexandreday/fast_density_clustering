@@ -176,7 +176,7 @@ plot_to_show = None
 
     plt.clf()
 
-def summary_model(model, delta=None, show=True, savefile = None, delta_show = True):
+def summary_model(model, delta=None, ytrue = None, show=True, savefile = None, delta_show = True):
     """ Summary figure passing in only an FDC object (model), noise can be specified via the delta parameter """
     
     if delta is None:
@@ -191,7 +191,7 @@ def summary_model(model, delta=None, show=True, savefile = None, delta_show = Tr
 
     rho = model.rho
     X = model.X
-    summary(idx_centers, cluster_label, rho, X, delta = delta_, show=show, savefile=savefile, delta_show=delta_show)
+    summary(idx_centers, cluster_label, rho, X, y=ytrue, delta = delta_, show=show, savefile=savefile, delta_show=delta_show)
 
 def inferred_label(model, delta=None, show=True, savefile = None, delta_show = True, fontsize =15, psize = 20):
 
