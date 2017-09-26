@@ -104,12 +104,15 @@ class FDC:
         """
         from sklearn.neighbors import NearestNeighbors
 
+        t = time.time()
+
         self.X = X  # shallow copy
 
         if self.nh_size < 100 :
             self.nbrs = NearestNeighbors(n_neighbors = 100, algorithm='kd_tree').fit(X)
         else:
             self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)    
+
 
         self.nn_dist, self.nn_list = self.nbrs.kneighbors(X) # this scales like X.shape[0] * self.nh_size 
 
@@ -124,12 +127,13 @@ class FDC:
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
             atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
 
+        
         self.density_model.fit(X)
         self.bandwidth = self.density_model.bandwidth
-
+        
         print("[fdc] Computing density ...")
         self.rho = self.density_model.evaluate_density(X)
-
+        
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
         
@@ -138,11 +142,11 @@ class FDC:
         if self.merge: # usually by default one should perform this minimal merging .. 
             print("[fdc] Merging overlapping minimal clusters ...")
             self.check_cluster_stability_fast(X, 0.) # given 
-
+        
         if self.noise_threshold >= 1e-3 :
             print("[fdc] Iterating merging up to specified noise threshold ...")
             self.check_cluster_stability_fast(X, self.noise_threshold) # merging 'unstable' clusters
-
+        
         print("[fdc] Done in %.3f s" % (time.time()-start))
         
         enablePrint()
