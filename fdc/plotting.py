@@ -398,6 +398,10 @@ def facegrid(x, y, z_df, col_wrap = 4, downsample = None, show=True, savefig = N
         xnew = x[random_sub]
         ynew = y[random_sub]
         znew = z_df.iloc[random_sub]
+    else:
+        xnew = x
+        ynew = y
+        znew = z_df
    
     n_plot = z_df.shape[1]
 
