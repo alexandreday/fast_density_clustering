@@ -49,7 +49,6 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     b_list = []
     total_score_list = []
     accuracy_sample = {} 
-    clf_list = []
     n_unique = len(np.unique(y)) # need to standardize the data ... 
     n_sample = X.shape[0]
 
@@ -67,7 +66,6 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         logreg = LogisticRegression(penalty = 'l2', C=C, solver = 'lbfgs', multi_class='multinomial', class_weight='balanced', max_iter=n_iter_max)
         #logreg = LogisticRegression(penalty = 'l1', C=C, solver = 'saga', multi_class='multinomial', class_weight='balanced', max_iter=n_iter_max)
         logreg.fit(xtrain, ytrain)
-        clf_list.append(logreg)
 
         W_list.append(logreg.coef_)
         b_list.append(logreg.intercept_)
@@ -98,7 +96,7 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     W_mean = np.mean([W_list[i] for i in best_half_idx],axis=0)
     b_mean = np.mean([b_list[i] for i in best_half_idx],axis=0)
 
-    results = {
+    results = { # this contains the weight matrix and the intercept to reconstruct the classifier.
         'mean_score' : np.mean(total_score_list),
         'mean_score_cluster' :  mean_accuracy, # mean accuracy for each cluster
         'var_score_cluster' : std_accuracy, # std of accuracy for each cluster
