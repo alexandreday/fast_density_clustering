@@ -45,6 +45,7 @@ class TreeStructure:
     """ Contains all the hierachy and information concerning the clustering
     """
     def __init__(self, root = None, shallow_copy = None):
+
         self.root = root
         self.node_dict = None
         self.mergers = None
@@ -102,6 +103,20 @@ class TreeStructure:
         self.mergers = mergers
         self.tree_constructed = True
 
+    def node_items(self): # breath-first ordering
+        """ Returns a list of the nodes using a breath-first search
+        """
+        stack = [self.root]
+        list_nodes = []
+        while stack:
+            current_node = stack[0]
+            list_nodes.append(current_node)
+            for c in current_node.child:
+                stack.append(c)
+            stack = stack[1:]
+        
+        return list_nodes
+
     def identify_robust_merge(self, model, X, n_average = 10, score_threshold = 0.5):
         """Starting from the root, goes down the tree and evaluates which clustering node are robust
         It returns a list of the nodes for which their corresponding clusters are well defined according to 
@@ -120,67 +135,71 @@ class TreeStructure:
         print("---> 2 top layers")
         print("---> Root :", root)
         print("---> Root's childs :", root.get_child())
-
-        stack = [root]
-        result = {}
-
+        
         self.robust_terminal_node = [] #list of the terminal robust nodes
         self.robust_clf_node = {} # dictionary of the nodes where a partition is made (non-leaf nodes)
 
         if self.all_clf_node is not None: # meaning, the nodes have already been checked for classification
+            
             res = self.all_clf_node[root.get_id()]
-            if res['mean_score'] > score_threshold:
+
+            if res['mean_score'] > score_threshold :
                 self.robust_clf_node[root.get_id()] = res
 
-            stack = [root]
-            while stack:
-                current_node = stack[0]
-                for c in current_node.child:
-                    if c.get_id() in self.all_clf_node.keys():
+            for current_node in self.node_items() :
+                for c in current_node.child :
+                    if c.get_id() in self.all_clf_node.keys() :
                         res = self.all_clf_node[c.get_id()]
-                        if res['mean_score'] > score_threshold:
+                        if res['mean_score'] > score_threshold :
                             self.robust_clf_node[c.get_id()] = res
-                            stack.append(c)
-                stack = stack[1:]
 
-            for k, v in self.robust_clf_node.items(): # identify terminal nodes (leaves)
+            for k, v in self.robust_clf_node.items() : # identify terminal nodes (leaves)
                 c_node = node_dict[k]
-                for child in c_node.child:
+                for child in c_node.child :
                     id_c = child.get_id() 
-                    if id_c not in self.robust_clf_node.keys():
+                    if id_c not in self.robust_clf_node.keys() :
                         self.robust_terminal_node.append(id_c)
         
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        if self.all_clf_node is None:
-
-            while stack:
-                current_node = stack[0]
-                stack = stack[1:]
+        else: # focus on this loop .........
+            
+            for current_node in self.node_items():
                 if not current_node.is_leaf():
+                    
                     result_classify = score_merge(current_node, model, X, n_average = n_average)
                     score = result_classify['mean_score']
                     
                     if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
                         print("[tree.py] : robust node ", current_node.get_id()," %.4f > %.4f"%(score, score_threshold))
                         self.robust_clf_node[current_node.get_id()] = result_classify
-                        
-                        for node in current_node.get_child():
-                            stack.append(node)
+
                     else:
                         print("[tree.py] : reject node ", current_node.get_id()," %.4f < %.4f"%(score, score_threshold))
                         self.robust_terminal_node.append(current_node.get_id())
-                else:
+                else: # implies it's parent was robust, and is a leaf node 
                     self.robust_terminal_node.append(current_node.get_id())
         
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        #self.robust_clf_node is a dict containing all the classification info for further queries
+
+        # updating robust_clf_node ... 
+        self.probability_tree = {}
+
+        for node_id, classify_results in self.robust_clf_node.items():
+            current_node = self.node_dict[node_id]
+            for i, c in enumerate(current_node.child):
+                self.probability_tree[(node_id, c.get_id())] = classify_results['mean_score_cluster'][i]
+        
+        print(self.robust_clf_node[114])
+        
+        print(self.probability_tree)
+        exit()
+
+
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        # Listing all nodes in the robust tree ...
+        # Listing all nodes in the robust tree ...==
         all_robust_node = set([])
+
         for k, _ in self.robust_clf_node.items():
             all_robust_node.add(k)
             current_node = node_dict[k]
@@ -188,10 +207,6 @@ class TreeStructure:
                 all_robust_node.add(c.get_id())
 
         self.all_robust_node = list(all_robust_node)
-
-        #print(self.all_robust_node)
-        #print(self.robust_terminal_node)
-        #print(self.robust_clf_node.keys())
 
         
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):

@@ -75,37 +75,35 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         total_score = logreg.score(inv_sigma*(xtest-mu), ytest) # predict on test set
         total_score_list.append(total_score)
 
-        ypred = logreg.predict(xtest) # check performand per 
+        ypred = logreg.predict(inv_sigma*(xtest-mu)) # check performance per cluster
+        unique_ytest = np.unique(ytest) # these are sorted
 
-        min_accuracy = 1.01
-        unique_ytest = np.unique(ytest)
-       
         for c in unique_ytest:
-            ypred_c = ypred[ytest == c]
-            #exit()
-            TP = np.count_nonzero(ypred_c == c) # number of good answers !
-            accuracy = TP/len(ypred_c)*1.0
-            if accuracy < min_accuracy:
-                min_accuracy = accuracy
-            accuracy_sample[c].append(accuracy)
-    
+            idx_y = (ytest == c)
+            y_sub = ypred[idx_y]
+            s = np.sum(y_sub == c)/np.sum(idx_y) # number of correctly predicted
+            accuracy_sample[c].append(s)
+
     mean_accuracy = {}
     std_accuracy = {}
+
+    score_sort = np.argsort(total_score_list)
+    half_sample = int(n_average*0.5)
+    best_half_idx = score_sort[-half_sample:] # average over best half of the results, but with different partitions !
+
     for cluster, sample in accuracy_sample.items():
-        mean_accuracy[cluster] = np.mean(sample)
-        std_accuracy[cluster] = np.std(sample)
+        mean_accuracy[cluster] = np.mean(np.array(sample)[best_half_idx])  # sample_accuracy over best ones
+        std_accuracy[cluster] = np.std(np.array(sample)[best_half_idx])    # std_accuracy over best ones
 
-    best = np.argmax(total_score_list)
-
-    #print('Score for %i = '%, total_score_list[best])
+    W_mean = np.mean([W_list[i] for i in best_half_idx],axis=0)
+    b_mean = np.mean([b_list[i] for i in best_half_idx],axis=0)
 
     results = {
         'mean_score' : np.mean(total_score_list),
-        'mean_score_cluster' :  mean_accuracy,
-        'var_score_cluster' : std_accuracy,
-        'coeff' : W_list[best],
-        'intercept' : b_list[best],
-        'clf': clf_list[best],
+        'mean_score_cluster' :  mean_accuracy, # mean accuracy for each cluster
+        'var_score_cluster' : std_accuracy, # std of accuracy for each cluster
+        'coeff' : W_mean,       # this averaged weights over best performing classifiers
+        'intercept' : b_mean,   #b_list[best],
         'mean_xtrain' : mu,
         'inv_std_xtrain' : inv_sigma,
         'n_sample': n_sample # number of samples used for training -> !
