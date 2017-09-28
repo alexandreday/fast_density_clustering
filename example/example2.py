@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from sklearn import cluster, datasets
 from sklearn.neighbors import kneighbors_graph
 from sklearn.preprocessing import StandardScaler
-from fdc import FDC
+from fdc import FDC, plotting
 
 np.random.seed(0)
 
@@ -38,8 +38,8 @@ plt.figure(figsize=(10, 10))
 Global clustering parameters
 """
 
-noise_threshold=1.0
-nh_size=50
+noise_threshold = 1.0
+nh_size = 40
 
 
 datasets = [noisy_circles, noisy_moons, blobs, no_structure]
@@ -53,6 +53,7 @@ for i_dataset, dataset in enumerate(datasets):
     model=FDC(noise_threshold=noise_threshold, nh_size=nh_size)
     s=time.time()
     model.fit(X)
+    
     dt=time.time()-s
 
     n_center=len(model.idx_centers)
