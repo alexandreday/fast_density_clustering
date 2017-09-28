@@ -198,7 +198,21 @@ class TreeStructure:
             for i, c in enumerate(current_node.child):
                 self.probability_tree[(node_id, c.get_id())] = classify_results['mean_score_cluster'][i]
         
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        #~~~~~~~~~~~~~~~> recompute tree with combinatorial factors 
+
+        #self.combinatorial_tree() :
+
+        for node_id, node_clf in self.robust_clf_node.items(): 
+            if self.node_dict[node_id].child[0].get_id() in self.robust_terminal_node: # iterate over terminal robust clf nodes !
+                probability_set = [node_clf['mean_score']]
+                n = node_id
+                while n != self.root.get_id():
+                    parent = self.node_dict[n].parent
+                    probability_set.append(self.probability_tree[(parent.get_id(), n)])
+                    n = parent.get_id()
+        
+        ########### ----------> LEFT IT HERE " NOW COMPUTE COMBINATORIAL FACTORS ....... <---------
+        
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # Listing all nodes in the robust tree ...==

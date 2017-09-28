@@ -1,26 +1,7 @@
-from sklearn import svm
 from sklearn.linear_model import LogisticRegression
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 import numpy as np
-
-def gates(W, n_g=2):
-    """ Return the most important gates, sorted by amplitude. One set of get per category (class)
-    The number of gates returns is set by n_g
-    """
-    g_list = []
-    for i, w in enumerate(W):
-        wsort = np.sort(np.abs(w))
-        best_amp = wsort[-n_g:]
-        best_gates = []
-        for ba in best_amp:
-            pos = np.argmin(np.abs(np.abs(w)-ba))
-            best_gates.append(pos)
-            if w[pos] < 0: # stores position and sign of the gate for now
-                best_gates[-1] *= -1
-        g_list.append(best_gates)
-
-    return g_list
 
 def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     """ Multivariate logistic regression model (softmax) for classification with labels specified in model.cluster_label

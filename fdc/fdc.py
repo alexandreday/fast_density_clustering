@@ -109,10 +109,10 @@ class FDC:
         self.X = X  # shallow copy
 
         if self.nh_size < 100 :
+            print("here")
             self.nbrs = NearestNeighbors(n_neighbors = 100, algorithm='kd_tree').fit(X)
         else:
             self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)    
-
 
         self.nn_dist, self.nn_list = self.nbrs.kneighbors(X) # this scales like X.shape[0] * self.nh_size 
 
@@ -127,7 +127,6 @@ class FDC:
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
             atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
 
-        
         self.density_model.fit(X)
         self.bandwidth = self.density_model.bandwidth
         
@@ -138,6 +137,10 @@ class FDC:
         self.compute_delta(X, self.rho)
         
         print("[fdc] Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
+
+        # temporary idx for the centers :
+        self.idx_centers = self.idx_centers_unmerged
+        self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph)
 
         if self.merge: # usually by default one should perform this minimal merging .. 
             print("[fdc] Merging overlapping minimal clusters ...")
@@ -359,7 +362,7 @@ def check_cluster_stability(self, X, threshold):
         rho_center = rho[idx]
         delta_rho = rho_center - threshold
         if threshold < 1e-3: # just check nn_list ...
-            NH=nn_list[idx][1:]
+            NH=nn_list[idx][1:self.search_size]
         else:
             NH = self.find_NH_tree_search(idx, delta_rho, cluster_label)
 
