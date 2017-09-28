@@ -109,7 +109,6 @@ class FDC:
         self.X = X  # shallow copy
 
         if self.nh_size < 100 :
-            print("here")
             self.nbrs = NearestNeighbors(n_neighbors = 100, algorithm='kd_tree').fit(X)
         else:
             self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)    
