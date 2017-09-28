@@ -59,6 +59,7 @@ class TreeStructure:
 
         self.new_idx_centers = None
         self.tree_constructed = False
+        self.ignore_root = True
 
     def build_tree(self, model):
         """Given hierachy, builds a tree of the clusterings. The nodes are class objects define in the class TreeNode
@@ -165,11 +166,16 @@ class TreeStructure:
             # add root first 
             result_classify = score_merge(self.root, model, X, n_average = n_average)
             score = result_classify['mean_score']
-            if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                print("[tree.py] : root is robust #  %i \t score = %.4f"%(self.root.get_id(),score))
+
+            if self.ignore_root is True:
+                print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
                 self.robust_clf_node[self.root.get_id()] = result_classify
             else:
-                print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
+                if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+                    print("[tree.py] : root is robust #  %i \t score = %.4f"%(self.root.get_id(),score))
+                    self.robust_clf_node[self.root.get_id()] = result_classify
+                else:
+                    print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
 
             for current_node in self.node_items()[1:]:
                 if current_node.parent.get_id() in self.robust_clf_node.keys():
