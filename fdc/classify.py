@@ -41,7 +41,7 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     ----------
     results : dict
         Contains all the classifier info; 
-        Keys: ['mean_score', 'mean_score_cluster', 'var_score_cluster', 'coeff', 'intercept', 'clf', 'mean_xtrain', 'inv_std_xtrain', 'n_sample']
+        Keys: ['mean_score', 'mean_score_cluster', 'var_score_cluster', 'coeff', 'intercept', 'mean_xtrain', 'inv_std_xtrain', 'n_sample']
     
     """
 
@@ -104,7 +104,7 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         'intercept' : b_mean,   #b_list[best],
         'mean_xtrain' : mu,
         'inv_std_xtrain' : inv_sigma,
-        'n_sample': n_sample # number of samples used for training -> !
+        'n_sample': n_sample # number of samples used for training (xtrain.shape[0] + xtest.shape[0])
     }
     
     return results
