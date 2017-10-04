@@ -180,9 +180,10 @@ class FDC:
 
         Parameters
         -----------
-        compute_hierarchy : bool
-            Specifies if hierarchy should be stored (list of cluster assignments at all steps)
-            If True, hierarchy is stores in self.hierarchy
+        noise_iterable : iterable of floats
+            Should be an iterable containg noise values at which to perform coarse graining. Usually
+            one should start from 0 and go to larger values by small increments. The whole clustering
+            information is stored in self.hierarchy
         """
         if self.verbose == 0:
             blockPrint()
