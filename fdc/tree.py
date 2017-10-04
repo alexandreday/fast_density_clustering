@@ -236,6 +236,26 @@ class TreeStructure:
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
         """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
         and relabels the data accordingly
+
+        Parameters
+        ------
+
+        model : fdc object
+            Contains the coarse graining information
+
+        X  : array, shape = (n_sample, n_marker)
+            Contains the data in the original space
+        
+        n_average : int
+            Number of folds in the cross validation
+
+        score_threshold : float
+            Classification score threshold
+        
+        Returns
+        ---------
+        self : TreeStructure() object
+
         """
 
         self.identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
