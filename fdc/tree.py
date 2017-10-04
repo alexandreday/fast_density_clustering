@@ -532,108 +532,108 @@ class TreeStructure:
 
         """
 
-    if cluster_label is None:
-        cluster_label = self.new_cluster_label
-        
-    label_to_idx = {} # cluster label to data index
-    unique_label = np.unique(cluster_label)
-    n_sample, n_marker = X_standard.shape
+        if cluster_label is None:
+            cluster_label = self.new_cluster_label
+            
+        label_to_idx = {} # cluster label to data index
+        unique_label = np.unique(cluster_label)
+        n_sample, n_marker = X_standard.shape
 
-    if marker is None:
-        marker = ['marker_%i'%i for i in range(n_marker)]
+        if marker is None:
+            marker = ['marker_%i'%i for i in range(n_marker)]
 
-    assert n_sample == len(X_standard)
-    n_perc = int(round(0.05*n_sample))
+        assert n_sample == len(X_standard)
+        n_perc = int(round(0.05*n_sample))
 
-    for ul in unique_label:
-        label_to_idx[ul] = np.where(cluster_label == ul)[0]
+        for ul in unique_label:
+            label_to_idx[ul] = np.where(cluster_label == ul)[0]
 
-    idx_top = []
-    idx_bot = []
+        idx_top = []
+        idx_bot = []
 
-    for m in range(n_marker):
-        asort = np.argsort(X_standard[:,m])
-        idx_bot.append(asort[:n_perc]) # botoom most expressed markers
-        idx_top.append(asort[-n_perc:]) # top most expressed markers
-
-    cluster_positive_composition = {}
-    cluster_negative_composition = {}
-
-    for label, idx in label_to_idx.items():
-        # count percentage of saturated markers in a given cluster ...
-        # compare that to randomly distributed (size_of_cluster/n_sample)*n_perc
-        cluster_positive_composition[label] = []
-        cluster_negative_composition[label] = []
         for m in range(n_marker):
+            asort = np.argsort(X_standard[:,m])
+            idx_bot.append(asort[:n_perc]) # botoom most expressed markers
+            idx_top.append(asort[-n_perc:]) # top most expressed markers
 
-            ratio_pos = len(set(idx_top[m]).intersection(set(idx)))/len(idx_top[m])
-            ratio_neg = len(set(idx_bot[m]).intersection(set(idx)))/len(idx_bot[m])
+        cluster_positive_composition = {}
+        cluster_negative_composition = {}
 
-            cluster_positive_composition[label].append(ratio_pos)
-            cluster_negative_composition[label].append(ratio_neg)
+        for label, idx in label_to_idx.items():
+            # count percentage of saturated markers in a given cluster ...
+            # compare that to randomly distributed (size_of_cluster/n_sample)*n_perc
+            cluster_positive_composition[label] = []
+            cluster_negative_composition[label] = []
+            for m in range(n_marker):
 
-    df_pos = pd.DataFrame(cluster_positive_composition, index = marker)
-    df_neg = pd.DataFrame(cluster_negative_composition, index = marker)
-    
-    cluster_ratio_size = np.array([len(label_to_idx[ul])/n_sample for ul in unique_label])
-    df_cluster_ratio_size = pd.DataFrame(cluster_ratio_size.reshape(1,-1), index = ['Cluster_ratio'], columns = label_to_idx.keys())
+                ratio_pos = len(set(idx_top[m]).intersection(set(idx)))/len(idx_top[m])
+                ratio_neg = len(set(idx_bot[m]).intersection(set(idx)))/len(idx_bot[m])
 
-    # data frame, shape = (n_marker + 1, n_cluster) with index labels [cluster_ratio, marker_1, marker_2 ...]
-    df_pos_new = df_cluster_ratio_size.append(df_pos)
-    df_neg_new = df_cluster_ratio_size.append(df_neg)
+                cluster_positive_composition[label].append(ratio_pos)
+                cluster_negative_composition[label].append(ratio_neg)
 
-    return df_pos_new, df_neg_new
+        df_pos = pd.DataFrame(cluster_positive_composition, index = marker)
+        df_neg = pd.DataFrame(cluster_negative_composition, index = marker)
+        
+        cluster_ratio_size = np.array([len(label_to_idx[ul])/n_sample for ul in unique_label])
+        df_cluster_ratio_size = pd.DataFrame(cluster_ratio_size.reshape(1,-1), index = ['Cluster_ratio'], columns = label_to_idx.keys())
 
-def score_merge(root, model, X, n_average = 10):
-    """ Using a logistic regression multi-class classifier, determines the merges that are statistically
-    signicant based on a CV prediction score. Returns a robust clustering in the original space.
+        # data frame, shape = (n_marker + 1, n_cluster) with index labels [cluster_ratio, marker_1, marker_2 ...]
+        df_pos_new = df_cluster_ratio_size.append(df_pos)
+        df_neg_new = df_cluster_ratio_size.append(df_neg)
 
-    Returns
-    ---------
+        return df_pos_new, df_neg_new
 
-    classifier_info : dict
-        Keys of dict are ['mean_score', 'mean_score_cluster', 
-        'var_score_cluster', 'coeff', 
-        'intercept', 'clf', 'mean_xtrain',
-         'inv_std_xtrain', 'n_sample']
+    def score_merge(root, model, X, n_average = 10):
+        """ Using a logistic regression multi-class classifier, determines the merges that are statistically
+        signicant based on a CV prediction score. Returns a robust clustering in the original space.
 
-    """
-    
-    y = classification_labels(root.get_child(), model)
+        Returns
+        ---------
 
-    pos_subset =  (y != -1)
-    Xsubset = X[pos_subset] # original space coordinates
-    ysubset = y[pos_subset] # labels
+        classifier_info : dict
+            Keys of dict are ['mean_score', 'mean_score_cluster', 
+            'var_score_cluster', 'coeff', 
+            'intercept', 'clf', 'mean_xtrain',
+            'inv_std_xtrain', 'n_sample']
 
-    return classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
+        """
+        
+        y = classification_labels(root.get_child(), model)
 
-def classification_labels(node_list, model):
-    """ Returns a list of labels for the original data according to the classification
-    given at root. root is a TreeNode object which contains childrens. Each children (and the data it contains)
-    is assigned an arbitrary integer label. Data points not contained in that node are labelled as -1.
+        pos_subset =  (y != -1)
+        Xsubset = X[pos_subset] # original space coordinates
+        ysubset = y[pos_subset] # labels
 
-    Parameters
-    -------
-    node_list : list of nodes 
+        return classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
 
-    model : FDC object
+    def classification_labels(node_list, model):
+        """ Returns a list of labels for the original data according to the classification
+        given at root. root is a TreeNode object which contains childrens. Each children (and the data it contains)
+        is assigned an arbitrary integer label. Data points not contained in that node are labelled as -1.
 
-    Returns
-    --------
-    1D array of labels
+        Parameters
+        -------
+        node_list : list of nodes 
 
-    """
-    
-    n_sample = len(model.X)
-    y = -1*np.ones(n_sample,dtype=np.int)
-    y_init = model.hierarchy[0]['cluster_labels']
+        model : FDC object
 
-    for i, node in enumerate(node_list):
-        init_c = find_idx_cluster_in_root(model, node)
-        for ic in init_c:
-            y[y_init == ic] = i
+        Returns
+        --------
+        1D array of labels
 
-    return y
+        """
+        
+        n_sample = len(model.X)
+        y = -1*np.ones(n_sample,dtype=np.int)
+        y_init = model.hierarchy[0]['cluster_labels']
+
+        for i, node in enumerate(node_list):
+            init_c = find_idx_cluster_in_root(model, node)
+            for ic in init_c:
+                y[y_init == ic] = i
+
+        return y
 
 
 def find_mergers(hierarchy , noise_range):
