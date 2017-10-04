@@ -18,15 +18,17 @@ def set_nice_font(size = 18):
 def set_latex():
     import latex
     
-def density_map(X,z,
-                xlabel=None,ylabel=None,zlabel=None,label=None,
+def density_map(X, z,
+                xlabel=None, ylabel=None, zlabel=None, label=None,
                 centers=None,
                 psize=20,
-                out_file=None,title=None,show=True,cmap='coolwarm',
+                out_file=None, title=None, show=True, cmap='coolwarm',
                 remove_tick=False,
                 use_perc=False,
                 rasterized = True,
-                fontsize = 15
+                fontsize = 15,
+                vmax = None,
+                vmin = None
                 ):
     """Plots a 2D density map given x,y coordinates and an intensity z for
     every data point
@@ -65,9 +67,9 @@ def density_map(X,z,
 
     else:
         if label is not None:
-            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=rasterized,label=label)
+            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=rasterized,label=label,vmax=vmax,vmin=vmin)
         else:
-            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=rasterized)
+            plt.scatter(x,y,c=z,cmap=cmap,s=psize,alpha=1.0,rasterized=rasterized, vmax=vmax,vmin=vmin)
     
         cb=plt.colorbar()
     

@@ -32,6 +32,7 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     accuracy_sample = {} 
     n_unique = len(np.unique(y)) # need to standardize the data ... 
     n_sample = X.shape[0]
+    zero_eps = 1e-6 
 
     for i in range(n_unique):
         accuracy_sample[i] = []
@@ -39,7 +40,11 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     for _ in range(n_average):
         
         ytrain, ytest, xtrain, xtest = train_test_split(y, X, test_size=0.2)
-        mu, inv_sigma = np.mean(xtrain, axis=0), 1./np.std(xtrain, axis = 0)
+    
+        std = np.std(xtrain, axis = 0)
+        std[std < zero_eps] = 1.0 # get rid of zero variance data.
+        mu, inv_sigma = np.mean(xtrain, axis=0), 1./std
+
         xtrain = (xtrain - mu)*inv_sigma
 
         unique_ytrain = np.unique(ytrain)
@@ -55,11 +60,15 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         total_score_list.append(total_score)
 
         ypred = logreg.predict(inv_sigma*(xtest-mu)) # check performance per cluster
+        
+        #print(ytest)
         unique_ytest = np.unique(ytest) # these are sorted
-
+        #print(unique_ytest)
+        #-----------
+        #dlsfklsd
         for c in unique_ytest:
             idx_y = (ytest == c)
-            y_sub = ypred[idx_y]
+            y_sub = ypred[idx_y] 
             s = np.sum(y_sub == c)/np.sum(idx_y) # number of correctly predicted
             accuracy_sample[c].append(s)
 
@@ -74,8 +83,8 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
         mean_accuracy[cluster] = np.mean(np.array(sample)[best_half_idx])  # sample_accuracy over best ones
         std_accuracy[cluster] = np.std(np.array(sample)[best_half_idx])    # std_accuracy over best ones
 
-    W_mean = np.mean([W_list[i] for i in best_half_idx],axis=0)
-    b_mean = np.mean([b_list[i] for i in best_half_idx],axis=0)
+    W_mean = np.mean([W_list[i] for i in best_half_idx], axis=0)
+    b_mean = np.mean([b_list[i] for i in best_half_idx], axis=0)
 
     results = { # this contains the weight matrix and the intercept to reconstruct the classifier.
         'mean_score' : np.mean(total_score_list),

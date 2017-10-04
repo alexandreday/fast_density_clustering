@@ -490,6 +490,80 @@ class TreeStructure:
         
         return gate_dict
 
+    def describe_clusters(self, X_standard, cluster_label = None, marker = None, perc = 0.05):
+    """ Checks the composition of each clusters in terms of outliers (define by top and bottom perc)
+
+    Parameters
+    --------------
+    X_standard : array, shape = (n_sample, n_marker)
+        Data array with raw marker expression 
+    cluster_label : optional, array, shape = n_sample
+        Cluster labels for each data point. If none, just uses the labels infered by the Tree
+    marker : optional, list of str, len(list) = n_marker
+        Marker labels. If not specified will use marker_0, marker_1, etc.
+    perc : optional, float
+        The percentage of most and least expressed data points for a marker that you consider outliers
+    
+    Return
+    -------------
+    df_pos, df_neg : tuple of pandas.DataFrame
+        dataframes with row index as markers and columns as cluster labels. An additional row also
+        indicates the size of each cluster as a fraction of the total sample.
+
+    """
+
+    if cluster_label is None:
+        cluster_label = self.new_cluster_label
+        
+    label_to_idx = {} # cluster label to data index
+    unique_label = np.unique(cluster_label)
+    n_sample, n_marker = X_standard.shape
+
+    if marker is None:
+        marker = ['marker_%i'%i for i in range(n_marker)]
+
+    assert n_sample == len(X_standard)
+    n_perc = int(round(0.05*n_sample))
+
+    for ul in unique_label:
+        label_to_idx[ul] = np.where(cluster_label == ul)[0]
+
+    idx_top = []
+    idx_bot = []
+
+    for m in range(n_marker):
+        asort = np.argsort(X_standard[:,m])
+        idx_bot.append(asort[:n_perc]) # botoom most expressed markers
+        idx_top.append(asort[-n_perc:]) # top most expressed markers
+
+    cluster_positive_composition = {}
+    cluster_negative_composition = {}
+
+    for label, idx in label_to_idx.items():
+        # count percentage of saturated markers in a given cluster ...
+        # compare that to randomly distributed (size_of_cluster/n_sample)*n_perc
+        cluster_positive_composition[label] = []
+        cluster_negative_composition[label] = []
+        for m in range(n_marker):
+
+            ratio_pos = len(set(idx_top[m]).intersection(set(idx)))/len(idx_top[m])
+            ratio_neg = len(set(idx_bot[m]).intersection(set(idx)))/len(idx_bot[m])
+
+            cluster_positive_composition[label].append(ratio_pos)
+            cluster_negative_composition[label].append(ratio_neg)
+
+    df_pos = pd.DataFrame(cluster_positive_composition, index = marker)
+    df_neg = pd.DataFrame(cluster_negative_composition, index = marker)
+    
+    cluster_ratio_size = np.array([len(label_to_idx[ul])/n_sample for ul in unique_label])
+    df_cluster_ratio_size = pd.DataFrame(cluster_ratio_size.reshape(1,-1), index = ['Cluster_ratio'], columns = label_to_idx.keys())
+
+    # data frame, shape = (n_marker + 1, n_cluster) with index labels [cluster_ratio, marker_1, marker_2 ...]
+    df_pos_new = df_cluster_ratio_size.append(df_pos)
+    df_neg_new = df_cluster_ratio_size.append(df_neg)
+
+    return df_pos_new, df_neg_new
+
 def score_merge(root, model, X, n_average = 10):
     """ Using a logistic regression multi-class classifier, determines the merges that are statistically
     signicant based on a CV prediction score. Returns a robust clustering in the original space.
@@ -673,3 +747,4 @@ def find_idx_cluster_in_root(model, root):
     node_list = np.array(breath_first_search(root))
     n_initial_cluster = len(model.hierarchy[0]['idx_centers'])
     return np.sort(node_list[node_list < n_initial_cluster]) # subset of initial clusters contained in the subtree starting at tree.
+

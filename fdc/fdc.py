@@ -292,7 +292,6 @@ class FDC:
         """
         rho = self.rho
         nn_list = self.nn_list
-
         
         new_leaves=nn_list[idx][1:self.nh_size]
         NH=set(nn_list[idx][1:self.nh_size])  # starts from the initial minimal neighborhood set by user 
