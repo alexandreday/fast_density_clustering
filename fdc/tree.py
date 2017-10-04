@@ -511,26 +511,26 @@ class TreeStructure:
         return gate_dict
 
     def describe_clusters(self, X_standard, cluster_label = None, marker = None, perc = 0.05):
-    """ Checks the composition of each clusters in terms of outliers (define by top and bottom perc)
+        """ Checks the composition of each clusters in terms of outliers (define by top and bottom perc)
 
-    Parameters
-    --------------
-    X_standard : array, shape = (n_sample, n_marker)
-        Data array with raw marker expression 
-    cluster_label : optional, array, shape = n_sample
-        Cluster labels for each data point. If none, just uses the labels infered by the Tree
-    marker : optional, list of str, len(list) = n_marker
-        Marker labels. If not specified will use marker_0, marker_1, etc.
-    perc : optional, float
-        The percentage of most and least expressed data points for a marker that you consider outliers
-    
-    Return
-    -------------
-    df_pos, df_neg : tuple of pandas.DataFrame
-        dataframes with row index as markers and columns as cluster labels. An additional row also
-        indicates the size of each cluster as a fraction of the total sample.
+        Parameters
+        --------------
+        X_standard : array, shape = (n_sample, n_marker)
+            Data array with raw marker expression 
+        cluster_label : optional, array, shape = n_sample
+            Cluster labels for each data point. If none, just uses the labels infered by the Tree
+        marker : optional, list of str, len(list) = n_marker
+            Marker labels. If not specified will use marker_0, marker_1, etc.
+        perc : optional, float
+            The percentage of most and least expressed data points for a marker that you consider outliers
+        
+        Return
+        -------------
+        df_pos, df_neg : tuple of pandas.DataFrame
+            dataframes with row index as markers and columns as cluster labels. An additional row also
+            indicates the size of each cluster as a fraction of the total sample.
 
-    """
+        """
 
     if cluster_label is None:
         cluster_label = self.new_cluster_label
