@@ -136,13 +136,13 @@ class TreeStructure:
         print("---> 2 top layers")
         print("---> Root :", root)
         print("---> Root's childs :", root.get_child())
-        
-        self.robust_terminal_node = [] #list of the terminal robust nodes
-        self.robust_clf_node = {} # dictionary of the nodes where a partition is made (non-leaf nodes)
-
+    
         if self.all_clf_node is not None: # meaning, the nodes have already been checked for classification
+
+            print("Need to update this part, ")
+            assert False
             
-            res = self.all_clf_node[root.get_id()]
+            '''res = self.all_clf_node[root.get_id()]
 
             if res['mean_score'] > score_threshold :
                 self.robust_clf_node[root.get_id()] = res
@@ -159,67 +159,12 @@ class TreeStructure:
                 for child in c_node.child :
                     id_c = child.get_id() 
                     if id_c not in self.robust_clf_node.keys() :
-                        self.robust_terminal_node.append(id_c)
+                        self.robust_terminal_node.append(id_c) '''
         
         else: # focus on this loop .........
-            
-            # add root first 
-            result_classify = score_merge(self.root, model, X, n_average = n_average)
-            score = result_classify['mean_score']
+            self.compute_robust_node(model, X, n_average, score_threshold)
 
-            if self.ignore_root is True:
-                print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
-                self.robust_clf_node[self.root.get_id()] = result_classify
-            else:
-                if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                    print("[tree.py] : root is robust #  %i \t score = %.4f"%(self.root.get_id(),score))
-                    self.robust_clf_node[self.root.get_id()] = result_classify
-                else:
-                    print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
-
-            for current_node in self.node_items()[1:]:
-                if current_node.parent.get_id() in self.robust_clf_node.keys():
-                    if not current_node.is_leaf():
-                        
-                        result_classify = score_merge(current_node, model, X, n_average = n_average)
-                        score = result_classify['mean_score']
-                        
-                        if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                            print("[tree.py] : robust node #  %i \t score = %.4f"%(current_node.get_id(),score))
-                            self.robust_clf_node[current_node.get_id()] = result_classify
-
-                        else:
-                            print("[tree.py] : reject node #  %i \t score = %.4f"%(current_node.get_id(),score))
-                            self.robust_terminal_node.append(current_node.get_id())
-                    else: # implies it's parent was robust, and is a leaf node 
-                        self.robust_terminal_node.append(current_node.get_id())
-        
-        #self.robust_clf_node is a dict containing all the classification info for further queries
-
-        # updating robust_clf_node ... 
-        self.probability_tree = {}
-
-        for node_id, classify_results in self.robust_clf_node.items():
-            current_node = self.node_dict[node_id]
-            for i, c in enumerate(current_node.child):
-                self.probability_tree[(node_id, c.get_id())] = classify_results['mean_score_cluster'][i]
-        
-        #~~~~~~~~~~~~~~~> recompute tree with combinatorial factors 
-
-        #self.combinatorial_tree() :
-
-        for node_id, node_clf in self.robust_clf_node.items(): 
-            if self.node_dict[node_id].child[0].get_id() in self.robust_terminal_node: # iterate over terminal robust clf nodes !
-                probability_set = [node_clf['mean_score']]
-                n = node_id
-                while n != self.root.get_id():
-                    parent = self.node_dict[n].parent
-                    probability_set.append(self.probability_tree[(parent.get_id(), n)])
-                    n = parent.get_id()
-        
-        ########### ----------> LEFT IT HERE " NOW COMPUTE COMBINATORIAL FACTORS ....... <---------
-        
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        self.compute_probability_tree() # builds a dictionary of the classification scores on every branches.
 
         # Listing all nodes in the robust tree ...==
         all_robust_node = set([])
@@ -232,6 +177,58 @@ class TreeStructure:
 
         self.all_robust_node = list(all_robust_node)
 
+    def compute_robust_node(self, model, X, n_average, score_threshold):
+        """ Start from the root, computes the classification score at every branch in the tree
+        and stops if classication score is below a certain threshold.
+        Results are stored in:
+        self.robust_clf_node : dictionary of node id to classification information (weights, biases, scores, etc.)
+        self.robust_terminal_node : list of terminal nodes id, whose parents are robust classifiers.
+        """
+
+        self.robust_terminal_node = [] #list of the terminal robust nodes
+        self.robust_clf_node = {} # dictionary of the nodes where a partition is made (non-leaf nodes)
+        # add root first 
+        result_classify = score_merge(self.root, model, X, n_average = n_average)
+        score = result_classify['mean_score']
+
+        if self.ignore_root is True:
+            print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
+            self.robust_clf_node[self.root.get_id()] = result_classify
+        else:
+            if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+                print("[tree.py] : root is robust #  %i \t score = %.4f"%(self.root.get_id(),score))
+                self.robust_clf_node[self.root.get_id()] = result_classify
+            else:
+                print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
+
+        for current_node in self.node_items()[1:]:
+            if current_node.parent.get_id() in self.robust_clf_node.keys():
+                if not current_node.is_leaf():
+                    
+                    result_classify = score_merge(current_node, model, X, n_average = n_average)
+                    score = result_classify['mean_score']
+                    
+                    if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+                        print("[tree.py] : robust node #  %i \t score = %.4f"%(current_node.get_id(),score))
+                        self.robust_clf_node[current_node.get_id()] = result_classify
+
+                    else:
+                        print("[tree.py] : reject node #  %i \t score = %.4f"%(current_node.get_id(),score))
+                        self.robust_terminal_node.append(current_node.get_id())
+                else: # implies it's parent was robust, and is a leaf node 
+                    self.robust_terminal_node.append(current_node.get_id())
+
+    def compute_probability_tree(self):
+        """ Compute the probability of correct classification for every branch of the tree.
+        The info is stored in a dictionary self.probability_tree which map tuples to probabilities
+        Tuples are the parent node id and the child node id.
+        """
+
+        self.probability_tree = {}
+        for node_id, classify_results in self.robust_clf_node.items():
+            current_node = self.node_dict[node_id]
+            for i, c in enumerate(current_node.child):
+                self.probability_tree[(node_id, c.get_id())] = classify_results['mean_score_cluster'][i]
         
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
         """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
@@ -584,56 +581,59 @@ class TreeStructure:
 
         return df_pos_new, df_neg_new
 
-    def score_merge(root, model, X, n_average = 10):
-        """ Using a logistic regression multi-class classifier, determines the merges that are statistically
-        signicant based on a CV prediction score. Returns a robust clustering in the original space.
+##############################################
+###############################################
 
-        Returns
-        ---------
+def score_merge(root, model, X, n_average = 10):
+    """ Using a logistic regression multi-class classifier, determines the merges that are statistically
+    signicant based on a CV prediction score. Returns a robust clustering in the original space.
 
-        classifier_info : dict
-            Keys of dict are ['mean_score', 'mean_score_cluster', 
-            'var_score_cluster', 'coeff', 
-            'intercept', 'clf', 'mean_xtrain',
-            'inv_std_xtrain', 'n_sample']
+    Returns
+    ---------
 
-        """
-        
-        y = classification_labels(root.get_child(), model)
+    classifier_info : dict
+        Keys of dict are ['mean_score', 'mean_score_cluster', 
+        'var_score_cluster', 'coeff', 
+        'intercept', 'clf', 'mean_xtrain',
+        'inv_std_xtrain', 'n_sample']
 
-        pos_subset =  (y != -1)
-        Xsubset = X[pos_subset] # original space coordinates
-        ysubset = y[pos_subset] # labels
+    """
+    
+    y = classification_labels(root.get_child(), model)
 
-        return classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
+    pos_subset =  (y != -1)
+    Xsubset = X[pos_subset] # original space coordinates
+    ysubset = y[pos_subset] # labels
 
-    def classification_labels(node_list, model):
-        """ Returns a list of labels for the original data according to the classification
-        given at root. root is a TreeNode object which contains childrens. Each children (and the data it contains)
-        is assigned an arbitrary integer label. Data points not contained in that node are labelled as -1.
+    return classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
 
-        Parameters
-        -------
-        node_list : list of nodes 
+def classification_labels(node_list, model):
+    """ Returns a list of labels for the original data according to the classification
+    given at root. root is a TreeNode object which contains childrens. Each children (and the data it contains)
+    is assigned an arbitrary integer label. Data points not contained in that node are labelled as -1.
 
-        model : FDC object
+    Parameters
+    -------
+    node_list : list of nodes 
 
-        Returns
-        --------
-        1D array of labels
+    model : FDC object
 
-        """
-        
-        n_sample = len(model.X)
-        y = -1*np.ones(n_sample,dtype=np.int)
-        y_init = model.hierarchy[0]['cluster_labels']
+    Returns
+    --------
+    1D array of labels
 
-        for i, node in enumerate(node_list):
-            init_c = find_idx_cluster_in_root(model, node)
-            for ic in init_c:
-                y[y_init == ic] = i
+    """
+    
+    n_sample = len(model.X)
+    y = -1*np.ones(n_sample,dtype=np.int)
+    y_init = model.hierarchy[0]['cluster_labels']
 
-        return y
+    for i, node in enumerate(node_list):
+        init_c = find_idx_cluster_in_root(model, node)
+        for ic in init_c:
+            y[y_init == ic] = i
+
+    return y
 
 
 def find_mergers(hierarchy , noise_range):
