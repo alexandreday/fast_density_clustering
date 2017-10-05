@@ -83,7 +83,7 @@ class TreeStructure:
         if self.tree_constructed is True:
             return
 
-        mergers = find_mergers(model.hierarchy , model.noise_range)
+        mergers = find_mergers(model.hierarchy , model.noise_range) # OK this might be a problem ... need to check this.
         mergers.reverse()
         
         node_dict = {}
@@ -260,7 +260,7 @@ class TreeStructure:
         root = self.root
         node_dict = self.node_dict
         mergers = self.mergers
-        robust_terminal_node = self.robust_terminal_node
+        robust_terminal_node = self.robust_terminal_node # this is a list 
         
         ###################
         ###################
@@ -274,19 +274,20 @@ class TreeStructure:
         y_original = model.hierarchy[0]['cluster_labels']
         cluster_to_node_id = {}
 
+        # here all terminal nodes are given a label, in the same order they are stored.
         y_node = classification_labels([node_dict[i] for i in robust_terminal_node], model)
-        
-        for i, v in enumerate(robust_terminal_node):
-            node_id = v
+        assert np.count_nonzero(y_node == -1) == 0, "Wrong labelling !"
+
+        for i, node_id in enumerate(robust_terminal_node):
             pos = (y_node == i)
             y_robust[pos] = i
-            cluster_to_node_id[i] = v
+            cluster_to_node_id[i] = node_id
         
         if len(robust_terminal_node) == 0:
-            y_robust *= 0 # only one coloring !
+            y_robust *= 0 # only one coloring 
         
         new_idx_centers = []
-        all_idx = np.arange(0,model.X.shape[0],dtype=int)
+        all_idx = np.arange(0,model.X.shape[0], dtype=int)
 
         for i in range(cluster_n):
             pos_i = (y_robust == i)
@@ -614,29 +615,31 @@ def classification_labels(node_list, model):
 
     Parameters
     -------
-    node_list : list of nodes 
+    node_list : list of nodes, these should be the child of a parent node for instance.
 
     model : FDC object
 
     Returns
     --------
     1D array of labels
-
     """
     
     n_sample = len(model.X)
     y = -1*np.ones(n_sample,dtype=np.int)
-    y_init = model.hierarchy[0]['cluster_labels']
+    y_init = model.hierarchy[0]['cluster_labels'] # full set of labels at smallest scale ... 
 
-    for i, node in enumerate(node_list):
+    for i, node in enumerate(node_list): # all data points contained a node take label i
         init_c = find_idx_cluster_in_root(model, node)
         for ic in init_c:
-            y[y_init == ic] = i
+            # relabelling here according to merger
+            y[y_init == ic] = i 
 
     return y
 
 
 def find_mergers(hierarchy , noise_range):
+
+    from collections import OrderedDict
 
     """ Determines the list of merges that are made during the coarse-graining """
     
@@ -647,7 +650,7 @@ def find_mergers(hierarchy , noise_range):
 
     current_merge_idx = n_initial_cluster
     n_merge = 0
-    merging_dict = {}
+    merging_dict = OrderedDict()
 
     merger_record = []
 
@@ -668,7 +671,6 @@ def find_mergers(hierarchy , noise_range):
                     mapped_u = []
                     for k in tmp_u:
                         mapped_k = apply_map(merging_dict, k)
-
                         mapped_u.append(mapped_k)
                         
                     mapped_u = np.unique(mapped_u)
@@ -682,7 +684,7 @@ def find_mergers(hierarchy , noise_range):
     
     # merge remaining ----
     mapped_u = []
-    for k,v in merging_dict.items():
+    for k, v in merging_dict.items():
         if v == -1:
             mapped_u.append(k)
     merger_record.append([mapped_u, current_merge_idx, 1.5*(merger_record[-1][2])])
@@ -725,14 +727,19 @@ def get_scale(Z, c_1, c_2):
     return -1
         
 def breath_first_search(root):
-    
+    """
+    Returns
+    -------
+    node_list : list of node id contained in root 
+    """
+
     stack = [root]
     node_list = []
     # breath-first search
     while stack:
         current_node = stack[0]
         stack = stack[1:]
-        node_list.append(current_node.get_id())
+        node_list.append(current_node.get_id()) 
 
         if not current_node.is_leaf():
             for node in current_node.get_child():
@@ -740,7 +747,7 @@ def breath_first_search(root):
 
     return node_list
 
-def breath_first_search_w_scale(root, Z):
+''' def breath_first_search_w_scale(root, Z):
     scale = find_scale(root.get_id(), Z)
 
     node_list = breath_first_search(root)
@@ -761,10 +768,14 @@ def find_scale(id, Z):
 
 def find_leaves(cluster_n, Z, n_init_cluster): # find the leafs of a cluster a given scale
     idx = cluster_n - n_init_cluster - 1
-    return Z[idx]
+    return Z[idx] '''
     
-def find_idx_cluster_in_root(model, root):
-    node_list = np.array(breath_first_search(root))
-    n_initial_cluster = len(model.hierarchy[0]['idx_centers'])
+def find_idx_cluster_in_root(model, node):
+    """ Finds the original (noise_threshold = init) clusters contains in the node
+    Returns the index of the terminal nodes contained in node.
+    """
+    node_list = np.array(breath_first_search(node)) #list of terminal nodes contained in node. 
+    n_initial_cluster = len(model.hierarchy[0]['idx_centers']) # map out what is going on here .
+    # recall that the cluster labelling is done following the dendrogram convention (see scipy)
     return np.sort(node_list[node_list < n_initial_cluster]) # subset of initial clusters contained in the subtree starting at tree.
 
