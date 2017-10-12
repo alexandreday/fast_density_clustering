@@ -61,7 +61,7 @@ class FDC:
     xtol: float, optional (default = 0.01)
         precision parameter for optimizing the bandwidth using maximum likelihood on a test set
     
-    search_size int, optional (default = 20)
+    search_size: int, optional (default = 20)
         when performing search over neighborhoods, size of each local neighborhood to check when
         expanding. This drastically slows the coarse-graining if chosen to be too big !
     """
@@ -122,7 +122,7 @@ class FDC:
         print("[fdc] Starting clustering with n=%i samples..." % n_sample)
         start = time.time()
 
-        print("[fdc] Fitting kernel model for density estimation ...")
+        print("[fdc] Fitting kernel model fo    r density estimation ...")
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
             atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
 

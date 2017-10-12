@@ -6,7 +6,7 @@ from scipy.cluster.hierarchy import dendrogram as scipydendro
 from scipy.cluster.hierarchy import to_tree
 from .hierarchy import compute_linkage_matrix
 
-class TreeNode:
+class TREENODE:
 
     def __init__(self, id = -1, parent = None, child = [], scale = -1):
         self.child = child # has to be list of TreeNode
@@ -41,7 +41,7 @@ class TreeNode:
         child.reverse()
         return child 
 
-class TreeStructure:
+class TREE:
     """ Contains all the hierachy and information concerning the clustering
     """
     def __init__(self, root = None, shallow_copy = None):
@@ -89,12 +89,12 @@ class TreeStructure:
         node_dict = {}
         
         m = mergers[0]
-        root = TreeNode(id = m[1], scale = m[2])
+        root = TREENODE(id = m[1], scale = m[2])
         node_dict[root.get_id()] = root
         
         for m in mergers:
             for mc in m[0]:
-                c_node = TreeNode(id = mc, parent = node_dict[m[1]], child = [], scale = -1)
+                c_node = TREENODE(id = mc, parent = node_dict[m[1]], child = [], scale = -1)
                 node_dict[m[1]].add_child(c_node)
                 node_dict[c_node.get_id()] = c_node
             node_dict[m[1]].scale = m[2]
@@ -164,8 +164,7 @@ class TreeStructure:
         else: # focus on this loop .........
             self.compute_robust_node(model, X, n_average, score_threshold)
 
-        self.compute_probability_tree() # builds a dictionary of the classification scores on every branches.
-
+    
         # Listing all nodes in the robust tree ...==
         all_robust_node = set([])
 
@@ -176,6 +175,27 @@ class TreeStructure:
                 all_robust_node.add(c.get_id())
 
         self.all_robust_node = list(all_robust_node)
+
+    def compute_propagated_error(self, node_id):
+        path = []
+        p = self.node_dict[node_id]
+        while p != self.root:
+            tmp = p
+            p = p.parent
+            path.append((tmp, p))
+        print(path)
+        print([probability_tree[p] for p in path])
+    
+    def compute_propagated_robust_node(self, score_threshold):
+        """ Based on the classifying information obtained from compute_robust_node, 
+        finds subset of the tree that has a -> total error <- better than the score_threshold !
+        """
+        self.compute_probability_tree() # builds a dictionary of the classification scores on every branches.
+
+        for node_id in self.robust_clf_node.keys():
+            print("checking node ", node_id,'\t',self.dict[node_id])
+            self.compute_propagated_error(node_id)
+            return None
 
     def compute_robust_node(self, model, X, n_average, score_threshold):
         """ Start from the root, computes the classification score at every branch in the tree
@@ -251,7 +271,7 @@ class TreeStructure:
         
         Returns
         ---------
-        self : TreeStructure() object
+        self : TREE() object
 
         """
 
@@ -287,7 +307,7 @@ class TreeStructure:
             y_robust *= 0 # only one coloring 
         
         new_idx_centers = []
-        all_idx = np.arange(0,model.X.shape[0], dtype=int)
+        all_idx = np.arange(0, model.X.shape[0], dtype=int)
 
         for i in range(cluster_n):
             pos_i = (y_robust == i)
@@ -336,9 +356,8 @@ class TreeStructure:
                 
                 child_list = current_clf_node.child
                 info = self.robust_clf_node[current_clf_node.get_id()]
-                W,b,mu,inv_std = info['coeff'], info['intercept'], info['mean_xtrain'], info['inv_std_xtrain']
+                W, b, mu, inv_std = info['coeff'], info['intercept'], info['mean_xtrain'], info['inv_std_xtrain']
                 y = self.classify_point(inv_std*(x-mu), W, b)
-                #print('child_pos =', y)
                 current_clf_node = child_list[y]
         
         return y_pred
