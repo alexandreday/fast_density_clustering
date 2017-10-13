@@ -5,6 +5,8 @@ import pickle
 from scipy.cluster.hierarchy import dendrogram as scipydendro
 from scipy.cluster.hierarchy import to_tree
 from .hierarchy import compute_linkage_matrix
+import copy
+from collections import OrderedDict
 
 class TREENODE:
 
@@ -13,6 +15,7 @@ class TREENODE:
         self.scale = scale
         self.parent = parent
         self.id = id
+
     def __repr__(self):
         return ("Node: [%s] @ s = %.3f" % (self.id,self.scale))
 
@@ -40,12 +43,11 @@ class TREENODE:
         child = self.child[:]
         child.reverse()
         return child 
-
+    
 class TREE:
     """ Contains all the hierachy and information concerning the clustering
     """
     def __init__(self, root = None, shallow_copy = None):
-
         self.root = root
         self.node_dict = None
         self.mergers = None
@@ -83,24 +85,22 @@ class TREE:
         if self.tree_constructed is True:
             return
 
-        mergers = find_mergers(model.hierarchy , model.noise_range) # OK this might be a problem ... need to check this.
+        mergers = copy.deepcopy(find_mergers(model.hierarchy , model.noise_range)) # OK this might be a problem ... need to check this.
         mergers.reverse()
-        
-        node_dict = {}
-        
         m = mergers[0]
-        root = TREENODE(id = m[1], scale = m[2])
-        node_dict[root.get_id()] = root
+
+        self.node_dict = {}
         
+        self.root = copy.deepcopy(TREENODE(id = m[1], scale = m[2]))
+        self.node_dict[self.root.get_id()] = self.root
+            
         for m in mergers:
             for mc in m[0]:
-                c_node = TREENODE(id = mc, parent = node_dict[m[1]], child = [], scale = -1)
-                node_dict[m[1]].add_child(c_node)
-                node_dict[c_node.get_id()] = c_node
-            node_dict[m[1]].scale = m[2]
+                c_node = copy.deepcopy(TREENODE(id = mc, parent = self.node_dict[m[1]], child = [], scale = -1))
+                self.node_dict[m[1]].add_child(c_node)
+                self.node_dict[c_node.get_id()] = c_node
+            self.node_dict[m[1]].scale = m[2]
 
-        self.root = root
-        self.node_dict = node_dict
         self.mergers = mergers
         self.tree_constructed = True
 
@@ -179,23 +179,41 @@ class TREE:
     def compute_propagated_error(self, node_id):
         path = []
         p = self.node_dict[node_id]
-        while p != self.root:
+        
+        while p.get_id() != self.root.get_id():
             tmp = p
             p = p.parent
-            path.append((tmp, p))
-        print(path)
-        print([probability_tree[p] for p in path])
+            path.append((p.get_id(),tmp.get_id()))
+        
+        full_path_prob = [self.probability_tree[p] for p in path] 
+        return compute_prob(full_path_prob)
+        #print(path)
+        #full_path = [self.probability_tree[p] for p in path] 
+        #print(full_path)
+        #print('total prob:',compute_prob(full_path))
     
     def compute_propagated_robust_node(self, score_threshold):
         """ Based on the classifying information obtained from compute_robust_node, 
         finds subset of the tree that has a -> total error <- better than the score_threshold !
         """
         self.compute_probability_tree() # builds a dictionary of the classification scores on every branches.
+        self.robust_clf_propag_error = {}
 
+        self.robust_clf_propag_node = {}
+        terminal_node = []
         for node_id in self.robust_clf_node.keys():
-            print("checking node ", node_id,'\t',self.dict[node_id])
-            self.compute_propagated_error(node_id)
-            return None
+            print("checking node ", node_id,'\t',self.node_dict[node_id])
+            p_error = self.compute_propagated_error(node_id)
+            self.robust_clf_propag_error[node_id] = p_error
+            if p_error > score_threshold:
+                self.robust_clf_propag_node[node_id] = self.robust_clf_node[node_id]
+
+        for n in self.robust_clf_propag_node.keys():
+            for n_c in self.node_dict[n].child:
+                if n_c.get_id() not in self.robust_clf_propag_node.keys():
+                    terminal_node.append(n_c.get_id())
+
+        self.robust_terminal_propag_node = terminal_node
 
     def compute_robust_node(self, model, X, n_average, score_threshold):
         """ Start from the root, computes the classification score at every branch in the tree
@@ -282,6 +300,13 @@ class TREE:
         mergers = self.mergers
         robust_terminal_node = self.robust_terminal_node # this is a list 
         
+        self.compute_propagated_robust_node(score_threshold)
+
+        robust_terminal_node = self.robust_terminal_propag_node
+        #print('quite: ',len(robust_terminal_node))
+        #print('not quite: ',len(self.robust_terminal_node))
+        #exit()
+
         ###################
         ###################
         # RELABELLING DATA !
@@ -316,11 +341,15 @@ class TREE:
             new_idx_centers.append(idx_i)
 
         self.new_cluster_label = y_robust
-        self.robust_terminal_node = robust_terminal_node
         self.new_idx_centers = np.array(new_idx_centers,dtype=int)
         self.cluster_to_node_id = cluster_to_node_id
         self.node_to_cluster_id = {v: k for k, v in self.cluster_to_node_id.items()}
-
+        print("NODE TO CLUSTER PLOTLABELS:\n", self.node_to_cluster_id)
+        print("Terminal \t parent\t prob")
+        for n in robust_terminal_node:
+            p_id = self.node_dict[n].parent.get_id()
+            print(n,'\t',p_id,'\t',"%.4f"% self.robust_clf_propag_error[p_id])
+       #
         return self
 
     def check_all_merge(self, model, X, n_average = 10):
@@ -656,10 +685,7 @@ def classification_labels(node_list, model):
     return y
 
 
-def find_mergers(hierarchy , noise_range):
-
-    from collections import OrderedDict
-
+def find_mergers(hierarchy, noise_range):    
     """ Determines the list of merges that are made during the coarse-graining """
     
     n_depth = len(noise_range)
@@ -798,3 +824,20 @@ def find_idx_cluster_in_root(model, node):
     # recall that the cluster labelling is done following the dendrogram convention (see scipy)
     return np.sort(node_list[node_list < n_initial_cluster]) # subset of initial clusters contained in the subtree starting at tree.
 
+def prob_single_path(element):
+    if type(element) is not list:
+        return 1 - element
+    prod = 1.
+    for e in element[1:]:
+        prod*=e
+    prod*=(1.-element[0])
+    return prod
+
+def compute_prob(ls):
+    p_error = 0.
+    n_clf_node = len(ls)
+
+    for i in range(n_clf_node):
+        p_error += prob_single_path(ls[-i:])
+
+    return 1-p_error

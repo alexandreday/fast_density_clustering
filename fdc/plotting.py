@@ -288,6 +288,8 @@ def cluster_w_label(X, model:FDC,
     if show:
         plt.show()
     
+    plt.clf()
+    
 
 def summary_v2(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=20, savefile=None, show=False):
     """ Summary plots w/o density map """
