@@ -30,7 +30,8 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     b_list = []
     total_score_list = []
     accuracy_sample = {} 
-    n_unique = len(np.unique(y)) # need to standardize the data ... 
+    unique_y = np.unique(y)
+    n_unique = len(unique_y) # need to standardize the data ... 
     n_sample = X.shape[0]
     zero_eps = 1e-6 
 
@@ -61,16 +62,17 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
 
         ypred = logreg.predict(inv_sigma*(xtest-mu)) # check performance per cluster
         
-        #print(ytest)
-        unique_ytest = np.unique(ytest) # these are sorted
-        #print(unique_ytest)
+
         #-----------
         #dlsfklsd
-        for c in unique_ytest:
-            idx_y = (ytest == c)
-            y_sub = ypred[idx_y] 
-            s = np.sum(y_sub == c)/np.sum(idx_y) # number of correctly predicted
-            accuracy_sample[c].append(s)
+        for c in unique_y:
+            if c in ytest:
+                idx_y = (ytest == c)
+                y_sub = ypred[idx_y] 
+                s = np.sum(y_sub == c)/np.sum(idx_y) # number of correctly predicted
+                accuracy_sample[c].append(s)
+            else:
+                accuracy_sample[c].append(-1) # MAY trigger a bug here, need to fix small clusters classification ... !
 
     mean_accuracy = {}
     std_accuracy = {}

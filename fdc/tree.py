@@ -237,7 +237,7 @@ class TREE:
             self.robust_clf_node[self.root.get_id()] = result_classify
         else:
             if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                print("[tree.py] : {0:<20s}{1:<4d}{2:<10s}{3:<.4f}".format("root is node #",self.root.get_id(),"score =",score))
+                print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("root is node #",self.root.get_id(),"score =",score))
                 self.robust_clf_node[self.root.get_id()] = result_classify
             else:
                 print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
@@ -250,11 +250,11 @@ class TREE:
                     score = result_classify['mean_score']
                     
                     if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                        print("[tree.py] : {0:<20s}{1:<4d}{2:<10s}{3:<.4f}".format("robust node #",current_node.get_id(),"score =",score))
+                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("robust node #",current_node.get_id(),"score =",score))
                         self.robust_clf_node[current_node.get_id()] = result_classify
 
                     else:
-                        print("[tree.py] : reject node #  %i \t score = %.4f"%(current_node.get_id(),score))
+                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("reject node #",current_node.get_id(),"score =",score))
                         self.robust_terminal_node.append(current_node.get_id())
                 else: # implies it's parent was robust, and is a leaf node 
                     self.robust_terminal_node.append(current_node.get_id())
@@ -352,12 +352,13 @@ class TREE:
         self.new_idx_centers = np.array(new_idx_centers,dtype=int)
         self.cluster_to_node_id = cluster_to_node_id
         self.node_to_cluster_id = {v: k for k, v in self.cluster_to_node_id.items()}
-
-
-        print("[tree.py] : ", "{0:<10s}{1:<10s}{2:<10s}".format("Terminal","parent","prob"))
+        
+        print("\n\n\n")
+        print("[tree.py] : -----------> VALIDATION SCORING INFORMATION < -----------------")
+        print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}".format("Terminal node","Parent node", "Displayed node","Progated probability"))
         for n in robust_terminal_node:
             p_id = self.node_dict[n].parent.get_id()
-            print("[tree.py] : ", "{0:<10d}{1:<10d}{2:<10.4f}".format(n,p_id,self.robust_clf_propag_error[p_id]))
+            print("[tree.py] : ", "{0:<15d}{1:<15d}{2:<15d}{3:<15.4f}".format(n,p_id,self.node_to_cluster_id[n],self.robust_clf_propag_error[p_id]))
                 
         return self
 
