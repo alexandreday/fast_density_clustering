@@ -10,35 +10,38 @@ from collections import OrderedDict
 
 class TREENODE:
 
-    def __init__(self, id = -1, parent = None, child = [], scale = -1):
-        self.child = child # has to be list of TreeNode
+    def __init__(self, id_ = -1, parent = None, child = None, scale = -1):
+        if child is None:
+            self.child = [] # has to be list of TreeNode
+        else:
+            self.child = child
         self.scale = scale
         self.parent = parent
-        self.id = id
+        self.id_ = id_
 
     def __repr__(self):
-        return ("Node: [%s] @ s = %.3f" % (self.id,self.scale))
+        return ("Node: [%s] @ s = %.3f" % (self.id_,self.scale)) 
 
     def is_leaf(self):
         return len(self.child) == 0
 
-    def get_child(self, id = None):
-        if id is None:
+    def get_child(self, id_ = None):
+        if id_ is None:
             return self.child
         else:
             for c in self.child:
-                if c.get_id() == id:
+                if c.get_id() == id_:
                     return c
 
     def get_scale(self):
         return self.scale
 
     def get_id(self):
-        return self.id
+        return self.id_
 
     def add_child(self, treenode):
         self.child.append(treenode)
-
+        
     def get_rev_child(self):
         child = self.child[:]
         child.reverse()
@@ -47,7 +50,7 @@ class TREENODE:
 class TREE:
     """ Contains all the hierachy and information concerning the clustering
     """
-    def __init__(self, root = None, shallow_copy = None):
+    def __init__(self, root = None, shallow_copy = None, ignore_root = True):
         self.root = root
         self.node_dict = None
         self.mergers = None
@@ -61,7 +64,7 @@ class TREE:
 
         self.new_idx_centers = None
         self.tree_constructed = False
-        self.ignore_root = True
+        self.ignore_root = ignore_root
 
     def build_tree(self, model):
         """Given hierachy, builds a tree of the clusterings. The nodes are class objects define in the class TreeNode
@@ -85,18 +88,18 @@ class TREE:
         if self.tree_constructed is True:
             return
 
-        mergers = copy.deepcopy(find_mergers(model.hierarchy , model.noise_range)) # OK this might be a problem ... need to check this.
+        mergers = find_mergers(model.hierarchy , model.noise_range) # OK this might be a problem ... need to check this.
         mergers.reverse()
         m = mergers[0]
 
         self.node_dict = {}
         
-        self.root = copy.deepcopy(TREENODE(id = m[1], scale = m[2]))
+        self.root = TREENODE(id_ = m[1], scale = m[2])
         self.node_dict[self.root.get_id()] = self.root
             
         for m in mergers:
             for mc in m[0]:
-                c_node = copy.deepcopy(TREENODE(id = mc, parent = self.node_dict[m[1]], child = [], scale = -1))
+                c_node = TREENODE(id_ = mc, parent = self.node_dict[m[1]], child = [], scale = -1)
                 self.node_dict[m[1]].add_child(c_node)
                 self.node_dict[c_node.get_id()] = c_node
             self.node_dict[m[1]].scale = m[2]
@@ -133,9 +136,9 @@ class TREE:
 
         root, node_dict, mergers = self.root, self.node_dict, self.mergers
 
-        print("---> 2 top layers")
-        print("---> Root :", root)
-        print("---> Root's childs :", root.get_child())
+        print("[tree.py] : Printing two top-most layers")
+        print("[tree.py] : Root :", root)
+        print("[tree.py] : Root's childs :", root.get_child())
     
         if self.all_clf_node is not None: # meaning, the nodes have already been checked for classification
 
@@ -202,10 +205,10 @@ class TREE:
         self.robust_clf_propag_node = {}
         terminal_node = []
         for node_id in self.robust_clf_node.keys():
-            print("checking node ", node_id,'\t',self.node_dict[node_id])
+            #print("checking node ", node_id,'\t',self.node_dict[node_id])
             p_error = self.compute_propagated_error(node_id)
             self.robust_clf_propag_error[node_id] = p_error
-            if p_error > score_threshold:
+            if p_error+1e-6 > score_threshold:
                 self.robust_clf_propag_node[node_id] = self.robust_clf_node[node_id]
 
         for n in self.robust_clf_propag_node.keys():
@@ -233,8 +236,8 @@ class TREE:
             print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
             self.robust_clf_node[self.root.get_id()] = result_classify
         else:
-            if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                print("[tree.py] : root is robust #  %i \t score = %.4f"%(self.root.get_id(),score))
+            if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+                print("[tree.py] : {0:<20s}{1:<4d}{2:<10s}{3:<.4f}".format("root is node #",self.root.get_id(),"score =",score))
                 self.robust_clf_node[self.root.get_id()] = result_classify
             else:
                 print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
@@ -246,8 +249,8 @@ class TREE:
                     result_classify = score_merge(current_node, model, X, n_average = n_average)
                     score = result_classify['mean_score']
                     
-                    if score > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                        print("[tree.py] : robust node #  %i \t score = %.4f"%(current_node.get_id(),score))
+                    if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
+                        print("[tree.py] : {0:<20s}{1:<4d}{2:<10s}{3:<.4f}".format("robust node #",current_node.get_id(),"score =",score))
                         self.robust_clf_node[current_node.get_id()] = result_classify
 
                     else:
@@ -255,6 +258,7 @@ class TREE:
                         self.robust_terminal_node.append(current_node.get_id())
                 else: # implies it's parent was robust, and is a leaf node 
                     self.robust_terminal_node.append(current_node.get_id())
+
 
     def compute_probability_tree(self):
         """ Compute the probability of correct classification for every branch of the tree.
@@ -292,9 +296,12 @@ class TREE:
         self : TREE() object
 
         """
+        if score_threshold > 1.0 or score_threshold < 0.0:
+            assert False, "Can't choose a threshold above 1.0 or below 0.0 !"
 
-        self.identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
-        
+        if self.robust_terminal_node is None:
+            self.identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
+
         root = self.root
         node_dict = self.node_dict
         mergers = self.mergers
@@ -303,6 +310,7 @@ class TREE:
         self.compute_propagated_robust_node(score_threshold)
 
         robust_terminal_node = self.robust_terminal_propag_node
+
         #print('quite: ',len(robust_terminal_node))
         #print('not quite: ',len(self.robust_terminal_node))
         #exit()
@@ -344,12 +352,13 @@ class TREE:
         self.new_idx_centers = np.array(new_idx_centers,dtype=int)
         self.cluster_to_node_id = cluster_to_node_id
         self.node_to_cluster_id = {v: k for k, v in self.cluster_to_node_id.items()}
-        print("NODE TO CLUSTER PLOTLABELS:\n", self.node_to_cluster_id)
-        print("Terminal \t parent\t prob")
+
+
+        print("[tree.py] : ", "{0:<10s}{1:<10s}{2:<10s}".format("Terminal","parent","prob"))
         for n in robust_terminal_node:
             p_id = self.node_dict[n].parent.get_id()
-            print(n,'\t',p_id,'\t',"%.4f"% self.robust_clf_propag_error[p_id])
-       #
+            print("[tree.py] : ", "{0:<10d}{1:<10d}{2:<10.4f}".format(n,p_id,self.robust_clf_propag_error[p_id]))
+                
         return self
 
     def check_all_merge(self, model, X, n_average = 10):
@@ -357,7 +366,7 @@ class TREE:
         """ Goes over all classification nodes and evaluates classification scores """ 
         self.build_tree(model)
         self.all_clf_node = {}
-        
+    
         for merger in self.mergers : # don't need to go through the whole hierarchy, since we're checking everything
             node_id = merger[1]
             result_classify = score_merge(self.node_dict[node_id], model, X, n_average = n_average)
@@ -478,6 +487,10 @@ class TREE:
         f.write(','.join(string_list))
         f.write("|>")
         f.close()
+
+    def print_mapping(self):
+        print("Mapping of terminal nodes to plotted labels:") 
+        [print(k, " -> ", v) for k,v in OrderedDict(self.node_to_cluster_id).items()]
 
     def find_gate(self, node_id):
         """ Return the most important gates, sorted by amplitude. One set of gate per category (class)
