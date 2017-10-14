@@ -184,6 +184,11 @@ class FDC:
             Should be an iterable containg noise values at which to perform coarse graining. Usually
             one should start from 0 and go to larger values by small increments. The whole clustering
             information is stored in self.hierarchy
+
+        Return
+        ------
+        self
+        
         """
         if self.verbose == 0:
             blockPrint()
@@ -213,6 +218,8 @@ class FDC:
         self.noise_threshold = noise_range[-1]
 
         enablePrint()
+
+        return self 
  
     def compute_delta(self, X, rho = None):
         """
