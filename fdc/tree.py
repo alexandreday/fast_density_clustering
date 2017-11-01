@@ -383,7 +383,7 @@ class TREE:
         """
         #uprint(self.robust_clf_node)
         y_pred = -1 * np.ones(X.shape[0], dtype=int)
-        terminal_nodes = set(self.robust_terminal_node)
+        terminal_nodes = set(self.robust_terminal_propag_node)
         node_to_cluster = self.node_to_cluster_id
 
         for i, x in enumerate(X):
