@@ -14,9 +14,6 @@ import math
 def set_nice_font(size = 18):
     font = {'family' : 'serif', 'size'   : size}
     plt.rc('font', **font)
-
-def set_latex():
-    import latex
     
 def density_map(X, z,
                 xlabel=None, ylabel=None, zlabel=None, label=None,
