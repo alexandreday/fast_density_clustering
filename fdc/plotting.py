@@ -11,9 +11,12 @@ from .mycolors import COLOR_PALETTE
 from .fdc import FDC
 import math
 
-def set_nice_font(size = 18):
+
+def set_nice_font(size = 18, usetex=False):
     font = {'family' : 'serif', 'size'   : size}
     plt.rc('font', **font)
+    if usetex is True:
+        plt.rc('text', usetex=True)
     
 def density_map(X, z,
                 xlabel=None, ylabel=None, zlabel=None, label=None,
