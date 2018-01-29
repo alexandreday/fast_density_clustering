@@ -95,10 +95,10 @@ def density_map(X, z,
     if show:
         plt.show()
 
-def scatter_w_label(x,y,z,psize=20):
-    n_unique_label=np.unique(z).shape[0]
-    for i in range(n_unique_label):
-        pos=(z==i)
+def scatter_w_label(x, y, z, psize=20):
+    unique_z=np.unique(z)
+    for i,zval in enumerate(unique_z):
+        pos=(z==zval)
         plt.scatter(x[pos],y[pos],s=psize,c=contrast_colors(i), rasterized=True)
     plt.show()
 
