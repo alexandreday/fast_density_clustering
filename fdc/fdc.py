@@ -364,7 +364,6 @@ def check_cluster_stability(self, X, threshold):
     idx_true_centers = []
 
     for idx in idx_centers:
-
         rho_center = rho[idx]
         delta_rho = rho_center - threshold
         if threshold < 1e-3: # just check nn_list ...

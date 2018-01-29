@@ -88,6 +88,10 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     W_mean = np.mean([W_list[i] for i in best_half_idx], axis=0)
     b_mean = np.mean([b_list[i] for i in best_half_idx], axis=0)
 
+    # Do a majority vote over folds 
+    # 
+
+
     results = { # this contains the weight matrix and the intercept to reconstruct the classifier.
         'mean_score' : np.mean(total_score_list),
         'mean_score_cluster' :  mean_accuracy, # mean accuracy for each cluster
