@@ -11,7 +11,6 @@ from .mycolors import COLOR_PALETTE
 from .fdc import FDC
 import math
 
-
 def set_nice_font(size = 18, usetex=False):
     font = {'family' : 'serif', 'size'   : size}
     plt.rc('font', **font)
@@ -95,13 +94,25 @@ def density_map(X, z,
     if show:
         plt.show()
 
-def scatter_w_label(x, y, z, psize=20):
-    unique_z=np.unique(z)
-    for i,zval in enumerate(unique_z):
-        pos=(z==zval)
-        plt.scatter(x[pos],y[pos],s=psize,c=contrast_colors(i), rasterized=True)
-    plt.show()
+def scatter_w_label(x, y, z, psize=20, label = None):
 
+    unique_z=np.sort(np.unique(z.flatten()))
+    mycol = COLOR_PALETTE()
+
+    plt.subplots(figsize=(8,6))
+
+    for i, zval in enumerate(unique_z):
+        pos=(z.flatten()==zval)
+        if label is not None:
+            plt.scatter(x[pos],y[pos],s=psize,c=mycol[i], label=label[i], rasterized=True)
+        else:
+            plt.scatter(x[pos],y[pos],s=psize,c=mycol[i], rasterized=True)
+    
+    if label is not None:
+        plt.legend(loc='best',fontsize=12)
+
+    plt.tight_layout()
+    plt.show()
 
 def plot_true_label(X, palette, y=None, fontsize = 15, psize = 20):
     plt.title('True labels', fontsize=fontsize)
