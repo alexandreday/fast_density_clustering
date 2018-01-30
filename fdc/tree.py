@@ -145,26 +145,7 @@ class TREE:
 
             print("Need to update this part, ")
             assert False
-            
-            '''res = self.all_clf_node[root.get_id()]
 
-            if res['mean_score'] > score_threshold :
-                self.robust_clf_node[root.get_id()] = res
-
-            for current_node in self.node_items() :
-                for c in current_node.child :
-                    if c.get_id() in self.all_clf_node.keys() :
-                        res = self.all_clf_node[c.get_id()]
-                        if res['mean_score'] > score_threshold :
-                            self.robust_clf_node[c.get_id()] = res
-
-            for k, v in self.robust_clf_node.items() : # identify terminal nodes (leaves)
-                c_node = node_dict[k]
-                for child in c_node.child :
-                    id_c = child.get_id() 
-                    if id_c not in self.robust_clf_node.keys() :
-                        self.robust_terminal_node.append(id_c) '''
-        
         else: # focus on this loop .........
             self.compute_robust_node(model, X, n_average, score_threshold)
 
@@ -210,6 +191,7 @@ class TREE:
             p_error = self.compute_propagated_error(node_id)
             self.robust_clf_propag_error[node_id] = p_error
             if p_error+1e-6 > score_threshold:
+
                 self.robust_clf_propag_node[node_id] = self.robust_clf_node[node_id]
 
         for n in self.robust_clf_propag_node.keys():
@@ -223,8 +205,8 @@ class TREE:
         """ Start from the root, computes the classification score at every branch in the tree
         and stops if classication score is below a certain threshold.
         Results are stored in:
-        self.robust_clf_node : dictionary of node id to classification information (weights, biases, scores, etc.)
-        self.robust_terminal_node : list of terminal nodes id, whose parents are robust classifiers.
+            self.robust_clf_node : dictionary of node id to classification information (weights, biases, scores, etc.)
+            self.robust_terminal_node : list of terminal nodes id, whose parents are robust classifiers.
         """
 
         self.robust_terminal_node = [] #list of the terminal robust nodes
@@ -379,31 +361,25 @@ class TREE:
     
     def predict(self, X):
         """ Uses the root classifiers to perform a hierarchical classification of the nodes !
-
-
         need to do recursive classification ... 
         
         """
         #uprint(self.robust_clf_node)
-    
         terminal_nodes = set(self.robust_terminal_propag_node)
         node_to_cluster = self.node_to_cluster_id
 
-        current_clf_node = self.root
-
-        if current_clf_node.get_id() in terminal_nodes: # robust terminal node reached !
-            y_pred[i] = node_to_cluster[current_clf_node.get_id()] * np.ones(X.shape[0], dtype=int)
-        else:
-            y_pred = -1 * np.ones(X.shape[0], dtype=int)
-            child_list = current_clf_node.child
-
-            for i, x in enumerate(X):
-
-                    #info = self.robust_clf_node[current_clf_node.get_id()]
-                    #W, b, mu, inv_std = info['coeff'], info['intercept'], info['mean_xtrain'], info['inv_std_xtrain']
-
-                    y = self.classify_point(inv_std*(x-mu), W, b)
-                    current_clf_node = child_list[y]
+        for i, x in enumerate(X):
+            current_clf_node = self.root # recursively go down the tree, starting from root
+            current_id = current_clf_node.get_id()
+            while True:
+                if current_clf_node.get_id() in terminal_nodes:
+                    y_pred[i] = node_to_cluster[current_id] # reached the leaf node
+                    break
+                else:
+                    y_branch = self.robust_clf_node[current_id].predict([x])[0]
+    
+                child_list = current_clf_node.child
+                current_clf_node = child_list[y_branch] # go down one layer
             
         return y_pred
 
