@@ -1,5 +1,5 @@
 from .fdc import FDC
-from . import classify
+from .classify import CLF
 import numpy as np
 import pickle
 from scipy.cluster.hierarchy import dendrogram as scipydendro
@@ -7,7 +7,6 @@ from scipy.cluster.hierarchy import to_tree
 from .hierarchy import compute_linkage_matrix
 import copy
 from collections import OrderedDict
-from classify import CLF
 
 class TREENODE:
 
@@ -88,7 +87,7 @@ class TREE:
         """
         if self.tree_constructed is True:
             return
-
+        
         mergers = find_mergers(model.hierarchy , model.noise_range) # OK this might be a problem ... need to check this.
         mergers.reverse()
         m = mergers[0]
@@ -212,8 +211,10 @@ class TREE:
         self.robust_terminal_node = [] #list of the terminal robust nodes
         self.robust_clf_node = {} # dictionary of the nodes where a partition is made (non-leaf nodes)
         # add root first 
+
         clf = classify_root(self.root, model, X, n_average = n_average)
         score = clf.cv_score
+        print("voila")
     
         if self.ignore_root is True:
             print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
@@ -221,7 +222,7 @@ class TREE:
         else:
             if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
                 print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("root is node #",self.root.get_id(),"score =",score))
-                self.robust_clf_node[self.root.get_id()] = result_classify
+                self.robust_clf_node[self.root.get_id()] = clf
             else:
                 print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
 
@@ -249,10 +250,11 @@ class TREE:
         """
 
         self.probability_tree = {}
-        for node_id, classify_results in self.robust_clf_node.items():
+        for node_id, clf in self.robust_clf_node.items():
             current_node = self.node_dict[node_id]
             for i, c in enumerate(current_node.child):
-                self.probability_tree[(node_id, c.get_id())] = classify_results['mean_score_cluster'][i]
+                self.probability_tree[(node_id, c.get_id())] = clf.cv_score # could also give score per class ........
+                #classify_results['mean_score_cluster'][i]
         
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
         """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
@@ -311,7 +313,7 @@ class TREE:
 
         # here all terminal nodes are given a label, in the same order they are stored.
         y_node = classification_labels([node_dict[i] for i in robust_terminal_node], model)
-        assert np.count_nonzero(y_node == -1) == 0, "Wrong labelling !"
+        assert np.count_nonzero(y_node == -1) == 0, "Wrong labelling or ROOT is not robust ... !"
 
         for i, node_id in enumerate(robust_terminal_node):
             pos = (y_node == i)
@@ -383,7 +385,7 @@ class TREE:
             
         return y_pred
 
-'''     def classify_point(self, x, W, b):
+    '''     def classify_point(self, x, W, b):
         """ Given weight matrix and intercept (bias), classifies point x 
         w.r.t to a linear classifier """
 
@@ -650,6 +652,9 @@ def classify_root(root, model, X, n_average = 10, C=1.0):
     
     y = classification_labels(root.get_child(), model)
 
+    if len(np.unique(y)) == 1:
+        return CLF(clf_type='trivial')
+
     pos_subset =  (y != -1)
     Xsubset = X[pos_subset] # original space coordinates
     ysubset = y[pos_subset] # labels
@@ -732,7 +737,11 @@ def find_mergers(hierarchy, noise_range):
     for k, v in merging_dict.items():
         if v == -1:
             mapped_u.append(k)
-    merger_record.append([mapped_u, current_merge_idx, 1.5*(merger_record[-1][2])])
+    # adding top row !!
+    if len(merger_record) == 0:
+        merger_record.append([mapped_u, current_merge_idx, 1.0])
+    else:
+        merger_record.append([mapped_u, current_merge_idx, 1.5*(merger_record[-1][2])])
 
     return merger_record
 

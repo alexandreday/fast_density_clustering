@@ -126,6 +126,7 @@ class CLF:
         self.clf_type = clf_type
         self.kwargs = kwargs
         self.trained = False
+        self.cv_score = 1.0
     
     def fit(self, X, y):
         """Fits classifier
@@ -152,6 +153,9 @@ class CLF:
     def predict(self, X):
         """ Returns labels for X (-1, 1)
         """
+        if self.clf_type == 'trivial':
+            self._n_sample = len(X)
+            return np.zeros(len(X))
 
         if self.trained is False:
             assert False, "Must train model first !"
