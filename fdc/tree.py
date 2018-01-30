@@ -260,7 +260,6 @@ class TREE:
                 else: # implies it's parent was robust, and is a leaf node 
                     self.robust_terminal_node.append(current_node.get_id())
 
-
     def compute_probability_tree(self):
         """ Compute the probability of correct classification for every branch of the tree.
         The info is stored in a dictionary self.probability_tree which map tuples to probabilities
@@ -380,29 +379,35 @@ class TREE:
     
     def predict(self, X):
         """ Uses the root classifiers to perform a hierarchical classification of the nodes !
+
+
+        need to do recursive classification ... 
         
         """
         #uprint(self.robust_clf_node)
-        y_pred = -1 * np.ones(X.shape[0], dtype=int)
+    
         terminal_nodes = set(self.robust_terminal_propag_node)
         node_to_cluster = self.node_to_cluster_id
 
-        for i, x in enumerate(X):
-            current_clf_node = self.root
-            while True:
-                if current_clf_node.get_id() in terminal_nodes: # robust terminal node reached !
-                    y_pred[i] = node_to_cluster[current_clf_node.get_id()]
-                    break
-                
-                child_list = current_clf_node.child
-                info = self.robust_clf_node[current_clf_node.get_id()]
-                W, b, mu, inv_std = info['coeff'], info['intercept'], info['mean_xtrain'], info['inv_std_xtrain']
-                y = self.classify_point(inv_std*(x-mu), W, b)
-                current_clf_node = child_list[y]
-        
+        current_clf_node = self.root
+
+        if current_clf_node.get_id() in terminal_nodes: # robust terminal node reached !
+            y_pred[i] = node_to_cluster[current_clf_node.get_id()] * np.ones(X.shape[0], dtype=int)
+        else:
+            y_pred = -1 * np.ones(X.shape[0], dtype=int)
+            child_list = current_clf_node.child
+
+            for i, x in enumerate(X):
+
+                    #info = self.robust_clf_node[current_clf_node.get_id()]
+                    #W, b, mu, inv_std = info['coeff'], info['intercept'], info['mean_xtrain'], info['inv_std_xtrain']
+
+                    y = self.classify_point(inv_std*(x-mu), W, b)
+                    current_clf_node = child_list[y]
+            
         return y_pred
 
-    def classify_point(self, x, W, b):
+'''     def classify_point(self, x, W, b):
         """ Given weight matrix and intercept (bias), classifies point x 
         w.r.t to a linear classifier """
 
@@ -419,7 +424,7 @@ class TREE:
             for i, w in enumerate(W):
                 score_per_class.append(np.dot(x,w)+b[i])
             #print(score_per_class)
-            return np.argmax(score_per_class)
+            return np.argmax(score_per_class) '''
 
     def write_result_mathematica(self, model, marker) : # graph should be a dict of list
         """ 
