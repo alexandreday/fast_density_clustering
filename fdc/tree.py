@@ -7,6 +7,7 @@ from scipy.cluster.hierarchy import to_tree
 from .hierarchy import compute_linkage_matrix
 import copy
 from collections import OrderedDict
+from classify import CLF
 
 class TREENODE:
 
@@ -229,12 +230,12 @@ class TREE:
         self.robust_terminal_node = [] #list of the terminal robust nodes
         self.robust_clf_node = {} # dictionary of the nodes where a partition is made (non-leaf nodes)
         # add root first 
-        result_classify = score_merge(self.root, model, X, n_average = n_average)
-        score = result_classify['mean_score']
-
+        clf = classify_root(self.root, model, X, n_average = n_average)
+        score = clf.cv_score
+    
         if self.ignore_root is True:
             print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
-            self.robust_clf_node[self.root.get_id()] = result_classify
+            self.robust_clf_node[self.root.get_id()] = clf
         else:
             if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
                 print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("root is node #",self.root.get_id(),"score =",score))
@@ -246,12 +247,12 @@ class TREE:
             if current_node.parent.get_id() in self.robust_clf_node.keys():
                 if not current_node.is_leaf():
                     
-                    result_classify = score_merge(current_node, model, X, n_average = n_average)
-                    score = result_classify['mean_score']
+                    clf = classify_root(current_node, model, X, n_average = n_average)
+                    score = clf.cv_score
                     
                     if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
                         print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("robust node #",current_node.get_id(),"score =",score))
-                        self.robust_clf_node[current_node.get_id()] = result_classify
+                        self.robust_clf_node[current_node.get_id()] = clf
 
                     else:
                         print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("reject node #",current_node.get_id(),"score =",score))
@@ -370,16 +371,16 @@ class TREE:
     
         for merger in self.mergers : # don't need to go through the whole hierarchy, since we're checking everything
             node_id = merger[1]
-            result_classify = score_merge(self.node_dict[node_id], model, X, n_average = n_average)
-            print("[tree.py] : ", node_id, "accuracy : %.3f"%result_classify['mean_score'], "sample_size : %i"%result_classify['n_sample'], sep='\t')
+            clf = classify_root(self.node_dict[node_id], model, X, n_average = n_average)
+            print("[tree.py] : ", node_id, "accuracy : %.3f"%clf.cv_score, "sample_size : %i"%clf._n_sample, sep='\t')
 
-            self.all_clf_node[node_id] = result_classify
+            self.all_clf_node[node_id] = clf
 
         return self
     
     def predict(self, X):
-        """ Given find_robust_labelling was performed, new data from X can be classified using self.robust_clf_node
-        returns the terminal "cluster" label (not the node !)
+        """ Uses the root classifiers to perform a hierarchical classification of the nodes !
+        
         """
         #uprint(self.robust_clf_node)
         y_pred = -1 * np.ones(X.shape[0], dtype=int)
@@ -647,18 +648,22 @@ class TREE:
 ##############################################
 ###############################################
 
-def score_merge(root, model, X, n_average = 10):
-    """ Using a logistic regression multi-class classifier, determines the merges that are statistically
-    signicant based on a CV prediction score. Returns a robust clustering in the original space.
+def classify_root(root, model, X, n_average = 10, C=1.0):
+    """ Trains a classifier on the childs of "root" and returns a classifier for these types.
 
+    Important attributes are:
+
+        self.scaler_list -> [mu, std]
+
+        self.cv_score -> mean cv score
+
+        self.mean_train_score -> mean train score
+
+        self.clf_list -> list of sklearn classifiers (for taking majority vote)
+    
     Returns
     ---------
-
-    classifier_info : dict
-        Keys of dict are ['mean_score', 'mean_score_cluster', 
-        'var_score_cluster', 'coeff', 
-        'intercept', 'clf', 'mean_xtrain',
-        'inv_std_xtrain', 'n_sample']
+    CLF object (from classify.py). Object has similar syntax to sklearn's classifier syntax
 
     """
     
@@ -668,7 +673,7 @@ def score_merge(root, model, X, n_average = 10):
     Xsubset = X[pos_subset] # original space coordinates
     ysubset = y[pos_subset] # labels
 
-    return classify.fit_logit(Xsubset, ysubset, n_average = n_average, C = 1.0)
+    return CLF(clf_type='svm', n_average=n_average, C=C).fit(Xsubset, ysubset)
 
 def classification_labels(node_list, model):
     """ Returns a list of labels for the original data according to the classification
