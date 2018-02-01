@@ -214,7 +214,6 @@ class TREE:
 
         clf = classify_root(self.root, model, X, n_average = n_average)
         score = clf.cv_score
-        print("voila")
     
         if self.ignore_root is True:
             print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
