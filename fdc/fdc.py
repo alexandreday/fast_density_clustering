@@ -37,8 +37,10 @@ class FDC:
         method generates the same results. This random is used to seed
         the cross-validation (set partitions) which will in turn affect the bandwitdth value
 
-    test_ratio_size: float, optional (default = 0.1)
+    test_ratio_size: float, optional (default = 0.5)
         Ratio size of the test set used when performing maximum likehood estimation.
+        In order to have smooth estimations (prevent overfitting), it is recommended to
+        use a large test_ratio_size (closer to 1.0) rather than a small one.
 
     verbose: int, optional (default = 1)
         Set to 0 if you don't want to see print to screen.
@@ -67,12 +69,13 @@ class FDC:
     """
 
     def __init__(self, nh_size=40, noise_threshold=0.4,
-                random_state=0, test_ratio_size=0.1, verbose=1, bandwidth=None,
+                random_state=0, test_ratio_size=0.8, verbose=1, bandwidth=None,
                 merge=True,
                 atol=0.000005,
                 rtol=0.00005,
                 xtol=0.01,
-                search_size = 20
+                search_size = 20,
+                smooth_rho =False
                 ):
 
         self.test_ratio_size = test_ratio_size
@@ -87,6 +90,7 @@ class FDC:
         self.xtol = xtol 
         self.cluster_label = None
         self.search_size = search_size
+        self.smooth_rho = smooth_rho
 
     def fit(self,X):
         """ Performs density clustering on given data set
@@ -108,10 +112,10 @@ class FDC:
 
         self.X = X  # shallow copy
 
-        if self.nh_size < 100 :
-            self.nbrs = NearestNeighbors(n_neighbors = 100, algorithm='kd_tree').fit(X)
-        else:
-            self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)    
+        #if self.nh_size < 100 : # mmmm ?!
+        #    self.nbrs = NearestNeighbors(n_neighbors = 100, algorithm='kd_tree').fit(X)
+        #else:
+        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)    
 
         self.nn_dist, self.nn_list = self.nbrs.kneighbors(X) # this scales like X.shape[0] * self.nh_size 
 

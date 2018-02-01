@@ -258,6 +258,9 @@ class TREE:
     def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
         """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
         and relabels the data accordingly
+        
+        Trick here: first use a low threshold (will compute the tree down to it's lowest components)
+        Then one can just iterate quickly over score threshold ...
 
         Parameters
         ------

@@ -182,8 +182,9 @@ plot_to_show = None
     plt.subplot(133)
     density_map(X,rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
 
+    plt.tight_layout()
     if savefile:
-        plt.savefig(savefile)
+        plt.savefig(savefile, dpi=300)
     if show is True:
         plt.show()
 
