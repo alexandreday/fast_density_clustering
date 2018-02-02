@@ -125,7 +125,7 @@ def plot_true_label(X, palette, y=None, fontsize = 15, psize = 20):
             pos=(y==yu)
             plt.scatter(X[pos,0],X[pos,1], s=psize, c=palette[i],rasterized=True)
 
-def plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = 20, delta = None, delta_show = True, fontsize=15):
+def plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = 20, eta = None, eta_show = True, fontsize=15):
     
     n_center = len(idx_centers)
 
@@ -149,9 +149,9 @@ def plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = 20, 
     dx = xmax - xmin
     dy = ymax - ymin
 
-    if delta is not None: # displaying delta parameter
-        if delta_show:
-            txt = ax.annotate("$\delta=%.2f$"%delta,[xmin+0.15*dx,ymin+0.05*dy], xytext=(0,0), textcoords='offset points',
+    if eta is not None: # displaying eta parameter
+        if eta_show:
+            txt = ax.annotate("$\eta=%.2f$"%eta,[xmin+0.15*dx,ymin+0.05*dy], xytext=(0,0), textcoords='offset points',
             fontsize=20,horizontalalignment='center', verticalalignment='center')
             txt.set_path_effects([
                 PathEffects.Stroke(linewidth=5, foreground="w"),
@@ -161,7 +161,7 @@ def plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = 20, 
     plt.tight_layout()
 
 
-def summary(idx_centers, cluster_label, rho, X, delta = None, delta_show = True, y=None, psize=20, savefile=None, show=False,
+def summary(idx_centers, cluster_label, rho, X, eta = None, eta_show = True, y=None, psize=20, savefile=None, show=False,
 plot_to_show = None
 ):
     """ Summary plots : original labels (if available), inferred labels and density map used for clustering """
@@ -177,7 +177,7 @@ plot_to_show = None
     plot_true_label(X, palette, y=y,fontsize=fontsize, psize = psize)
 
     ax = plt.subplot(132)
-    plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize =psize, delta = delta, delta_show = delta_show, fontsize=fontsize)
+    plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize =psize, eta = eta, eta_show = eta_show, fontsize=fontsize)
 
     plt.subplot(133)
     density_map(X,rho,centers=X[idx_centers],title='Density map', psize=psize, show=False)
@@ -190,32 +190,32 @@ plot_to_show = None
 
     plt.clf()
 
-def summary_model(model, delta=None, ytrue = None, show=True, savefile = None, delta_show = True):
-    """ Summary figure passing in only an FDC object (model), noise can be specified via the delta parameter """
+def summary_model(model, eta=None, ytrue = None, show=True, savefile = None, eta_show = True):
+    """ Summary figure passing in only an FDC object (model), noise can be specified via the eta parameter """
     
-    if delta is None:
-        delta_ = model.noise_threshold
+    if eta is None:
+        eta_ = model.eta
         idx_centers = model.idx_centers
         cluster_label = model.cluster_label
     else:
-        pos = np.argmin(np.abs(np.array(model.noise_range)-delta))
-        delta_ = model.noise_range[pos]
+        pos = np.argmin(np.abs(np.array(model.noise_range)-eta))
+        eta_ = model.noise_range[pos]
         idx_centers = model.hierarchy[pos]['idx_centers']
         cluster_label = model.hierarchy[pos]['cluster_labels']
 
     rho = model.rho
     X = model.X
-    summary(idx_centers, cluster_label, rho, X, y=ytrue, delta = delta_, show=show, savefile=savefile, delta_show=delta_show)
+    summary(idx_centers, cluster_label, rho, X, y=ytrue, eta = eta_, show=show, savefile=savefile, eta_show=eta_show)
 
-def inferred_label(model, delta=None, show=True, savefile = None, delta_show = True, fontsize =15, psize = 20):
+def inferred_label(model, eta=None, show=True, savefile = None, eta_show = True, fontsize =15, psize = 20):
 
-    if delta is None:
-        delta_ = model.noise_range[-1]
+    if eta is None:
+        eta_ = model.noise_range[-1]
         idx_centers = model.idx_centers
         cluster_label = model.cluster_label
     else:
-        pos = np.argmin(np.abs(np.array(model.noise_range)-delta))
-        delta_ = model.noise_range[pos]
+        pos = np.argmin(np.abs(np.array(model.noise_range)-eta))
+        eta_ = model.noise_range[pos]
         idx_centers = model.hierarchy[pos]['idx_centers']
         cluster_label = model.hierarchy[pos]['cluster_labels']
 
@@ -228,7 +228,7 @@ def inferred_label(model, delta=None, show=True, savefile = None, delta_show = T
     
     plt.figure(1,figsize=(10,10))
     ax = plt.subplot(111)
-    plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = psize, delta = delta_, delta_show = delta_show, fontsize=fontsize)
+    plot_inferred_label(ax, X, idx_centers, cluster_label, palette, psize = psize, eta = eta_, eta_show = eta_show, fontsize=fontsize)
 
     if savefile is not None:
         plt.savefig(savefile)
@@ -365,7 +365,7 @@ def dendrogram(model, show=True, savefile=None):
     plt.ylim(0, 1.2 * model.max_noise)
 
     plt.xlabel('cluster $\#$',fontsize=fontsize)
-    plt.ylabel('$\delta$',fontsize=fontsize)
+    plt.ylabel('$\eta$',fontsize=fontsize)
     plt.title('Clustering hierarchy',fontsize=fontsize)
     plt.tight_layout()
 

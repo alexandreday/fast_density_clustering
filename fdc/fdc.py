@@ -282,13 +282,13 @@ class FDC:
 
         return self
 
-    def get_cluster_info(self, delta = None):
+    def get_cluster_info(self, eta = None):
         """ Returns (cluster_label, idx_center) """
 
-        if delta is None:
+        if eta is None:
             return self.cluster_label, self.idx_centers
         else:
-            pos = np.argmin(np.abs(np.array(self.noise_range)-delta))
+            pos = np.argmin(np.abs(np.array(self.noise_range)-eta))
             #delta_ = self.noise_range[pos]
             #idx_centers = self.hierarchy[pos]['idx_centers']
             cluster_label = self.hierarchy[pos]['cluster_labels']
