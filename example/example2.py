@@ -69,7 +69,7 @@ for i_dataset, dataset in enumerate(datasets):
 
     # create clustering estimators
 
-    model = FDC(noise_threshold=noise_threshold)
+    model = FDC(eta=noise_threshold)
 
     s=time.time()
 

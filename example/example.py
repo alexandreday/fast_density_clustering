@@ -21,7 +21,7 @@ print("------> Example with %i true cluster centers <-------"%n_true_center)
 
 X, y = make_blobs(10000, 2, n_true_center) # Generating random gaussian mixture
 
-model = FDC(noise_threshold=0.0, nh_size=40) # specifying density clustering parameters
+model = FDC(eta=0.0, nh_size=40) # specifying density clustering parameters
 
 model.fit(X) # performing the clustering
 
