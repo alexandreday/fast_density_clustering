@@ -406,6 +406,25 @@ class TREE:
             #print(score_per_class)
             return np.argmax(score_per_class) '''
 
+    def save(self, name=None):
+        """ Saves current model to specified path 'name' """
+        if name is None:
+            name = self.make_file_name()
+        fopen = open(name,'wb')
+        pickle.dump(self,fopen)
+        fopen.close()
+        
+    def load(self, name=None):
+        if name is None:
+            name = self.make_file_name()
+
+        self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
+        return self
+
+    def make_file_name(self):
+        t_name = "clf_tree.pkl"
+        return t_name
+
     def write_result_mathematica(self, model, marker) : # graph should be a dict of list
         """ 
         -> Saves results in .txt files, which are easily read with a Mathematica
