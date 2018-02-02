@@ -27,8 +27,8 @@ class FDC:
         If a point has the maximum density among it's nh_size neighbors, it is marked as 
         a potential cluster center.
     
-    noise_threshold : float, optional (default = 0.4)
-        Used to merge clusters. This is done by quenching directly to the specified noise threshold
+    eta : float, optional (default = 0.4)
+        Noise threshold used to merge clusters. This is done by quenching directly to the specified noise threshold
         (as opposed to progressively coarse-graining). The noise threshold determines the extended 
         neighborhood of cluster centers. Points that have a relative density difference of less than 
         "noise_threshold" and that are density-reachable, are part of the extended neighborhood.
@@ -69,7 +69,7 @@ class FDC:
         expanding. This drastically slows the coarse-graining if chosen to be too big !
     """
 
-    def __init__(self, nh_size=40, noise_threshold=0.4,
+    def __init__(self, nh_size=40, eta=0.4,
                 random_state=0, test_ratio_size=0.8, verbose=1, bandwidth=None,
                 merge=True,
                 atol=0.000005,
@@ -83,7 +83,7 @@ class FDC:
         self.verbose = verbose
         self.nh_size = nh_size
         self.bandwidth = bandwidth
-        self.noise_threshold = noise_threshold
+        self.eta = eta
         self.merge=merge
         self.atol = atol
         self.rtol = rtol
@@ -144,9 +144,9 @@ class FDC:
             print("[fdc] Merging overlapping minimal clusters ...")
             self.check_cluster_stability_fast(X, 0.) # given 
         
-        if self.noise_threshold >= 1e-3 :
+        if self.eta >= 1e-3 :
             print("[fdc] Iterating merging up to specified noise threshold ...")
-            self.check_cluster_stability_fast(X, self.noise_threshold) # merging 'unstable' clusters
+            self.check_cluster_stability_fast(X, self.eta) # merging 'unstable' clusters
         
         print("[fdc] Done in %.3f s" % (time.time()-start))
         
@@ -169,21 +169,21 @@ class FDC:
         self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
         return self
 
-    def check_cluster_stability_fast(self, X, noise_threshold = None): # given 
+    def check_cluster_stability_fast(self, X, eta = None): # given 
         if self.verbose == 0:
             blockPrint()
 
-        if noise_threshold is None:
-            noise_threshold =  self.noise_threshold
+        if eta is None:
+            eta =  self.eta
 
         while True: # iterates untill number of cluster does no change ... 
 
             self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
-            self.idx_centers, n_false_pos = check_cluster_stability(self, X, noise_threshold) 
+            self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta) 
             self.idx_centers_unmerged = self.idx_centers
 
             if n_false_pos == 0:
-                print("      # of stable clusters with noise %.6f : %i" % (noise_threshold, self.idx_centers.shape[0]))
+                print("      # of stable clusters with noise %.6f : %i" % (eta, self.idx_centers.shape[0]))
                 break
                 
         enablePrint()
@@ -219,7 +219,7 @@ class FDC:
         # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
         
         for nt in noise_range:
-            self.check_cluster_stability_fast(self.X, noise_threshold = nt)
+            self.check_cluster_stability_fast(self.X, eta = nt)
             self.clustering_history[round(nt,3)] = (self.cluster_label,self.idx_centers) # storing for later plotting ... 
             
             hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
@@ -338,7 +338,7 @@ class FDC:
 
     def make_file_name(self):
         t_name = "fdc_nhSize=%i_eta=%.3f_ratio=%.2f.pkl"
-        return t_name%(self.nh_size, self.noise_threshold, self.test_ratio_size)
+        return t_name%(self.nh_size, self.eta, self.test_ratio_size)
 
 #####################################################
 #####################################################
