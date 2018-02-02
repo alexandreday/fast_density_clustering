@@ -13,6 +13,7 @@ import time
 from numpy.random import random
 import sys, os
 from .density_estimation import KDE
+import pickle
     
 class FDC:
 
@@ -37,9 +38,9 @@ class FDC:
         method generates the same results. This random is used to seed
         the cross-validation (set partitions) which will in turn affect the bandwitdth value
 
-    test_ratio_size: float, optional (default = 0.5)
+    test_ratio_size: float, optional (default = 0.8)
         Ratio size of the test set used when performing maximum likehood estimation.
-        In order to have smooth estimations (prevent overfitting), it is recommended to
+        In order to have smooth density estimations (prevent overfitting), it is recommended to
         use a large test_ratio_size (closer to 1.0) rather than a small one.
 
     verbose: int, optional (default = 1)
@@ -74,8 +75,7 @@ class FDC:
                 atol=0.000005,
                 rtol=0.00005,
                 xtol=0.01,
-                search_size = 20,
-                smooth_rho =False
+                search_size = 20
                 ):
 
         self.test_ratio_size = test_ratio_size
@@ -90,7 +90,6 @@ class FDC:
         self.xtol = xtol 
         self.cluster_label = None
         self.search_size = search_size
-        self.smooth_rho = smooth_rho
 
     def fit(self,X):
         """ Performs density clustering on given data set
@@ -112,21 +111,17 @@ class FDC:
 
         self.X = X  # shallow copy
 
-        #if self.nh_size < 100 : # mmmm ?!
-        #    self.nbrs = NearestNeighbors(n_neighbors = 100, algorithm='kd_tree').fit(X)
-        #else:
-        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)    
+        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
 
         self.nn_dist, self.nn_list = self.nbrs.kneighbors(X) # this scales like X.shape[0] * self.nh_size 
 
         if self.verbose == 0:
             blockPrint()
 
-        n_sample = X.shape[0]
-        print("[fdc] Starting clustering with n=%i samples..." % n_sample)
+        print("[fdc] Starting clustering with n=%i samples..." % X.shape[0])
         start = time.time()
 
-        print("[fdc] Fitting kernel model fo    r density estimation ...")
+        print("[fdc] Fitting kernel model for density estimation ...")
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
             atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
 
@@ -158,7 +153,22 @@ class FDC:
         enablePrint()
 
         return self
-    
+
+    def save(self, name=None):
+        """ Saves current model to specified path 'name' """
+        if name is None:
+            name = self.make_file_name()
+        fopen = open(name,'wb')
+        pickle.dump(self,fopen)
+        fopen.close()
+        
+    def load(self, name=None):
+        if name is None:
+            name = self.make_file_name()
+
+        self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
+        return self
+
     def check_cluster_stability_fast(self, X, noise_threshold = None): # given 
         if self.verbose == 0:
             blockPrint()
@@ -326,6 +336,9 @@ class FDC:
 
         return np.array(list(NH))
 
+    def make_file_name(self):
+        t_name = "fdc_nhSize=%i_eta=%.3f_ratio=%.2f.pkl"
+        return t_name%(self.nh_size, self.noise_threshold, self.test_ratio_size)
 
 #####################################################
 #####################################################

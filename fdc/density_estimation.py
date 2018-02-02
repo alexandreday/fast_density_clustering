@@ -114,39 +114,6 @@ class KDE():
 
         return h_optimal
 
-    '''  def find_nh_size(self, X, h_optimal = None, n_estimate = 100):
-        """ Given the optimal bandwidth from the CV score, finds the nh_size (using a binary search) which yield h_opt according 
-        to the formula np.median(dist_to_nth_neighor) = h_opt
-        """
-        if h_optimal is None:
-            h_optimal = self.bandwidth # should trigger a bug if this is not defined !
-
-        nn = NearestNeighbors(n_neighbors = n_estimate, algorithm='kd_tree').fit(X)
-        nn_dist, _ = self.nbrs.kneighbors(X, n_neighbors = 3*n_estimate)
-        max_n = 3*n_estimate
-        min_n = 0
-
-        n_var = n_estimate
-        while True: # performs binary search until convergence !
-            h_est = np.median(nn_dist[:,n_var])
-            print(n_var,'\t', h_est)
-            if h_est > h_optimal:
-                max_n = n_var
-                change = round(0.5*(max_n - min_n))+min_n
-                if change != n_var:
-                    n_var = change
-                else:
-                    break 
-            else:
-                min_n = n_var
-                change = round(0.5*(max_n - min_n))+min_n
-                if change != n_var:
-                    n_var = change
-                else:
-                    break
-        return n_var 
-    '''
-
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
         """
