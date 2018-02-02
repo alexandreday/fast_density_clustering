@@ -341,7 +341,7 @@ class TREE:
         
         print("\n\n\n")
         print("[tree.py] : -----------> VALIDATION SCORING INFORMATION < -----------------")
-        print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}".flsormat("Terminal node","Parent node", "Displayed node","Progated probability"))
+        print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}".format("Terminal node","Parent node", "Displayed node","Progated probability"))
         for n in robust_terminal_node:
             p_id = self.node_dict[n].parent.get_id()
             print("[tree.py] : ", "{0:<15d}{1:<15d}{2:<15d}{3:<15.4f}".format(n,p_id,self.node_to_cluster_id[n],self.robust_clf_propag_error[p_id]))
