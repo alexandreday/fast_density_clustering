@@ -214,13 +214,11 @@ class FDC:
         hierarchy = []
         self.max_noise = -1
         n_cluster = 0
-        self.clustering_history = {}
 
         # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
         
         for nt in noise_range:
             self.check_cluster_stability_fast(self.X, eta = nt)
-            self.clustering_history[round(nt,3)] = (self.cluster_label,self.idx_centers) # storing for later plotting ... 
             
             hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
             if len(self.idx_centers) != n_cluster:

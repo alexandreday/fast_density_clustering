@@ -206,7 +206,7 @@ class CLF:
 
         return np.array(y_pred).reshape(-1, 2) '''
 
-    def fit_SVM(self, X, y, n_average = 10, C = 1.0, n_iter_max = 100, test_size = 0.2):
+    def fit_SVM(self, X, y, n_average = 'auto', C = 1.0, n_iter_max = 100, test_size = 0.5):
         #### ----------
         # -> 
         # ->
@@ -218,7 +218,7 @@ class CLF:
         xtrain_scaler_list = []
 
         n_sample = X.shape[0]
-        zero_eps = 1e-6 
+        zero_eps = 1e-6
 
         for _ in range(n_average):
             
