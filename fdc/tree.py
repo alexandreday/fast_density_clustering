@@ -7,6 +7,7 @@ from scipy.cluster.hierarchy import to_tree
 from .hierarchy import compute_linkage_matrix
 import copy
 from collections import OrderedDict as OD
+from collections import Counter
 
 class TREENODE:
 
@@ -78,7 +79,7 @@ class TREE:
         ------------
         self: TREE object
     
-        """"
+        """
 
         self.node_dict = None
         self.mergers = None
@@ -99,8 +100,6 @@ class TREE:
         self.cv_score = cv_score
         self.min_size = min_size
         self.test_size_ratio = test_size_ratio
-
-        return self
 
     def build_tree(self, model):
         """Given hierachy, builds a tree of the clusterings. The nodes are class objects define in the class TreeNode
@@ -210,7 +209,7 @@ class TREE:
         self.robust_terminal_node = [] #list of the terminal robust nodes
         self.robust_clf_node = OD() # dictionary of the nodes where a partition is made (non-leaf nodes)
     
-        clf = classify_node(self.root, model, X, n_average = self.n_average) # classify the root
+        clf = self.classify_node(self.root, model, X) # classify the root
         min_cv_score = self.cv_score
         clf_score = clf.cv_score
     
@@ -228,7 +227,7 @@ class TREE:
             if current_node.parent.get_id() in self.robust_clf_node.keys():
                 if not current_node.is_leaf():
                     
-                    clf = classify_node(current_node, model, X, n_average = n_average)
+                    clf = self.classify_node(current_node, model, X)
                     clf_score = clf.cv_score
                     
                     if clf_score+1e-6 > min_cv_score: # --- search stops if the node is not statistically signicant (threshold)
@@ -276,7 +275,7 @@ class TREE:
             assert False, "** cv_score must be between 0.0 and 1.0 **"
 
         if self.robust_terminal_node is None:
-            self.identify_robust_merge(model, X, n_average = n_average, cv_score = cv_score)
+            self.identify_robust_merge(model, X)
 
         root = self.root
         node_dict = self.node_dict
@@ -326,7 +325,7 @@ class TREE:
                 
         return self
 
-    def check_all_merge(self, model, X, n_average = 10):
+    def check_all_merge(self, model, X):
 
         """ Goes over all classification nodes and evaluates classification scores """ 
         self.build_tree(model)
@@ -334,7 +333,7 @@ class TREE:
 
         for merger in self.mergers : # don't need to go through the whole hierarchy, since we're checking everything
             node_id = merger[1]
-            clf = classify_node(self.node_dict[node_id], model, X, n_average = n_average)
+            clf = self.classify_node(self.node_dict[node_id], model, X)
             print("[tree.py] : ", node_id, "accuracy : %.3f"%clf.cv_score, "sample_size : %i"%clf._n_sample, sep='\t')
 
             self.all_clf_node[node_id] = clf
@@ -534,35 +533,47 @@ class TREE:
 ##############################################
 ###############################################
 
-def classify_node(root, model, X, n_average = 10, C=1.0):
-    """ Trains a classifier on the childs of "root" and returns a classifier for these types.
+    def classify_node(self, node, model, X, C=1.0):
+        """ Trains a classifier on the childs of "root" and returns a classifier for these types.
 
-    Important attributes are:
+        Important attributes are (for CLF object):
 
-        self.scaler_list -> [mu, std]
+            self.scaler_list -> [mu, std]
 
-        self.cv_score -> mean cv score
+            self.cv_score -> mean cv score
 
-        self.mean_train_score -> mean train score
+            self.mean_train_score -> mean train score
 
-        self.clf_list -> list of sklearn classifiers (for taking majority vote)
-    
-    Returns
-    ---------
-    CLF object (from classify.py). Object has similar syntax to sklearn's classifier syntax
+            self.clf_list -> list of sklearn classifiers (for taking majority vote)
+        
+        Returns
+        ---------
+        CLF object (from classify.py). Object has similar syntax to sklearn's classifier syntax
 
-    """
-    
-    y = classification_labels(root.get_child(), model)
+        """
+        ## ok need to down sample somewhere here
+        min_size = self.min_size
+        test_size_ratio = self.test_size_ratio
+        n_average = self.n_average
 
-    if len(np.unique(y)) == 1:
-        return CLF(clf_type='trivial')
+        y = classification_labels(node.get_child(), model)
 
-    pos_subset =  (y != -1)
-    Xsubset = X[pos_subset] # original space coordinates
-    ysubset = y[pos_subset] # labels
+        if len(np.unique(y)) == 1:
+            return CLF(clf_type='trivial')
 
-    return CLF(clf_type='svm', n_average=n_average, C=C).fit(Xsubset, ysubset)
+        pos_subset =  (y != -1)
+        Xsubset = X[pos_subset] # original space coordinates
+        ysubset = y[pos_subset] # labels
+
+        count = Counter(ysubset)
+
+        for v in count.values():
+            if v < min_size: # cluster should be merged, it is considered too small
+                fake_clf = CLF()
+                fake_clf.cv_score = -1.
+                return fake_clf
+
+        return CLF(clf_type='svm', n_average=n_average, C=C).fit(Xsubset, ysubset, down_sample=min_size)
 
 def classification_labels(node_list, model):
     """ Returns a list of labels for the original data according to the classification

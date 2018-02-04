@@ -128,7 +128,7 @@ class CLF:
         self.trained = False
         self.cv_score = 1.0
     
-    def fit(self, X, y):
+    def fit(self, X, y, down_sample=None):
         """Fits classifier
 
         Important attributes are:
@@ -144,6 +144,7 @@ class CLF:
         """
         
         self.trained = True
+        self.down_sample = down_sample
 
         if self.clf_type == 'svm':
             return self.fit_SVM(X, y, **self.kwargs)
@@ -220,9 +221,29 @@ class CLF:
         n_sample = X.shape[0]
         zero_eps = 1e-6
 
+        y_unique = np.unique(y) # different labels
+        n_sample = X.shape[0]
+        idx = np.arange(n_sample)
+        yu_pos = {yy:idx[(y == yu)] for yu in y_unique}
+        n_class = len(y_unique)
+
         for _ in range(n_average):
-            
-            ytrain, ytest, xtrain, xtest = train_test_split(y, X, test_size=test_size)
+
+            if self.down_sample is not None:
+                n_sample = X.shape[0]
+                pos_rand = []
+                for pos in yu_pos.values():
+                    ntmp = len(pos)
+                    pos_rand.append(np.random.choice(np.arange(ntmp), size= self.down_sample, replace = False))
+
+                pos_rand = np.hstack(pos_rand)
+                ytmp  = y[pos_rand] # populations are now downsampled AND balanced
+                Xtmp = X[pos_rand]
+            else
+                ytmp = y
+                Xtmp = X
+
+            ytrain, ytest, xtrain, xtest = train_test_split(ytmp, Xtmp, test_size=test_size)
         
             std = np.std(xtrain, axis = 0)    
             std[std < zero_eps] = 1.0 # get rid of zero variance data.
