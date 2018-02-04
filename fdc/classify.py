@@ -123,13 +123,17 @@ class CLF:
     
     """
 
-    def __init__(self, clf_type, **kwargs):
+    def __init__(self, clf_type, n_average=10, n_iter_max = 100, test_size = 0.5, down_sample=None, **kwargs):
         self.clf_type = clf_type
+        self.n_average = n_average
+        self.n_iter_max = n_iter_max
+        self.test_size = test_size
+        self.down_sample = down_sample
         self.kwargs = kwargs
         self.trained = False
         self.cv_score = 1.0
-    
-    def fit(self, X, y, down_sample=None):
+
+    def fit(self, X, y):
         """Fits classifier
 
         Important attributes are:
@@ -145,7 +149,6 @@ class CLF:
         """
         
         self.trained = True
-        self.down_sample = down_sample
 
         if self.clf_type == 'svm':
             return self.fit_SVM(X, y, **self.kwargs)
@@ -153,8 +156,8 @@ class CLF:
             return fit_logit(X, y, **self.kwargs)
         
     def predict(self, X):
-        """ Returns labels for X (-1, 1)
-        """
+        """Returns labels for X (-1, 1)"""
+
         if self.clf_type == 'trivial':
             self._n_sample = len(X)
             return np.zeros(len(X))
@@ -208,11 +211,16 @@ class CLF:
 
         return np.array(y_pred).reshape(-1, 2) '''
 
-    def fit_SVM(self, X, y, n_average = 'auto', C = 1.0, n_iter_max = 100, test_size = 0.5):
+    def fit_SVM(self, X, y, C = 1.0):
         #### ----------
         # -> 
         # ->
         #### ----------
+
+        n_average = self.n_average
+        n_iter_max = self.n_iter_max
+        down_sample = self.down_sample
+        test_size = self.test_size
 
         predict_score = []
         training_score = []
@@ -225,12 +233,12 @@ class CLF:
         y_unique = np.unique(y) # different labels
         n_sample = X.shape[0]
         idx = np.arange(n_sample)
-        yu_pos = {yy:idx[(y == yu)] for yu in y_unique}
+        yu_pos = {yu : idx[(y == yu)] for yu in y_unique}
         n_class = len(y_unique)
 
         for _ in range(n_average):
 
-            if self.down_sample is not None:
+            if self.down_sample is not None: 
                 n_sample = X.shape[0]
                 pos_rand = []
                 for pos in yu_pos.values():
@@ -250,7 +258,7 @@ class CLF:
             std[std < zero_eps] = 1.0 # get rid of zero variance data.
             mu, inv_sigma = np.mean(xtrain, axis=0), 1./std
 
-            xtrain = (xtrain - mu)*inv_sigma
+            xtrain = (xtrain - mu)*inv_sigma # zscoring the data 
             xtest = (xtest - mu)*inv_sigma
 
             clf = SVC(C=C, class_weight='balanced')
