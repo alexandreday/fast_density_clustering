@@ -180,7 +180,7 @@ class CLF:
         # row are data, col are clf
     
         y_pred = []
-        for x_vote in vote:
+        for x_vote in vote: # majority voting here !
             y_pred.append(most_common(list(x_vote)))
 
         return np.array(y_pred).reshape(-1,1)
@@ -212,10 +212,40 @@ class CLF:
         return np.array(y_pred).reshape(-1, 2) '''
 
     def fit_SVM(self, X, y, C = 1.0):
+        """ Fit svm to data.
+
+        Parameters
+        ------------
+        X: array, shape = (n_sample, n_feature)
+            your data
+
+        y: array, shape = (n_sample, 1)
+            your labels
+        
+        C: float (default = )
+            inverse regularization strenght
+        
+        Other parameters
+        ------------
+        self.n_average : int
+            number of classifiers to train (will then take majority vote)
+        
+        self.n_iter_max: int 
+            maximum number of iteration for fitting
+        
+        self.down_sample: int
+            size of the train set
+        
+        self.test_size: float
+            ratio of test size (between 0 and 1), useful only when down_sample is None
+
+        Return
+        -------
+        self, CLF object
+
+        """
         #### ----------
-        # -> 
-        # ->
-        #### ----------
+        #         #### ----------
 
         n_average = self.n_average
         n_iter_max = self.n_iter_max
@@ -237,23 +267,27 @@ class CLF:
         n_class = len(y_unique)
 
         for _ in range(n_average):
-
-            if self.down_sample is not None: 
-                n_sample = X.shape[0]
+            if down_sample is not None: 
+                # down sampling data
                 pos_rand = []
+                all_elem = np.ones(len(y),dtype=bool)
                 for pos in yu_pos.values():
-                    ntmp = len(pos)
-                    pos_rand.append(np.random.choice(np.arange(ntmp), size= self.down_sample, replace = False))
-
+                    pos_rand.append(np.random.choice(pos, size = down_sample, replace = False))
+        
                 pos_rand = np.hstack(pos_rand)
-                ytmp  = y[pos_rand] # populations are now downsampled AND balanced
-                Xtmp = X[pos_rand]
-            else
+                ytrain = y[pos_rand]
+                xtrain = X[pos_rand]
+                all_elem[pos_rand] = False
+                
+                ytest = y[all_elem]
+                xtest = X[all_elem]
+            else:
                 ytmp = y
                 Xtmp = X
+                ytrain, ytest, xtrain, xtest = train_test_split(ytmp, Xtmp, test_size=test_size)
 
-            ytrain, ytest, xtrain, xtest = train_test_split(ytmp, Xtmp, test_size=test_size)
-        
+            #print("train size, test size:", len(ytrain),len(ytest),sep='\t')
+            
             std = np.std(xtrain, axis = 0)    
             std[std < zero_eps] = 1.0 # get rid of zero variance data.
             mu, inv_sigma = np.mean(xtrain, axis=0), 1./std
@@ -269,14 +303,17 @@ class CLF:
             training_score.append(t_score)
         
             p_score = clf.score(xtest, ytest) # predict on test set
+            #print(t_score,'\t',p_score)
             predict_score.append(p_score)
 
             clf_list.append(clf)
             xtrain_scaler_list.append([mu,inv_sigma])
 
         self.scaler_list = xtrain_scaler_list # scaling transformations (zero mean, unit std)
-        self.cv_score = np.mean(predict_score)  
+        self.cv_score = np.mean(predict_score)
+        self.cv_score_std = np.std(predict_score)  
         self.mean_train_score = np.mean(training_score)
+        self.std_train_score = np.std(training_score)
         self.clf_list = clf_list # classifier list for majority voting !
         self._n_sample = len(y)
 
