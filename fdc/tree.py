@@ -183,11 +183,11 @@ class TREE:
             print("Need to update this part, ")
             assert False
 
-        else: # focus on this loop .........
+        else: # focus on this loop -- ... ... ... --
             self.compute_robust_node(model, X)
 
-    
-        # Listing all nodes in the robust tree ...==
+        # Listing all nodes in the robust tree ...
+
         all_robust_node = set([])
 
         for k, _ in self.robust_clf_node.items():
@@ -197,46 +197,6 @@ class TREE:
                 all_robust_node.add(c.get_id())
 
         self.all_robust_node = list(all_robust_node)
-
-    def compute_propagated_error(self, node_id):
-        path = []
-        p = self.node_dict[node_id]
-        
-        while p.get_id() != self.root.get_id():
-            tmp = p
-            p = p.parent
-            path.append((p.get_id(),tmp.get_id()))
-        
-        full_path_prob = [self.probability_tree[p] for p in path] 
-        return compute_prob(full_path_prob)
-        #print(path)
-        #full_path = [self.probability_tree[p] for p in path] 
-        #print(full_path)
-        #print('total prob:',compute_prob(full_path))
-    
-    def compute_propagated_robust_node(self, cv_score):
-        """ Based on the classifying information obtained from compute_robust_node, 
-        finds subset of the tree that has a -> total error <- better than the cv_score !
-        """
-        self.compute_probability_tree() # builds a dictionary of the classification scores on every branches.
-        self.robust_clf_propag_error = OD()
-
-        self.robust_clf_propag_node = OD()
-        terminal_node = []
-        for node_id in self.robust_clf_node.keys():
-            #print("checking node ", node_id,'\t',self.node_dict[node_id])
-            p_error = self.compute_propagated_error(node_id)
-            self.robust_clf_propag_error[node_id] = p_error
-            if p_error+1e-6 > cv_score:
-
-                self.robust_clf_propag_node[node_id] = self.robust_clf_node[node_id]
-
-        for n in self.robust_clf_propag_node.keys():
-            for n_c in self.node_dict[n].child:
-                if n_c.get_id() not in self.robust_clf_propag_node.keys():
-                    terminal_node.append(n_c.get_id())
-
-        self.robust_terminal_propag_node = terminal_node
 
     def compute_robust_node(self, model, X):
         """ Start from the root, computes the classification score at every branch in the tree
@@ -280,19 +240,6 @@ class TREE:
                         self.robust_terminal_node.append(current_node.get_id())
                 else: # implies it's parent was robust, and is a leaf node 
                     self.robust_terminal_node.append(current_node.get_id())
-
-    def compute_probability_tree(self):
-        """ Compute the probability of correct classification for every branch of the tree.
-        The info is stored in a dictionary self.probability_tree which map tuples to probabilities
-        Tuples are the parent node id and the child node id.
-        """
-
-        self.probability_tree = OD()
-        for node_id, clf in self.robust_clf_node.items():
-            current_node = self.node_dict[node_id]
-            for i, c in enumerate(current_node.child):
-                self.probability_tree[(node_id, c.get_id())] = clf.cv_score # could also give score per class ........
-                #classify_results['mean_score_cluster'][i]
         
     def fit(self, model, X):
         """ Finds the merges that are statistically significant (i.e. greater than the cv_score)
@@ -304,7 +251,7 @@ class TREE:
         Parameters
         ------
 
-        model : fdc object
+        model : FDC object
             Contains the coarse graining information
 
         X  : array, shape = (n_sample, n_marker)
@@ -321,12 +268,12 @@ class TREE:
         self : TREE() object
 
         """
-        
+
         n_average = self.n_average
         cv_score = self.cv_score
 
         if cv_score > 1.0 or cv_score < 0.0:
-            assert False, "Can't choose a threshold above 1.0 or below 0.0 !"
+            assert False, "** cv_score must be between 0.0 and 1.0 **"
 
         if self.robust_terminal_node is None:
             self.identify_robust_merge(model, X, n_average = n_average, cv_score = cv_score)
@@ -336,19 +283,7 @@ class TREE:
         mergers = self.mergers
         robust_terminal_node = self.robust_terminal_node # this is a list 
         
-        self.compute_propagated_robust_node(cv_score)
-
-        robust_terminal_node = self.robust_terminal_propag_node
-
-        #print('quite: ',len(robust_terminal_node))
-        #print('not quite: ',len(self.robust_terminal_node))
-        #exit()
-
-        ###################
-        ###################
-        # RELABELLING DATA !
-        ###################
-        ###################
+        ##### Below : relabelling data to output final labels according to classifiers
 
         cluster_n = len(robust_terminal_node)
         n_sample = len(model.X)
@@ -384,7 +319,7 @@ class TREE:
         
         print("\n\n\n")
         print("[tree.py] : -----------> VALIDATION SCORING INFORMATION < -----------------")
-        print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}".format("Terminal node","Parent node", "Displayed node","Progated probability"))
+        print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}".format("Terminal node","Parent node", "Displayed node", "Cv score"))
         for n in robust_terminal_node:
             p_id = self.node_dict[n].parent.get_id()
             print("[tree.py] : ", "{0:<15d}{1:<15d}{2:<15d}{3:<15.4f}".format(n,p_id,self.node_to_cluster_id[n],self.robust_clf_propag_error[p_id]))
@@ -429,25 +364,6 @@ class TREE:
                 current_clf_node = child_list[y_branch] # go down one layer
             
         return y_pred
-
-    '''     def classify_point(self, x, W, b):
-        """ Given weight matrix and intercept (bias), classifies point x 
-        w.r.t to a linear classifier """
-
-        n_class = len(b)
-        
-        if n_class == 1: # binary classification
-            f = (np.dot(x,W[0]) + b)[0]
-            if f > 0.:
-                return 1
-            else:
-                return 0
-        else:
-            score_per_class = []
-            for i, w in enumerate(W):
-                score_per_class.append(np.dot(x,w)+b[i])
-            #print(score_per_class)
-            return np.argmax(score_per_class) '''
 
     def save(self, name=None):
         """ Saves current model to specified path 'name' """
@@ -540,83 +456,6 @@ class TREE:
     def print_mapping(self):
         print("Mapping of terminal nodes to plotted labels:") 
         [print(k, " -> ", v) for k,v in OD(self.node_to_cluster_id).items()]
-
-    def find_gate(self, node_id):
-        """ Return the most important gates, sorted by amplitude. One set of gate per category (class)
-        """
-        import copy
-        clf_info = self.robust_clf_node[node_id]
-        n_class = len(self.node_dict[node_id].child)
-
-        weights = clf_info['coeff'] # weights should be sorted by amplitude for now, those are the most important for the scoring function
-        gate_array = []
-        gate_weights = []
-
-        for i, w in enumerate(weights):
-            argsort_w = np.argsort(np.abs(w))[::-1] # ordering (largest to smallest) -> need also to get the signs
-            sign = np.sign(w[argsort_w])
-            gate_array.append([argsort_w, sign])
-            gate_weights.append(w)
-
-        if n_class == 2: # for binary classfication the first class (0) has a negative score ... for all other cases the classes have positive scores
-            gate_array.append(copy.deepcopy(gate_array[-1]))
-            gate_array[0][1] *= -1
-            gate_weights.append(copy.deepcopy(w))
-            gate_weights[0] *= -1
-        
-        gate_weights = np.array(gate_weights)
-
-        return gate_array, gate_weights
-
-    def print_clf_weight(self, markers=None, file='weight.txt'):
-
-        weight_summary = OD()
-        for node_id, info in self.robust_clf_node.items():
-            node = self.node_dict[node_id]
-            _, gate_weights = self.find_gate(node_id)
-            for i,c in enumerate(node.child):
-                weight_summary[(node_id, c.get_id())] = gate_weights[i]
-        
-        fout = open(file, 'w')
-
-        fout.write('n1\tn2\t')
-        n_feature = len(gate_weights[0])
-        if markers is not None:
-            for m in markers:
-                fout.write(m+'\t')
-        else:
-            for i in range(n_feature):
-                fout.write(str(i)+'\t')
-        fout.write('\n')
-
-        for k, v in weight_summary.items():
-            k0 = k[0]
-            k1 = k[1]
-            if k[0] in self.node_to_cluster_id.keys():
-                k0 = self.node_to_cluster_id[k[0]]
-            if k[1] in self.node_to_cluster_id.keys():
-                k1 = self.node_to_cluster_id[k[1]]
-            fout.write('%i\t%i\t'%(k0,k1))
-
-            for w in v:
-                fout.write('%.3f\t'%w)
-            fout.write('\n')
-    
-    
-    def find_full_gate(self, model):
-        """ Determines the most relevant gates which specify each partition 
-        """
-        gate_dict = OD() # (tuple to gate ... (clf_node, child_node) -> gate (ordered in magnitude))
-
-        for node_id, info in self.robust_clf_node.items():
-
-            childs = self.node_dict[node_id].child
-            gates, _ = self.find_gate(node_id)
-
-            for c, g in zip(childs, gates):
-                gate_dict[(node_id, c.get_id())] = g # storing gate info
-        
-        return gate_dict
 
     def describe_clusters(self, X_standard, cluster_label = None, marker = None, perc = 0.05):
         """ Checks the composition of each clusters in terms of outliers (define by top and bottom perc)
@@ -864,29 +703,6 @@ def breath_first_search(root):
                 stack.append(node)
 
     return node_list
-
-''' def breath_first_search_w_scale(root, Z):
-    scale = find_scale(root.get_id(), Z)
-
-    node_list = breath_first_search(root)
-    node_list_scale = []
-    for n in node_list:
-        if float_equal(find_scale(n.get_id(),Z),scale):
-            node_list_scale.append(n)
-
-    return node_list_scale
-
-def find_scale(id, Z):
-    n_merge = len(Z)
-    n_init_c = np.max(Z[:,:2]) + 2 - n_merge # + 2 since u start from 0 and u don't count the root
-    if id < n_init_c :
-        return  0
-    else:
-        return Z[int(id-n_init_c),2]
-
-def find_leaves(cluster_n, Z, n_init_cluster): # find the leafs of a cluster a given scale
-    idx = cluster_n - n_init_cluster - 1
-    return Z[idx] '''
     
 def find_idx_cluster_in_root(model, node):
     """ Finds the original (noise_threshold = init) clusters contains in the node
@@ -896,21 +712,3 @@ def find_idx_cluster_in_root(model, node):
     n_initial_cluster = len(model.hierarchy[0]['idx_centers']) # map out what is going on here .
     # recall that the cluster labelling is done following the dendrogram convention (see scipy)
     return np.sort(node_list[node_list < n_initial_cluster]) # subset of initial clusters contained in the subtree starting at tree.
-
-def prob_single_path(element):
-    if type(element) is not list:
-        return 1 - element
-    prod = 1.
-    for e in element[1:]:
-        prod*=e
-    prod*=(1.-element[0])
-    return prod
-
-def compute_prob(ls):
-    p_error = 0.
-    n_clf_node = len(ls)
-
-    for i in range(n_clf_node):
-        p_error += prob_single_path(ls[-i:])
-
-    return 1-p_error
