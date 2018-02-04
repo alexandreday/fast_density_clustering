@@ -48,10 +48,38 @@ class TREENODE:
         return child 
     
 class TREE:
-    """ Contains all the hierachy and information concerning the clustering
-    """
-    def __init__(self, root = None, shallow_copy = None, ignore_root = True):
-        self.root = root
+    """ Contains all the hierachy and information concerning the clustering """
+    
+    def __init__(self, n_average = 10, cv_score = 0.5, min_size = 50, test_size_ratio = 0.5, ignore_root = False):
+        """" Tree model to deal with hiearchical clustering stored in FDC().hierarchy
+        
+        Parameters
+        -----------
+        n_average: int, optional (default = 10)
+            number of classifiers that will be trained on different random partitioned. the score of each
+            node of the tree corresponds to the average score. the prediction is obtained using a majority vote.
+
+        cv_score: float, optional (default = 0.5)
+            if the average cross-validation score for a node is above this value, it is called a robust node
+
+        min_size: int, optional (default = 50)
+            minimal size of a cluster
+
+        test_size_ratio: float (default = 0.5)
+            size of the test set to be used when cross-validating
+        
+        ignore_root: bool (default = False)
+            wether or not to ignore the root score when checking for robust nodes.
+            the root is special since in many density hierarchies, the top most clusters will never be merged together
+            thus the root as a node will split into multiple (more than 2) high-level clusters, whereas all other nodes will typically 
+            split into 2 clusters.
+
+        Return
+        ------------
+        self: TREE object
+    
+        """"
+
         self.node_dict = None
         self.mergers = None
         self.robust_node = None
@@ -64,7 +92,15 @@ class TREE:
 
         self.new_idx_centers = None
         self.tree_constructed = False
+
+        # ------------------> Classifier information
         self.ignore_root = ignore_root
+        self.n_average = n_average
+        self.cv_score = cv_score
+        self.min_size = min_size
+        self.test_size_ratio = test_size_ratio
+
+        return self
 
     def build_tree(self, model):
         """Given hierachy, builds a tree of the clusterings. The nodes are class objects define in the class TreeNode
@@ -88,7 +124,7 @@ class TREE:
         if self.tree_constructed is True:
             return
         
-        mergers = find_mergers(model.hierarchy , model.noise_range) # OK this might be a problem ... need to check this.
+        mergers = find_mergers(model.hierarchy, model.noise_range)
         mergers.reverse()
         m = mergers[0]
 
@@ -108,7 +144,7 @@ class TREE:
         self.tree_constructed = True
 
     def node_items(self): # breath-first ordering
-        """ Returns a list of the nodes using a breath-first search
+        """ Returns the full list of nodes below the root
         """
         stack = [self.root]
         list_nodes = []
@@ -121,15 +157,17 @@ class TREE:
         
         return list_nodes
 
-    def identify_robust_merge(self, model, X, n_average = 10, score_threshold = 0.5):
-        """Starting from the root, goes down the tree and evaluates which clustering node are robust
-        It returns a list of the nodes for which their corresponding clusters are well defined according to 
-        a logistic regression and a score_threshold given by the user
+    def identify_robust_merge(self, model, X):
+        """Starting from the root, goes down the tree and evaluates which clustering nodes are robust.
+        Each node in the tree corresponds to a partitioning of the a subset of the data. For each 
+        node one computes a cross-validation score on a downsampled dataset in order to compare nodes.
 
-        Will write information in the following objects :
+        The nodes that are robust and are terminal (meaning no robust nodes exist below them) are
+        stored in two attributes: 
 
-        self.robust_terminal_node (list) # 
-        self.robust_clf_node (dict) # full info
+        self.robust_terminal_node (list) # list of the terminal node indices (which can then be accessed by self.node_dict)
+        self.robust_clf_node (dict) # dictionary of classifiers (CLF objects from classify.py) - keys are node indices ; 
+
         """
 
         self.build_tree(model)  # Extracts all the information from model and outputs a tree    
@@ -146,7 +184,7 @@ class TREE:
             assert False
 
         else: # focus on this loop .........
-            self.compute_robust_node(model, X, n_average, score_threshold)
+            self.compute_robust_node(model, X)
 
     
         # Listing all nodes in the robust tree ...==
@@ -176,9 +214,9 @@ class TREE:
         #print(full_path)
         #print('total prob:',compute_prob(full_path))
     
-    def compute_propagated_robust_node(self, score_threshold):
+    def compute_propagated_robust_node(self, cv_score):
         """ Based on the classifying information obtained from compute_robust_node, 
-        finds subset of the tree that has a -> total error <- better than the score_threshold !
+        finds subset of the tree that has a -> total error <- better than the cv_score !
         """
         self.compute_probability_tree() # builds a dictionary of the classification scores on every branches.
         self.robust_clf_propag_error = OD()
@@ -189,7 +227,7 @@ class TREE:
             #print("checking node ", node_id,'\t',self.node_dict[node_id])
             p_error = self.compute_propagated_error(node_id)
             self.robust_clf_propag_error[node_id] = p_error
-            if p_error+1e-6 > score_threshold:
+            if p_error+1e-6 > cv_score:
 
                 self.robust_clf_propag_node[node_id] = self.robust_clf_node[node_id]
 
@@ -200,9 +238,10 @@ class TREE:
 
         self.robust_terminal_propag_node = terminal_node
 
-    def compute_robust_node(self, model, X, n_average, score_threshold:
+    def compute_robust_node(self, model, X):
         """ Start from the root, computes the classification score at every branch in the tree
         and stops if classication score is below a certain threshold.
+
         Results are stored in:
             self.robust_clf_node : dictionary of node id to classification information (weights, biases, scores, etc.)
             self.robust_terminal_node : list of terminal nodes id, whose parents are robust classifiers.
@@ -210,34 +249,34 @@ class TREE:
 
         self.robust_terminal_node = [] #list of the terminal robust nodes
         self.robust_clf_node = OD() # dictionary of the nodes where a partition is made (non-leaf nodes)
-        # add root first 
-
-        clf = classify_root(self.root, model, X, n_average = n_average)
-        score = clf.cv_score
     
-        if self.ignore_root is True:
-            print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(),score))
+        clf = classify_node(self.root, model, X, n_average = self.n_average) # classify the root
+        min_cv_score = self.cv_score
+        clf_score = clf.cv_score
+    
+        if self.ignore_root is True: 
+            print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(), clf_score))
             self.robust_clf_node[self.root.get_id()] = clf
         else:
-            if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("root is node #",self.root.get_id(),"score =",score))
+            if clf_score+1e-6 > min_cv_score: # --- search stops if the node is not statistically signicant (threshold)
+                print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("root is node #",self.root.get_id(),"score =",clf_score))
                 self.robust_clf_node[self.root.get_id()] = clf
             else:
-                print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),score))
+                print("[tree.py] : root is not robust #  %i \t score = %.4f"%(self.root.get_id(),clf_score))
 
         for current_node in self.node_items()[1:]:
             if current_node.parent.get_id() in self.robust_clf_node.keys():
                 if not current_node.is_leaf():
                     
-                    clf = classify_root(current_node, model, X, n_average = n_average)
-                    score = clf.cv_score
+                    clf = classify_node(current_node, model, X, n_average = n_average)
+                    clf_score = clf.cv_score
                     
-                    if score+1e-6 > score_threshold: # --- search stops if the node is not statistically signicant (threshold)
-                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("robust node #",current_node.get_id(),"score =",score))
+                    if clf_score+1e-6 > min_cv_score: # --- search stops if the node is not statistically signicant (threshold)
+                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("robust node #",current_node.get_id(),"score =",clf_score))
                         self.robust_clf_node[current_node.get_id()] = clf
 
                     else:
-                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("reject node #",current_node.get_id(),"score =",score))
+                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<.4f}".format("reject node #",current_node.get_id(),"score =",clf_score))
                         self.robust_terminal_node.append(current_node.get_id())
                 else: # implies it's parent was robust, and is a leaf node 
                     self.robust_terminal_node.append(current_node.get_id())
@@ -255,8 +294,8 @@ class TREE:
                 self.probability_tree[(node_id, c.get_id())] = clf.cv_score # could also give score per class ........
                 #classify_results['mean_score_cluster'][i]
         
-    def find_robust_labelling(self, model, X, n_average = 10, score_threshold = 0.5):
-        """ Finds the merges that are statistically significant (i.e. greater than the score_threshold)
+    def fit(self, model, X):
+        """ Finds the merges that are statistically significant (i.e. greater than the cv_score)
         and relabels the data accordingly
         
         Trick here: first use a low threshold (will compute the tree down to it's lowest components)
@@ -274,7 +313,7 @@ class TREE:
         n_average : int
             Number of folds in the cross validation
 
-        score_threshold : float
+        cv_score : float
             Classification score threshold
         
         Returns
@@ -282,18 +321,22 @@ class TREE:
         self : TREE() object
 
         """
-        if score_threshold > 1.0 or score_threshold < 0.0:
+        
+        n_average = self.n_average
+        cv_score = self.cv_score
+
+        if cv_score > 1.0 or cv_score < 0.0:
             assert False, "Can't choose a threshold above 1.0 or below 0.0 !"
 
         if self.robust_terminal_node is None:
-            self.identify_robust_merge(model, X, n_average = n_average, score_threshold = score_threshold)
+            self.identify_robust_merge(model, X, n_average = n_average, cv_score = cv_score)
 
         root = self.root
         node_dict = self.node_dict
         mergers = self.mergers
         robust_terminal_node = self.robust_terminal_node # this is a list 
         
-        self.compute_propagated_robust_node(score_threshold)
+        self.compute_propagated_robust_node(cv_score)
 
         robust_terminal_node = self.robust_terminal_propag_node
 
@@ -356,7 +399,7 @@ class TREE:
 
         for merger in self.mergers : # don't need to go through the whole hierarchy, since we're checking everything
             node_id = merger[1]
-            clf = classify_root(self.node_dict[node_id], model, X, n_average = n_average)
+            clf = classify_node(self.node_dict[node_id], model, X, n_average = n_average)
             print("[tree.py] : ", node_id, "accuracy : %.3f"%clf.cv_score, "sample_size : %i"%clf._n_sample, sep='\t')
 
             self.all_clf_node[node_id] = clf
@@ -652,7 +695,7 @@ class TREE:
 ##############################################
 ###############################################
 
-def classify_root(root, model, X, n_average = 10, C=1.0):
+def classify_node(root, model, X, n_average = 10, C=1.0):
     """ Trains a classifier on the childs of "root" and returns a classifier for these types.
 
     Important attributes are:
