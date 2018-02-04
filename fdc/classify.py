@@ -123,7 +123,7 @@ class CLF:
     
     """
 
-    def __init__(self, clf_type, n_average=10, n_iter_max = 100, test_size = 0.5, down_sample=None, **kwargs):
+    def __init__(self, clf_type='svm', n_average=10, n_iter_max = 100, test_size = 0.5, down_sample=None, **kwargs):
         self.clf_type = clf_type
         self.n_average = n_average
         self.n_iter_max = n_iter_max
