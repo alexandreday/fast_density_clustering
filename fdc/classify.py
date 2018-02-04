@@ -113,16 +113,17 @@ def fit_logit(X, y, n_average = 10, C = 1.0, n_iter_max = 100):
     return results
 
 class CLF:
+    """ Implements a classifier for hierarchical clustering
+
+    Parameters:
+    ----------
+    clf_type : str
+        Type of cluster, either 'svm' or 'logreg'
+    kwarg : optional arguments for SVM (see SVM definition below for name of keyword arguments)
+    
+    """
 
     def __init__(self, clf_type, **kwargs):
-        """ Implements a classifier for hierarchical clustering
-
-        Parameters:
-        ----------
-        clf_type : str
-            Type of cluster, either 'svm' or 'logreg'
-        kwarg : optional arguments for SVM (see SVM definition below for name of keyword arguments)
-        """
         self.clf_type = clf_type
         self.kwargs = kwargs
         self.trained = False
