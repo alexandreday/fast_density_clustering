@@ -14,6 +14,7 @@ from numpy.random import random
 import sys, os
 from .density_estimation import KDE
 import pickle
+from collections import OrderedDict as OD
     
 class FDC:
 
@@ -220,7 +221,7 @@ class FDC:
         for nt in noise_range:
             self.check_cluster_stability_fast(self.X, eta = nt)
             
-            hierarchy.append({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label}) # -> the only required information <- 
+            hierarchy.append(OD({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label})) # -> the only required information <- 
             if len(self.idx_centers) != n_cluster:
                 n_cluster = len(self.idx_centers)
                 self.max_noise = nt

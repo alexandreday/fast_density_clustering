@@ -200,7 +200,7 @@ class TREE:
 
         self.robust_terminal_propag_node = terminal_node
 
-    def compute_robust_node(self, model, X, n_average, score_threshold:
+    def compute_robust_node(self, model, X, n_average, score_threshold):
         """ Start from the root, computes the classification score at every branch in the tree
         and stops if classication score is below a certain threshold.
         Results are stored in:
