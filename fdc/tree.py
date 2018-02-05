@@ -57,7 +57,7 @@ class TREENODE:
 class TREE:
     """ Contains all the hierachy and information concerning the clustering """
     
-    def __init__(self, n_average = 10, cv_score = 0., min_size = 50, test_size_ratio = 0.5, ignore_root = False):
+    def __init__(self, n_average = 50, cv_score = 0., min_size = 50, test_size_ratio = 0.5, ignore_root = False):
         """" Tree model to deal with hiearchical clustering stored in FDC().hierarchy
         
         Parameters
@@ -175,7 +175,7 @@ class TREE:
         """
 
         self.build_tree(model)  # Extracts all the information from model and outputs a tree    
-
+    
         root, node_dict, mergers = self.root, self.node_dict, self.mergers
 
         print("[tree.py] : Printing two top-most layers")
@@ -214,10 +214,12 @@ class TREE:
                 found_merge = False
                 for node_id in self.robust_terminal_node:
                     p = self.node_dict[node_id].parent
+                    if p is None: # root is reached !
+                        break
                     clf = self.robust_clf_node[p.get_id()]
                     if clf.cv_score - clf.cv_score_std < self.cv_score: # remove that node
-                        print('merging childs of %i'%p.get_id())
-                        print('i.e. ->',p.get_child_id())
+                        #print('merging childs of %i'%p.get_id())
+                        #print('i.e. ->',p.get_child_id())
                         #print(self.robust_clf_node.keys())
                         self.robust_clf_node.pop(p.get_id())
                         #print('popped')
@@ -330,9 +332,7 @@ class TREE:
         cluster_to_node_id = OD()
 
         # here all terminal nodes are given a label, in the same order they are stored.
-        print(len(robust_terminal_node))
         y_node = classification_labels([node_dict[i] for i in robust_terminal_node], model)
-        print(len(np.unique(y_node)))
         
         assert np.count_nonzero(y_node == -1) == 0, "Wrong labelling or ROOT is not robust ... !"
 
@@ -364,11 +364,15 @@ class TREE:
         print("[tree.py] : -----------> VALIDATION SCORING INFORMATION < -----------------")
         print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}{4:<15s}{5:15s}".format("Terminal node", "Parent node", "Displayed node", "Cv score", "Cv +-","Effective CV"))
         for n in robust_terminal_node:
-            p_id = self.node_dict[n].parent.get_id()
-            cv_score = self.robust_clf_node[p_id].cv_score
-            cv_score_std = self.robust_clf_node[p_id].cv_score_std
-            print("[tree.py] : ", "{0:<15d}{1:<15d}{2:<15d}{3:<15.4f}{4:<15.5f}{5:<15.4f}".format(n,p_id,self.node_to_cluster_id[n],
-            cv_score, cv_score_std, cv_score - cv_score_std))
+            p = self.node_dict[n].parent
+            if p is not None:
+                p_id = p.get_id()
+                cv_score = self.robust_clf_node[p_id].cv_score
+                cv_score_std = self.robust_clf_node[p_id].cv_score_std
+                print("[tree.py] : ", "{0:<15d}{1:<15d}{2:<15d}{3:<15.4f}{4:<15.5f}{5:<15.4f}".format(n,p_id,self.node_to_cluster_id[n],
+                cv_score, cv_score_std, cv_score - cv_score_std))
+            else:
+                print("[tree.py] : root reached -> one cluster remaining")
                 
         return self
     
@@ -684,10 +688,11 @@ def find_mergers(hierarchy, noise_range):
     for k, v in merging_dict.items():
         if v == -1:
             mapped_u.append(k)
+    
     # adding top row !!
     if len(merger_record) == 0:
         merger_record.append([mapped_u, current_merge_idx, 1.0])
-    else:
+    elif len(mapped_u) > 1:
         merger_record.append([mapped_u, current_merge_idx, 1.5*(merger_record[-1][2])])
 
     return merger_record
