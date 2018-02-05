@@ -34,6 +34,12 @@ class TREENODE:
                 if c.get_id() == id_:
                     return c
 
+    def get_child_id(self):
+        if len(self.child) == 0:
+            return []
+        else:
+            return [c.id_ for c in self.child]
+
     def get_scale(self):
         return self.scale
 
@@ -51,7 +57,7 @@ class TREENODE:
 class TREE:
     """ Contains all the hierachy and information concerning the clustering """
     
-    def __init__(self, n_average = 10, cv_score = 0.5, min_size = 50, test_size_ratio = 0.5, ignore_root = False):
+    def __init__(self, n_average = 10, cv_score = 0., min_size = 50, test_size_ratio = 0.5, ignore_root = False):
         """" Tree model to deal with hiearchical clustering stored in FDC().hierarchy
         
         Parameters
@@ -60,8 +66,9 @@ class TREE:
             number of classifiers that will be trained on different random partitioned. the score of each
             node of the tree corresponds to the average score. the prediction is obtained using a majority vote.
 
-        cv_score: float, optional (default = 0.5)
+        cv_score: float, optional (default = 0.0)
             if the average cross-validation score for a node is above this value, it is called a robust node
+            should be starting with cv_score = 0, then sweeping up, using bottom-up clustering
 
         min_size: int, optional (default = 50)
             minimal size of a cluster
@@ -85,8 +92,7 @@ class TREE:
         self.mergers = None
         self.new_cluster_label = None
         self.robust_terminal_node = None #list of the terminal robust nodes
-        self.robust_clf_node = None # full information about classification is recorded here, keys of dict are the classifying nodes 
-        self.all_clf_node = None # calculated when checking all nodes !
+        self.robust_clf_node = None # full information about classification is recorded here, keys of dict are the classifying nodes id
         self.all_robust_node = None # list of all nodes in the robust tree (classifying nodes and leaf nodes)
         self.cluster_to_node_id = None # dictionary mapping cluster labels (displayed on plot) with node id
 
@@ -175,14 +181,8 @@ class TREE:
         print("[tree.py] : Printing two top-most layers")
         print("[tree.py] : Root :", root)
         print("[tree.py] : Root's childs :", root.get_child())
-    
-        if self.all_clf_node is not None: # meaning, the nodes have already been checked for classification
 
-            print("Need to update this part, ")
-            assert False
-
-        else: # focus on this loop -- ... ... ... --
-            self.compute_robust_node(model, X)
+        self.compute_robust_node(model, X)
 
         # Listing all nodes in the robust tree ...
 
@@ -204,21 +204,49 @@ class TREE:
             self.robust_clf_node : dictionary of node id to classification information (weights, biases, scores, etc.)
             self.robust_terminal_node : list of terminal nodes id, whose parents are robust classifiers.
         """
-
+        print(np.sort(self.robust_terminal_node))
         self.robust_terminal_node = [] #list of the terminal robust nodes
-        self.robust_clf_node = OD() # dictionary of the nodes where a partition is made (non-leaf nodes)
-    
-        clf = self.classify_node(self.root, model, X) # classify the root
+        if self.robust_clf_node is None:
+            self.robust_clf_node = OD() # dictionary of the nodes where a partition is made (non-leaf nodes)
+        
+        else:    ########## THIS IS IF THE TREE HAS ALREADY BEEN FITTED
+            tmp = {}
+            for node_id, clf in self.robust_clf_node.items():
+                if clf.cv_score - clf.cv_score_std > self.cv_score:
+                    tmp[node_id] = clf
+            self.robust_clf_node = tmp
+
+            stack = [self.root]
+            while stack:
+                c_node = stack[0]
+                stack = stack[1:]
+                if not c_node.is_leaf():
+                    for node in c_node.get_child():
+                        if node.get_id() not in self.robust_clf_node.keys():
+                            self.robust_terminal_node.append(node.get_id())
+                        else:
+                            stack.append(node)
+            ''' for k,v in self.robust_clf_node.items():
+                for c_id in self.node_dict[k].get_child_id():
+                    if c_id not in self.robust_clf_node.keys():
+                        self.robust_terminal_node.append(c_id) # leaf node '''
+            return
+
+        if self.root.get_id() in self.robust_clf_node.keys():
+            clf = self.robust_clf_node[self.root.get_id()]
+        else:
+            clf = self.classify_node(self.root, model, X)
+
         min_cv_score = self.cv_score
         clf_score = clf.cv_score
         std_score = clf.cv_score_std
     
-        if self.ignore_root is True: 
+        if self.ignore_root is True:
             print("[tree.py] : root is ignored, #  %i \t score = %.4f"%(self.root.get_id(), clf_score))
             self.robust_clf_node[self.root.get_id()] = clf
         else:
-            if clf_score+1e-6 > min_cv_score: # --- search stops if the node is not statistically signicant (threshold)
-                print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<7.4f}{4:5s}{5:6.5f}".format("root node #",self.root.get_id(),"score =",clf_score,"\t+-",std_score))
+            if clf_score-std_score > min_cv_score: # --- search stops if the node is not statistically signicant (threshold)
+                node_info(self.root, clf_score, std_score, min_cv_score)
                 self.robust_clf_node[self.root.get_id()] = clf
             else:
                 print("[tree.py] : root not robust #  %i \t score = %.4f"%(self.root.get_id(),clf_score))
@@ -227,21 +255,25 @@ class TREE:
             if current_node.parent.get_id() in self.robust_clf_node.keys():
                 if not current_node.is_leaf():
                     
-                    clf = self.classify_node(current_node, model, X)
+                    if current_node.get_id() in self.robust_clf_node.keys():
+                        clf = self.robust_clf_node[current_node.get_id()]
+                    else:
+                        clf = self.classify_node(current_node, model, X)
+
                     clf_score = clf.cv_score
                     std_score = clf.cv_score_std
                     
-                    if clf_score+1e-6 > min_cv_score: # --- search stops if the node is not statistically signicant (threshold)
-                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<7.4f}{4:5s}{5:6.5f}".format("robust node #",current_node.get_id(),"score =",clf_score,"\t+-",std_score))
+                    if clf_score-std_score > min_cv_score: # --- search stops if the node is not statistically signicant (threshold)
+                        node_info(current_node, clf_score, std_score, min_cv_score)
                         self.robust_clf_node[current_node.get_id()] = clf
 
                     else:
-                        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<7.4f}{4:5s}{5:6.5f}".format("reject node #",current_node.get_id(),"score =",clf_score,"\t+-",std_score))
+                        node_info(current_node, clf_score, std_score, min_cv_score)
                         self.robust_terminal_node.append(current_node.get_id())
                 else: # implies it's parent was robust, and is a leaf node 
                     self.robust_terminal_node.append(current_node.get_id())
         
-    def fit(self, model, X):
+    def fit(self, model, X, cv_score = None):
         """ Finds the merges that are statistically significant (i.e. greater than the cv_score)
         and relabels the data accordingly
         
@@ -270,35 +302,44 @@ class TREE:
         """
 
         n_average = self.n_average
-        cv_score = self.cv_score
-
+        if cv_score is None:
+            cv_score = self.cv_score
+        else:
+            self.cv_score = cv_score
+        
         if cv_score > 1.0 or cv_score < 0.0:
             assert False, "** cv_score must be between 0.0 and 1.0 **"
 
-        if self.robust_terminal_node is None:
-            self.identify_robust_merge(model, X)
-
+        print('[tree.py] : fitting with cv_score = %.4f'%self.cv_score)
+        self.identify_robust_merge(model, X) # fitting all the classifiers
+        robust_terminal_node = self.robust_terminal_node # this is a list
+        
         root = self.root
         node_dict = self.node_dict
         mergers = self.mergers
-        robust_terminal_node = self.robust_terminal_node # this is a list 
         
         ##### Below : relabelling data to output final labels according to classifiers
 
         cluster_n = len(robust_terminal_node)
+
         n_sample = len(model.X)
         y_robust = -1*np.ones(n_sample,dtype=np.int)
         y_original = model.hierarchy[0]['cluster_labels']
         cluster_to_node_id = OD()
 
         # here all terminal nodes are given a label, in the same order they are stored.
+        print(len(robust_terminal_node))
         y_node = classification_labels([node_dict[i] for i in robust_terminal_node], model)
+        print(len(np.unique(y_node)))
+        
         assert np.count_nonzero(y_node == -1) == 0, "Wrong labelling or ROOT is not robust ... !"
 
         for i, node_id in enumerate(robust_terminal_node):
             pos = (y_node == i)
             y_robust[pos] = i
             cluster_to_node_id[i] = node_id
+        #print(cluster_n)
+        #print(Counter(y_node))
         
         if len(robust_terminal_node) == 0:
             y_robust *= 0 # only one coloring 
@@ -317,28 +358,16 @@ class TREE:
         self.cluster_to_node_id = cluster_to_node_id
         self.node_to_cluster_id = OD({v: k for k, v in self.cluster_to_node_id.items()})
         
-        print("\n\n\n")
+        print("\n")
         print("[tree.py] : -----------> VALIDATION SCORING INFORMATION < -----------------")
-        print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}".format("Terminal node","Parent node", "Displayed node", "Cv score", "Cv +-"))
+        print("[tree.py] : ", "{0:<15s}{1:<15s}{2:<15s}{3:<15s}{4:<15s}{5:15s}".format("Terminal node", "Parent node", "Displayed node", "Cv score", "Cv +-","Effective CV"))
         for n in robust_terminal_node:
             p_id = self.node_dict[n].parent.get_id()
-            print("[tree.py] : ", "{0:<15d}{1:<15d}{2:<15d}{3:<15.4f}{4:<8.6f}".format(n,p_id,self.node_to_cluster_id[n],self.robust_clf_node[p_id].cv_score,self.robust_clf_node[p_id].cv_score_std))
+            cv_score = self.robust_clf_node[p_id].cv_score
+            cv_score_std = self.robust_clf_node[p_id].cv_score_std
+            print("[tree.py] : ", "{0:<15d}{1:<15d}{2:<15d}{3:<15.4f}{4:<15.5f}{5:<15.4f}".format(n,p_id,self.node_to_cluster_id[n],
+            cv_score, cv_score_std, cv_score - cv_score_std))
                 
-        return self
-
-    def check_all_merge(self, model, X):
-
-        """ Goes over all classification nodes and evaluates classification scores """ 
-        self.build_tree(model)
-        self.all_clf_node = OD()
-
-        for merger in self.mergers : # don't need to go through the whole hierarchy, since we're checking everything
-            node_id = merger[1]
-            clf = self.classify_node(self.node_dict[node_id], model, X)
-            print("[tree.py] : ", node_id, "accuracy : %.3f"%clf.cv_score, "sample_size : %i"%clf._n_sample, sep='\t')
-
-            self.all_clf_node[node_id] = clf
-
         return self
     
     def predict(self, X):
@@ -346,7 +375,7 @@ class TREE:
         need to do recursive classification ... 
         
         """
-        #uprint(self.robust_clf_node)
+        
         terminal_nodes = set(self.robust_terminal_propag_node)
         node_to_cluster = self.node_to_cluster_id
 
@@ -567,12 +596,8 @@ class TREE:
         ysubset = y[pos_subset] # labels
 
         count = Counter(ysubset)
-        #print(node)
-        #print(count)
         for v in count.values():
             if v < min_size: # cluster should be merged, it is considered too small
-                print(node)
-                print(count)
                 fake_clf = CLF()
                 fake_clf.cv_score = -1.
                 fake_clf.cv_score_std = -1.
@@ -670,6 +695,12 @@ def find_mergers(hierarchy, noise_range):
 ################################# UTILITY FUNCTIONS ####################################
 ########################################################################################
 ########################################################################################
+def node_info(node, cv_score, std_score, min_score):
+    if cv_score > min_score:
+        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<7.4f}{4:5s}{5:6.5f}".format("robust node #",node.get_id(),"score =",cv_score,"\t+-",std_score))
+    else:
+        print("[tree.py] : {0:<15s}{1:<10d}{2:<10s}{3:<7.4f}{4:5s}{5:6.5f}".format("reject node #",node.get_id(),"score =",cv_score,"\t+-",std_score))
+
 
 def str_gate(marker, sign):
     if sign < 0. :
