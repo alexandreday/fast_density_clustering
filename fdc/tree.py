@@ -213,19 +213,23 @@ class TREE:
             while True:
                 found_merge = False
                 for node_id in self.robust_terminal_node:
-                    p = self.node_dict[node_id].get_parent()
+                    p = self.node_dict[node_id].parent
                     clf = self.robust_clf_node[p.get_id()]
-                    if clf.cv_score - clf.cv_score_std < self.cv_score: # remove that node 
+                    if clf.cv_score - clf.cv_score_std < self.cv_score: # remove that node
+                        print('merging childs of %i'%p.get_id())
+                        print('i.e. ->',p.get_child_id())
+                        #print(self.robust_clf_node.keys())
                         self.robust_clf_node.pop(p.get_id())
-                        sub_node_list = breath_first_search(p)
+                        #print('popped')
+                        sub_node_list = breath_first_search(p)[1:]
                         for n in sub_node_list: # need to clear out the full subtree
                             if n in self.robust_clf_node.keys():
                                 self.robust_clf_node.pop(n)
                             if n in self.robust_terminal_node:
                                 self.robust_terminal_node.remove(n)
                             found_merge = True
-                            
-                            break
+                        self.robust_terminal_node.append(p.get_id()) # parent now becomes the terminal node
+                        break
                 if found_merge is False:
                     break
             return
