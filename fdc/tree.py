@@ -48,6 +48,9 @@ class TREENODE:
 
     def add_child(self, treenode):
         self.child.append(treenode)
+    
+    def remove_child(self, treenode):
+        self.child.remove(treenode)
         
     def get_rev_child(self):
         child = self.child[:]
@@ -146,6 +149,12 @@ class TREE:
 
         self.mergers = mergers
         self.tree_constructed = True
+    
+    def merge_nodes(self, node_list, target_node):
+        for node in node_list:
+            parent = node.parent
+            target_node.add_child(node) # transfering node
+            parent.remove_child(node)
 
     def node_items(self): # breath-first ordering
         """ Returns the full list of nodes below the root
@@ -218,20 +227,28 @@ class TREE:
                         break
                     clf = self.robust_clf_node[p.get_id()]
                     if clf.cv_score - clf.cv_score_std < self.cv_score: # remove that node
-                        #print('merging childs of %i'%p.get_id())
-                        #print('i.e. ->',p.get_child_id())
-                        #print(self.robust_clf_node.keys())
-                        self.robust_clf_node.pop(p.get_id())
-                        #print('popped')
-                        sub_node_list = breath_first_search(p)[1:]
-                        for n in sub_node_list: # need to clear out the full subtree
-                            if n in self.robust_clf_node.keys():
-                                self.robust_clf_node.pop(n)
-                            if n in self.robust_terminal_node:
-                                self.robust_terminal_node.remove(n)
-                            found_merge = True
-                        self.robust_terminal_node.append(p.get_id()) # parent now becomes the terminal node
-                        break
+                        # 2 cases here:
+                        #   1. node is merged with another leaf node
+                        #   2. node is merged with a subtree (which can create big instabilities !)
+                        case = 1
+                        for c in p.get_child_id():
+                            if c not in self.robust_terminal_node:
+                                case = 2
+                                break
+                        
+                        if case == 1:
+                            self.robust_clf_node.pop(p.get_id())
+                            #print('popped')
+                            sub_node_list = breath_first_search(p)[1:]
+                            for n in sub_node_list: # need to clear out the full subtree
+                                if n in self.robust_clf_node.keys():
+                                    self.robust_clf_node.pop(n)
+                                if n in self.robust_terminal_node:
+                                    self.robust_terminal_node.remove(n)
+                                found_merge = True
+                            self.robust_terminal_node.append(p.get_id()) # parent now becomes the terminal node
+                            break
+
                 if found_merge is False:
                     break
             return
@@ -239,7 +256,7 @@ class TREE:
         if self.root.get_id() in self.robust_clf_node.keys():
             clf = self.robust_clf_node[self.root.get_id()]
         else:
-            clf = self.classify_node(self.root, model, X)
+            clf = self.classify_node(self.root.get_child(), model, X)
 
         min_cv_score = self.cv_score
         clf_score = clf.cv_score
@@ -262,7 +279,7 @@ class TREE:
                     if current_node.get_id() in self.robust_clf_node.keys():
                         clf = self.robust_clf_node[current_node.get_id()]
                     else:
-                        clf = self.classify_node(current_node, model, X)
+                        clf = self.classify_node(current_node.get_child(), model, X)
 
                     clf_score = clf.cv_score
                     std_score = clf.cv_score_std
@@ -569,7 +586,7 @@ class TREE:
 ##############################################
 ###############################################
 
-    def classify_node(self, node, model, X, C=1.0):
+    def classify_node(self, node_list, model, X, C=1.0):
         """ Trains a classifier on the childs of "root" and returns a classifier for these types.
 
         Important attributes are (for CLF object):
@@ -592,7 +609,7 @@ class TREE:
         test_size_ratio = self.test_size_ratio
         n_average = self.n_average
 
-        y = classification_labels(node.get_child(), model)
+        y = classification_labels(node_list, model)
 
         if len(np.unique(y)) == 1:
             return CLF(clf_type='trivial')
@@ -765,4 +782,4 @@ def find_idx_cluster_in_root(model, node):
     node_list = np.array(breath_first_search(node)) #list of terminal nodes contained in node. 
     n_initial_cluster = len(model.hierarchy[0]['idx_centers']) # map out what is going on here .
     # recall that the cluster labelling is done following the dendrogram convention (see scipy)
-    return np.sort(node_list[node_list < n_initial_cluster]) # subset of initial clusters contained in the subtree starting at tree.
+    return np.sort(node_list[node_list < n_initial_cluster]) # subset of initial clusters contained in the subtree starting at node

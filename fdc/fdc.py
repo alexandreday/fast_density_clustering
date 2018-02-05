@@ -299,7 +299,7 @@ class FDC:
         self.cluster_label = cluster_label
 
 
-    def find_NH_tree_search(self, idx, delta, cluster_label):
+    def find_NH_tree_search(self, idx, eta, cluster_label):
         """
         Function for searching for nearest neighbors within
         some density threshold. 
@@ -325,11 +325,11 @@ class FDC:
             new_leaves=[]
 
             for leaf in leaves:
-                if cluster_label[leaf] == current_label : # search neighbors only if in current cluster 
+                if cluster_label[leaf] == current_label : # search neighbors only if in current cluster !
                     nn_leaf = nn_list[leaf][1:self.search_size] # note, this search_size can be greater than self.nh_size !
 
                     for nn in nn_leaf:
-                        if (rho[nn] > delta) & (nn not in NH):
+                        if (rho[nn] > eta) & (nn not in NH):
                             NH.add(nn)
                             new_leaves.append(nn)
 
@@ -338,6 +338,17 @@ class FDC:
     def make_file_name(self):
         t_name = "fdc_nhSize=%i_eta=%.3f_ratio=%.2f.pkl"
         return t_name%(self.nh_size, self.eta, self.test_ratio_size)
+
+    def compute_coarse_grain_graph(self):
+        graph = {}
+        
+        for idx in self.idx_centers: # at some scale
+            NH = self.find_NH_tree_search(idx, eta, cluster_label)
+            label_centers_nn = np.unique([cluster_label[ni] for ni in NH])
+
+
+
+
 
 #####################################################
 #####################################################
@@ -400,6 +411,8 @@ def check_cluster_stability(self, X, threshold):
             n_false_pos+=1
         else:
             idx_true_centers.append(idx)
+
+        
     return np.array(idx_true_centers,dtype=np.int), n_false_pos
 
 def assign_cluster(idx_centers, nn_delta, density_graph):
@@ -429,6 +442,7 @@ def assign_cluster_deep(root,cluster_label,density_graph,label):
         for child in root:
             cluster_label[child]=label
             assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
+
 
 def blockPrint():
     """Blocks printing to screen"""
