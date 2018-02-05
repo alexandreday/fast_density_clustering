@@ -204,32 +204,30 @@ class TREE:
             self.robust_clf_node : dictionary of node id to classification information (weights, biases, scores, etc.)
             self.robust_terminal_node : list of terminal nodes id, whose parents are robust classifiers.
         """
-        print(np.sort(self.robust_terminal_node))
-        self.robust_terminal_node = [] #list of the terminal robust nodes
         if self.robust_clf_node is None:
+            self.robust_terminal_node = [] #list of the terminal robust nodes
             self.robust_clf_node = OD() # dictionary of the nodes where a partition is made (non-leaf nodes)
         
-        else:    ########## THIS IS IF THE TREE HAS ALREADY BEEN FITTED
-            tmp = {}
-            for node_id, clf in self.robust_clf_node.items():
-                if clf.cv_score - clf.cv_score_std > self.cv_score:
-                    tmp[node_id] = clf
-            self.robust_clf_node = tmp
-
-            stack = [self.root]
-            while stack:
-                c_node = stack[0]
-                stack = stack[1:]
-                if not c_node.is_leaf():
-                    for node in c_node.get_child():
-                        if node.get_id() not in self.robust_clf_node.keys():
-                            self.robust_terminal_node.append(node.get_id())
-                        else:
-                            stack.append(node)
-            ''' for k,v in self.robust_clf_node.items():
-                for c_id in self.node_dict[k].get_child_id():
-                    if c_id not in self.robust_clf_node.keys():
-                        self.robust_terminal_node.append(c_id) # leaf node '''
+        else:    
+            ######## once the tree has been fully fitted, will just perform bottom-up merges based on desired score
+            while True:
+                found_merge = False
+                for node_id in self.robust_terminal_node:
+                    p = self.node_dict[node_id].get_parent()
+                    clf = self.robust_clf_node[p.get_id()]
+                    if clf.cv_score - clf.cv_score_std < self.cv_score: # remove that node 
+                        self.robust_clf_node.pop(p.get_id())
+                        sub_node_list = breath_first_search(p)
+                        for n in sub_node_list: # need to clear out the full subtree
+                            if n in self.robust_clf_node.keys():
+                                self.robust_clf_node.pop(n)
+                            if n in self.robust_terminal_node:
+                                self.robust_terminal_node.remove(n)
+                            found_merge = True
+                            
+                            break
+                if found_merge is False:
+                    break
             return
 
         if self.root.get_id() in self.robust_clf_node.keys():
