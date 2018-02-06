@@ -69,12 +69,15 @@ for i_dataset, dataset in enumerate(datasets):
     X = StandardScaler().fit_transform(X)
 
     model_fdc = FDC(eta=noise_threshold)
-    graph = DGRAPH()
+    #clf_args= {'max_depth':5, 'n_estimators': 50, 'max_features':1, 'class_weight':'balanced'}
+    #graph = DGRAPH(clf_type='rf', n_average = 10, min_size=100, clf_args=clf_args)
+    clf_args= {'C':1.0, 'class_weight':'balanced'}
+    graph = DGRAPH(clf_type='svm', n_average = 20, min_size=150, clf_args=clf_args)
 
     s=time.time()
     model_fdc.fit(X)
     graph.fit(model_fdc, X)
-    graph.merge_until_robust(X, 0.98)
+    graph.merge_until_robust(X, cv_score)
     y = graph.init_label
     
     dt=time.time()-s

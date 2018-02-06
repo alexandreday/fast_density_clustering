@@ -6,11 +6,13 @@ import pickle
 
 class DGRAPH:
     """ Check for neighbors """
-    def __init__(self, n_average = 50, cv_score = 0., min_size = 50, test_size_ratio = 0.5):
+    def __init__(self, n_average = 50, cv_score = 0., min_size = 50, test_size_ratio = 0.5, clf_type='svm', clf_args=None):
         self.n_average = n_average
         self.cv_score_threshold = cv_score
         self.min_size = min_size
         self.test_size_ratio = test_size_ratio
+        self.clf_type = clf_type
+        self.clf_args = clf_args
 
     def fit(self, model:FDC, X):
         #self.nh_graph = model.nh_graph
@@ -207,7 +209,7 @@ class DGRAPH:
                 fake_clf.cv_score_std = -1.
                 return fake_clf
 
-        return CLF(clf_type='svm', n_average=n_average, C=C, down_sample=min_size).fit(Xsubset, ysubset)
+        return CLF(clf_type=self.clf_type, n_average=n_average, down_sample=min_size, clf_args=self.clf_args).fit(Xsubset, ysubset)
     
     def save(self, name=None):
         """ Saves current model to specified path 'name' """
