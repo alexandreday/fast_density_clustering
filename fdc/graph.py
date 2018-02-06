@@ -2,6 +2,7 @@ from .fdc import FDC
 from .classify import CLF
 import numpy as np
 from collections import Counter
+import pickle
 
 class DGRAPH:
     """ Check for neighbors """
@@ -145,6 +146,7 @@ class DGRAPH:
             self.graph[(k1[0], new_cluster_label)] = self.graph.pop(k1)
 
     def merge_until_robust(self, X, cv_robust):
+        self.history = []
 
         while True:
             all_robust = True
@@ -163,6 +165,7 @@ class DGRAPH:
                 #print(self.graph.keys())
                 #print(self.nn_list)
                 self.merge_edge(X, worst_edge)
+                self.history.append([worst_effect_cv, np.copy(self.init_label)])
             else:
                 break
 
@@ -205,6 +208,24 @@ class DGRAPH:
                 return fake_clf
 
         return CLF(clf_type='svm', n_average=n_average, C=C, down_sample=min_size).fit(Xsubset, ysubset)
+    
+    def save(self, name=None):
+        """ Saves current model to specified path 'name' """
+        if name is None:
+            name = self.make_file_name()
+        fopen = open(name,'wb')
+        pickle.dump(self,fopen)
+        fopen.close()
+        
+    def load(self, name=None):
+        if name is None:
+            name = self.make_file_name()
+        self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
+        return self
+
+    def make_file_name(self):
+        t_name = "clf_tree.pkl"
+        return t_name
 
 def edge_info(edge_tuple, cv_score, std_score, min_score):
     edge_str = "%i -- %i"%(edge_tuple[0], edge_tuple[1])
