@@ -202,14 +202,14 @@ class DGRAPH:
         ysubset = y[pos_subset] # labels
         count = Counter(ysubset)
 
-        for v in count.values():
+        ''' for v in count.values():
             if v < min_size: # cluster should be merged, it is considered too small
                 fake_clf = CLF()
                 fake_clf.cv_score = -1.
                 fake_clf.cv_score_std = -1.
-                return fake_clf
-
-        return CLF(clf_type=self.clf_type, n_average=n_average, down_sample=min_size, clf_args=self.clf_args).fit(Xsubset, ysubset)
+                return fake_clf '''
+        n_sample = len(ysubset)
+        return CLF(clf_type=self.clf_type, n_average=n_average, test_size=self.test_size_ratio, down_sample=None, clf_args=self.clf_args).fit(Xsubset, ysubset)
     
     def save(self, name=None):
         """ Saves current model to specified path 'name' """

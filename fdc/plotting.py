@@ -238,7 +238,46 @@ def inferred_label(model, eta=None, show=True, savefile = None, eta_show = True,
 
     plt.clf()
 
-def cluster_w_label(X, model:FDC,
+def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20):
+    
+    y_unique = np.sort(np.unique(y))
+    n_center = len(y_unique)
+    palette = COLOR_PALETTE()
+    idx_centers = []
+    ax = plt.subplot(111)
+
+    for i, yu in enumerate(y_unique):
+        pos=(y==yu)
+        Xsub = X[pos]
+        plt.scatter(Xsub[:,0],Xsub[:,1],c=palette[i], s=psize, rasterized=True, alpha=0.7, edgecolors='k')
+        Xmean = np.mean(Xsub,axis=0)
+        idx_centers.append(np.argmin(np.linalg.norm(X - Xmean, axis=1)))
+     
+    centers = X[idx_centers]
+    for xy, i in zip(centers, y_unique) :
+        # Position of each label.
+        txt = ax.annotate(str(i),xy,
+        xytext=(0,0), textcoords='offset points',
+        fontsize=20,horizontalalignment='center', verticalalignment='center'
+        )
+        txt.set_path_effects([
+            PathEffects.Stroke(linewidth=5, foreground="w"),
+            PathEffects.Normal()])
+    
+    xmin,xmax = plt.xlim()
+    ymin,ymax = plt.ylim()
+    dx = xmax - xmin
+    dy = ymax - ymin
+    plt.xticks([])
+    plt.yticks([])
+    
+    plt.title('Inferred labels',fontsize=fontsize)
+    plt.tight_layout()
+    if show is True:
+        plt.show()
+
+
+''' def cluster_w_label(X, model:FDC,
                 xlabel=None,ylabel=None,zlabel=None,label=None, 
                 psize=20,
                 out_file=None,title=None,
@@ -300,7 +339,7 @@ def cluster_w_label(X, model:FDC,
     if show:
         plt.show()
     
-    plt.clf()
+    plt.clf() '''
     
 
 def summary_v2(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=20, savefile=None, show=False):
