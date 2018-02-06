@@ -33,16 +33,16 @@ class DGRAPH:
             if len(nh_cluster) > 1:
                 tmp = list(nh_cluster)
                 tmp.remove(current_label)
-                self.nn_list[current_label] = tmp
+                self.nn_list[current_label] = set(tmp)
             else: # well isolated blob !!
-                self.nn_list[current_label] = []
+                self.nn_list[current_label] = set([])
         
         # symmetrizing neighborhoods (sometimes this is necessary)
 
         for k, nnls in self.nn_list.items():
             for e in nnls:
                 if k not in self.nn_list[e]:
-                    self.nn_list[e].append(k)
+                    self.nn_list[e].add(k)
 
         self.fit_all_clf(model, X)
         return self
@@ -52,7 +52,6 @@ class DGRAPH:
         for center_label, nn_list in self.nn_list.items():
             for nn in nn_list:
                 idx_tuple = (center_label, nn)
-                print(idx_tuple)
                 idx_tuple_reverse = (nn, center_label)
                 if idx_tuple in self.graph.keys():
                     self.graph[idx_tuple_reverse] = self.graph[idx_tuple]
@@ -67,13 +66,13 @@ class DGRAPH:
         """ relabels data according to merging, and recomputing new classifiers for new edges """
         
         idx_1, idx_2 = edge_tuple
-        self.current_n_merge += 1
         pos_1 = (self.init_label == idx_1)
         pos_2 = (self.init_label == idx_2)
         new_cluster_label = self.init_n_cluster + self.current_n_merge
         
         self.init_label[pos_1] = self.init_n_cluster + self.current_n_merge # updating labels !
         self.init_label[pos_2] = self.init_n_cluster + self.current_n_merge # updating labels !
+        self.current_n_merge += 1
 
         # recompute classifiers for merged edge
         new_idx = []
@@ -88,10 +87,36 @@ class DGRAPH:
             idx_to_del.add((idx_2, e))
             new_idx.append(e)
         
+        new_nn_to_add = set([])
+        for k, v in self.nn_list.items():
+            if idx_1 in v:
+                v.remove(idx_1)
+                v.add(new_cluster_label)
+                new_nn_to_add.add(k)
+            if idx_2 in v:
+                v.remove(idx_2)
+                v.add(new_cluster_label)
+                new_nn_to_add.add(k)
+        
+        self.nn_list[new_cluster_label] = set(new_nn_to_add)
+
+        if idx_1 in self.nn_list.keys():
+            del self.nn_list[idx_1]
+        if idx_2 in self.nn_list.keys():
+            del self.nn_list[idx_2]
+        
+        for k,v in self.nn_list.items():
+            if idx_1 in v:
+                v.remove(idx_1)
+            if idx_2 in v:
+                v.remove(idx_2)
+
+        ########################################
+        #########################################        
+
         new_idx.remove(idx_1)
         new_idx.remove(idx_2)
-        
-        #print(self.graph.keys())
+    
         for idxd in idx_to_del:
             del self.graph[idxd]
         
@@ -105,6 +130,41 @@ class DGRAPH:
             self.graph[idx_tuple] = clf
             idx_tuple_reverse = (idx_tuple[1], idx_tuple[0])
             self.graph[idx_tuple_reverse] = self.graph[idx_tuple]
+        
+        k0_update = []
+        k1_update = []
+        for k, v in self.graph.items():
+            if (k[0] == idx_1) or (k[0] == idx_2): # old index still present !
+                k0_update.append(k)        
+            elif (k[1] == idx_1) or (k[1] == idx_2):
+                k1_update.append(k)
+        
+        for k0 in k0_update:
+            self.graph[(new_cluster_label, k0[1])] = self.graph.pop(k0)
+        for k1 in k1_update:
+            self.graph[(k1[0], new_cluster_label)] = self.graph.pop(k1)
+
+    def merge_until_robust(self, X, cv_robust):
+
+        while True:
+            all_robust = True
+            worst_effect_cv = 10
+            worst_edge = -1
+            for edge, clf in self.graph.items():
+                effect_cv = clf.cv_score - clf.cv_score_std
+                if effect_cv < worst_effect_cv:
+                    worst_effect_cv = effect_cv
+                    worst_edge = edge
+                if effect_cv < cv_robust:
+                    all_robust = False
+            
+            if all_robust is False:
+                print('[graph.py] Merging edge %i --- %i with effective score %.4f'%(worst_edge[0],worst_edge[1],worst_effect_cv))
+                #print(self.graph.keys())
+                #print(self.nn_list)
+                self.merge_edge(X, worst_edge)
+            else:
+                break
 
     def classify_edge(self, edge_tuple, X, C=1.0):
         """ Trains a classifier on the childs of "root" and returns a classifier for these types.
