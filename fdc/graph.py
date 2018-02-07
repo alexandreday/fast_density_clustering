@@ -6,29 +6,31 @@ import pickle
 
 class DGRAPH:
     """ Check for neighbors """
-    def __init__(self, n_average = 50, cv_score = 0., min_size = 50, test_size_ratio = 0.5, clf_type='svm', clf_args=None):
+    def __init__(self, n_average = 10, cv_score = 0., test_size_ratio = 0.5, clf_type='svm', clf_args=None):
         self.n_average = n_average
         self.cv_score_threshold = cv_score
-        self.min_size = min_size
         self.test_size_ratio = test_size_ratio
         self.clf_type = clf_type
         self.clf_args = clf_args
+        self.cluster_label = None
 
     def fit(self, model:FDC, X):
         #self.nh_graph = model.nh_graph
         #model = FDC()
 
-        idx_centers = model.idx_centers
+        self.idx_centers = model.idx_centers
+        self.rho_idx_centers = model.rho[self.idx_centers]
         cluster_label = model.cluster_label
 
         self.init_label = np.copy(cluster_label)
         self.init_n_cluster = len(np.unique(cluster_label))
         self.current_n_merge = 0
 
+
         self.graph = {} # adjacency "matrix" -> indexed by tuple
         self.nn_list = {} # list of neighboring clusters
 
-        for idx in idx_centers:
+        for idx in self.idx_centers:
             nh_idx = model.find_NH_tree_search(idx, -10, cluster_label)
             nh_cluster = np.unique(cluster_label[nh_idx])
             current_label = cluster_label[idx]
@@ -51,6 +53,7 @@ class DGRAPH:
         return self
     
     def fit_all_clf(self, model:FDC, X):
+        """ Fit clf on all graph edges """
 
         for center_label, nn_list in self.nn_list.items():
             for nn in nn_list:
@@ -149,6 +152,10 @@ class DGRAPH:
 
     def merge_until_robust(self, X, cv_robust):
         self.history = []
+        
+        # ----------
+        self.cluster_label = np.copy(self.init_label)
+        # ----------
 
         while True:
             all_robust = True
@@ -163,11 +170,23 @@ class DGRAPH:
                     all_robust = False
             
             if all_robust is False:
-                print('[graph.py] Merging edge %i --- %i with effective score %.4f'%(worst_edge[0],worst_edge[1],worst_effect_cv))
-                #print(self.graph.keys())
-                #print(self.nn_list)
+                print('[graph.py] Merging cluster %i <- with -> %i | edge score is %.4f'%(worst_edge[0], worst_edge[1], worst_effect_cv))
                 self.merge_edge(X, worst_edge)
-                self.history.append([worst_effect_cv, np.copy(self.init_label)])
+
+                pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
+                pos_idx1 = (self.cluster_label[self.idx_centers] == worst_edge[1])
+                rho_0 = self.rho_idx_centers[self.idx_centers[pos_idx0]]
+                rho_1 = self.rho_idx_centers[self.idx_centers[pos_idx1]]
+                
+                if rho_0 > rho_1:
+                    self.idx_centers[pos_idx1] = -20
+                else:
+                    self.idx_centers[pos_idx0] = -20
+
+                self.idx_centers = self.idx_centers[self.idx_centers > -1]
+
+                self.history.append([worst_effect_cv, np.copy(self.init_label),np.copy(self.idx_centers)])
+
             else:
                 break
 
@@ -190,7 +209,6 @@ class DGRAPH:
 
         """
         ## ok need to down sample somewhere here
-        min_size = self.min_size
         test_size_ratio = self.test_size_ratio
         n_average = self.n_average
 
