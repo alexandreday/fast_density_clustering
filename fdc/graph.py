@@ -2,6 +2,7 @@ from .fdc import FDC
 from .classify import CLF
 import numpy as np
 from collections import Counter
+from matplotlib import pyplot as plt
 import pickle
 
 class DGRAPH:
@@ -168,21 +169,26 @@ class DGRAPH:
             if all_robust is False:
                 n_cluster = self.init_n_cluster - self.current_n_merge - 1
                 current_label = self.init_n_cluster + self.current_n_merge - 1
-                merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
-                self.merge_edge(X, worst_edge)
 
+                merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
+                
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
                 pos_idx1 = (self.cluster_label[self.idx_centers] == worst_edge[1])
-                rho_0 = self.rho_idx_centers[self.idx_centers[pos_idx0]]
-                rho_1 = self.rho_idx_centers[self.idx_centers[pos_idx1]]
-                
+                rho_0 = self.rho_idx_centers[pos_idx0]
+                rho_1 = self.rho_idx_centers[pos_idx1]
+
                 if rho_0 > rho_1:
                     self.idx_centers[pos_idx1] = -20
                 else:
                     self.idx_centers[pos_idx0] = -20
 
-                self.idx_centers = self.idx_centers[self.idx_centers > -1]
+                pos_del = self.idx_centers > -1
+                self.idx_centers = self.idx_centers[pos_del]
+                self.rho_idx_centers = self.rho_idx_centers[pos_del]
+                
+                self.merge_edge(X, worst_edge)
 
+        
                 self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
 
             else:
@@ -227,13 +233,18 @@ class DGRAPH:
         n_sample = len(ysubset)
         return CLF(clf_type=self.clf_type, n_average=n_average, test_size=self.test_size_ratio, down_sample=None, clf_args=self.clf_args).fit(Xsubset, ysubset)
     
-    def merging_history():
+    def merging_history(self):
         """ Returns the merging history (starting from low cv score and merging iteratively) 
         format is a list with elements of the form [score, y_pred, idx_centers]
         score should be increasing for further elements in the list
         """
         return self.history
 
+    def get_cluster_label(self, n_cluster):
+        for s, y, idx in self.history:
+            if len(idx) == n_cluster:
+                return s,y,idx
+        assert False, 'number of cluster chosen incompatible with merging, no such number achieved'
 
     def save(self, name=None):
         """ Saves current model to specified path 'name' """
@@ -252,6 +263,9 @@ class DGRAPH:
     def make_file_name(self):
         t_name = "clf_tree.pkl"
         return t_name
+    
+    def plot_decision_graph(self):
+        decision_graph(self.merging_history())
 
 def edge_info(edge_tuple, cv_score, std_score, min_score):
     edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(edge_tuple[0]," -- ",edge_tuple[1])
@@ -265,3 +279,22 @@ def merge_info(c1, c2, score, new_c, n_cluster):
     out = "[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6d}{6:>15s}{7:>5d}".format("merge edge ",edge_str,"score - std =",score,
     "\tnew label ->",new_c,'n_cluster=',n_cluster)
     print(out)
+
+def decision_graph(merging_hist):
+    plt.rc('text', usetex=True)
+    score = []
+    n_cluster = []
+    for s, ypred, idx in merging_hist:
+        score.append(s)
+        n_cluster.append(len(idx))
+    
+    plt.plot(n_cluster[1:],np.diff(score),alpha=0.8,c="#30a2da")
+    plt.scatter(n_cluster[1:],np.diff(score),alpha=0.8,c="#30a2da", edgecolors='k')
+    plt.ylabel('$\Delta s = s(N_c+1)-s(N_c)$')
+    plt.xlabel('$N_c$, $\#$ of clusters')
+    ax = plt.twinx()
+    plt.plot(n_cluster,score,alpha=0.8,c="#fc4f30")
+    plt.scatter(n_cluster,score,alpha=0.8,c="#fc4f30", edgecolors='k')
+    ax.set_ylabel('cross-validation score $s(N_c)$')
+    plt.title('Decision Graph\n CV score difference (left), cv score(right) vs. $\#$ of clusters')
+    plt.show()

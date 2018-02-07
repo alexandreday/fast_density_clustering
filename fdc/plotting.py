@@ -238,7 +238,7 @@ def inferred_label(model, eta=None, show=True, savefile = None, eta_show = True,
 
     plt.clf()
 
-def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20):
+def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, title=None):
     
     y_unique = np.sort(np.unique(y))
     n_center = len(y_unique)
@@ -271,7 +271,9 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20):
     plt.xticks([])
     plt.yticks([])
     
-    plt.title('Inferred labels',fontsize=fontsize)
+    if title is not None:
+        plt.title(title,fontsize=fontsize)
+
     plt.tight_layout()
     if show is True:
         plt.show()
