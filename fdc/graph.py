@@ -22,7 +22,7 @@ class DGRAPH:
         self.rho_idx_centers = model.rho[self.idx_centers]
         cluster_label = model.cluster_label
 
-        self.init_label = np.copy(cluster_label)
+        self.cluster_label = np.copy(cluster_label)
         self.init_n_cluster = len(np.unique(cluster_label))
         self.current_n_merge = 0
 
@@ -72,12 +72,12 @@ class DGRAPH:
         """ relabels data according to merging, and recomputing new classifiers for new edges """
         
         idx_1, idx_2 = edge_tuple
-        pos_1 = (self.init_label == idx_1)
-        pos_2 = (self.init_label == idx_2)
+        pos_1 = (self.cluster_label == idx_1)
+        pos_2 = (self.cluster_label == idx_2)
         new_cluster_label = self.init_n_cluster + self.current_n_merge
         
-        self.init_label[pos_1] = self.init_n_cluster + self.current_n_merge # updating labels !
-        self.init_label[pos_2] = self.init_n_cluster + self.current_n_merge # updating labels !
+        self.cluster_label[pos_1] = self.init_n_cluster + self.current_n_merge # updating labels !
+        self.cluster_label[pos_2] = self.init_n_cluster + self.current_n_merge # updating labels !
         self.current_n_merge += 1
 
         # recompute classifiers for merged edge
@@ -152,11 +152,7 @@ class DGRAPH:
 
     def merge_until_robust(self, X, cv_robust):
         self.history = []
-        
-        # ----------
-        self.cluster_label = np.copy(self.init_label)
-        # ----------
-
+    
         while True:
             all_robust = True
             worst_effect_cv = 10
@@ -170,7 +166,9 @@ class DGRAPH:
                     all_robust = False
             
             if all_robust is False:
-                print('[graph.py] Merging cluster %i <- with -> %i | edge score is %.4f'%(worst_edge[0], worst_edge[1], worst_effect_cv))
+                n_cluster = self.init_n_cluster - self.current_n_merge - 1
+                current_label = self.init_n_cluster + self.current_n_merge - 1
+                merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
                 self.merge_edge(X, worst_edge)
 
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
@@ -185,7 +183,7 @@ class DGRAPH:
 
                 self.idx_centers = self.idx_centers[self.idx_centers > -1]
 
-                self.history.append([worst_effect_cv, np.copy(self.init_label),np.copy(self.idx_centers)])
+                self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
 
             else:
                 break
@@ -212,7 +210,7 @@ class DGRAPH:
         test_size_ratio = self.test_size_ratio
         n_average = self.n_average
 
-        y = np.copy(self.init_label)
+        y = np.copy(self.cluster_label)
         y[(y != edge_tuple[0]) & (y != edge_tuple[1])] = -1
 
         pos_subset =  (y != -1)
@@ -229,6 +227,14 @@ class DGRAPH:
         n_sample = len(ysubset)
         return CLF(clf_type=self.clf_type, n_average=n_average, test_size=self.test_size_ratio, down_sample=None, clf_args=self.clf_args).fit(Xsubset, ysubset)
     
+    def merging_history():
+        """ Returns the merging history (starting from low cv score and merging iteratively) 
+        format is a list with elements of the form [score, y_pred, idx_centers]
+        score should be increasing for further elements in the list
+        """
+        return self.history
+
+
     def save(self, name=None):
         """ Saves current model to specified path 'name' """
         if name is None:
@@ -248,8 +254,14 @@ class DGRAPH:
         return t_name
 
 def edge_info(edge_tuple, cv_score, std_score, min_score):
-    edge_str = "%i -- %i"%(edge_tuple[0], edge_tuple[1])
+    edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(edge_tuple[0]," -- ",edge_tuple[1])
     if cv_score > min_score:
-        print("[graph.py] : {0:<15s}{1:<10s}{2:<10s}{3:<7.4f}{4:5s}{5:6.5f}".format("robust edge ",edge_str,"score =",cv_score,"\t+-",std_score))
+        print("[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6.5f}".format("robust edge ",edge_str,"score =",cv_score,"\t+-",std_score))
     else:
-        print("[graph.py] : {0:<15s}{1:<10s}{2:<10s}{3:<7.4f}{4:5s}{5:6.5f}".format("reject edge ",edge_str,"score =",cv_score,"\t+-",std_score))
+        print("[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6.5f}".format("reject edge ",edge_str,"score =",cv_score,"\t+-",std_score))
+
+def merge_info(c1, c2, score, new_c, n_cluster):
+    edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(c1," -- ",c2)
+    out = "[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6d}{6:>15s}{7:>5d}".format("merge edge ",edge_str,"score - std =",score,
+    "\tnew label ->",new_c,'n_cluster=',n_cluster)
+    print(out)
