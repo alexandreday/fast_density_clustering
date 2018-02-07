@@ -58,7 +58,6 @@ fig= plt.figure(figsize=(7, 10))
 Setting FDC parameters (note these are the same across all datasets)
 """
 
-noise_threshold = 0.15 # no tuning here
 datasets = [noisy_circles, noisy_moons, varied, aniso, blobs, no_structure]
 cv_score = 0.99
 
@@ -68,22 +67,19 @@ for i_dataset, dataset in enumerate(datasets):
     # Always standardize data !
     X = StandardScaler().fit_transform(X)
 
-    model_fdc = FDC(eta=noise_threshold)
-    #clf_args= {'max_depth':5, 'n_estimators': 50, 'max_features':1, 'class_weight':'balanced'}
-    #graph = DGRAPH(clf_type='rf', n_average = 10, min_size=100, clf_args=clf_args)
-    clf_args= {'C':1.0, 'class_weight':'balanced'}
-    graph = DGRAPH(clf_type='svm', n_average = 20, min_size=150, clf_args=clf_args)
+    model_fdc = FDC()
+    graph = DGRAPH(clf_type='svm')
 
     s=time.time()
     model_fdc.fit(X)
     graph.fit(model_fdc, X)
     graph.merge_until_robust(X, cv_score)
-    y = graph.init_label
-    
+
     dt=time.time()-s
 
-    cluster_label = graph.init_label
+    cluster_label = graph.cluster_label_standard()
     n_center=len(np.unique(cluster_label))
+    #graph.plot_decision_graph()
 
     plt.subplot(3, 2, plot_num)
     plt.scatter(X[:, 0], X[:, 1], color=colors[cluster_label].tolist(), s=10, zorder=1)
@@ -96,7 +92,8 @@ for i_dataset, dataset in enumerate(datasets):
 
     plot_num+=1
 
-plt.suptitle("Validated density clustering, with score of %.2f \n Number of data points = %i"%(cv_score,n_samples))
+
+plt.suptitle("Validated density clustering, with score of %.3f \n Number of data points = %i"%(cv_score,n_samples))
 
 plt.savefig("sklearn_datasets_validated.png")
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])

@@ -186,7 +186,10 @@ class CLF:
             else:
                 ytmp = y
                 Xtmp = X
-                ytrain, ytest, xtrain, xtest = train_test_split(ytmp, Xtmp, test_size=test_size)
+                while True:
+                    ytrain, ytest, xtrain, xtest = train_test_split(ytmp, Xtmp, test_size=test_size)
+                    if len(np.unique(ytrain)) > 1:
+                        break
 
             #print("train size, test size:", len(ytrain),len(ytest),sep='\t')
             

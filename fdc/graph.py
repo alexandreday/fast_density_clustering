@@ -245,6 +245,14 @@ class DGRAPH:
             if len(idx) == n_cluster:
                 return s,y,idx
         assert False, 'number of cluster chosen incompatible with merging, no such number achieved'
+    
+    def cluster_label_standard(self):
+        " instead of using self.cluster_label, relabels cluster so that labels start from 0 and so on"
+        ytmp = self.cluster_label
+        new_y = np.zeros(len(ytmp),dtype=int)
+        for i, yu in enumerate(np.unique(ytmp)):
+            new_y[yu == ytmp]=i
+        return new_y
 
     def save(self, name=None):
         """ Saves current model to specified path 'name' """

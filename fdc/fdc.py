@@ -70,7 +70,7 @@ class FDC:
         expanding. This drastically slows the coarse-graining if chosen to be too big !
     """
 
-    def __init__(self, nh_size=40, eta=0.4,
+    def __init__(self, nh_size=40, eta=0.5,
                 random_state=0, test_ratio_size=0.8, verbose=1, bandwidth=None,
                 merge=True,
                 atol=0.000005,
