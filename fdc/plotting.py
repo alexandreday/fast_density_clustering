@@ -238,7 +238,7 @@ def inferred_label(model, eta=None, show=True, savefile = None, eta_show = True,
 
     plt.clf()
 
-def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, title=None):
+def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, title=None, w_label = True):
     
     y_unique = np.sort(np.unique(y))
     n_center = len(y_unique)
@@ -253,16 +253,17 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
         Xmean = np.mean(Xsub,axis=0)
         idx_centers.append(np.argmin(np.linalg.norm(X - Xmean, axis=1)))
      
-    centers = X[idx_centers]
-    for xy, i in zip(centers, y_unique) :
-        # Position of each label.
-        txt = ax.annotate(str(i),xy,
-        xytext=(0,0), textcoords='offset points',
-        fontsize=20,horizontalalignment='center', verticalalignment='center'
-        )
-        txt.set_path_effects([
-            PathEffects.Stroke(linewidth=5, foreground="w"),
-            PathEffects.Normal()])
+    if w_label is True:
+        centers = X[idx_centers]
+        for xy, i in zip(centers, y_unique) :
+            # Position of each label.
+            txt = ax.annotate(str(i),xy,
+            xytext=(0,0), textcoords='offset points',
+            fontsize=20,horizontalalignment='center', verticalalignment='center'
+            )
+            txt.set_path_effects([
+                PathEffects.Stroke(linewidth=5, foreground="w"),
+                PathEffects.Normal()])
     
     xmin,xmax = plt.xlim()
     ymin,ymax = plt.ylim()
