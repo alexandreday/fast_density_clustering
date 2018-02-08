@@ -186,10 +186,10 @@ class DGRAPH:
                 self.idx_centers = self.idx_centers[pos_del]
                 self.rho_idx_centers = self.rho_idx_centers[pos_del]
                 
-                self.merge_edge(X, worst_edge)
-
-        
                 self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
+
+                self.merge_edge(X, worst_edge)
+        
 
             else:
                 break
@@ -301,8 +301,8 @@ def decision_graph(merging_hist):
     plt.ylabel('$\Delta s = s(N_c+1)-s(N_c)$')
     plt.xlabel('$N_c$, $\#$ of clusters')
     ax = plt.twinx()
-    plt.plot(n_cluster,score,alpha=0.8,c="#fc4f30")
-    plt.scatter(n_cluster,score,alpha=0.8,c="#fc4f30", edgecolors='k')
+    plt.plot(n_cluster, score, alpha=0.8,c="#fc4f30")
+    plt.scatter(n_cluster, score, alpha=0.8,c="#fc4f30", edgecolors='k')
     ax.set_ylabel('cross-validation score $s(N_c)$')
     plt.title('Decision Graph\n CV score difference (left), cv score(right) vs. $\#$ of clusters')
     plt.show()
