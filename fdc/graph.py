@@ -16,9 +16,11 @@ class DGRAPH:
         self.cluster_label = None
 
     def fit(self, model:FDC, X):
-        #self.nh_graph = model.nh_graph
-        #model = FDC()
-
+        self.find_nn_list(model)
+        self.fit_all_clf(model, X)
+        return self
+    
+    def find_nn_list(self, model:FDC):
         self.idx_centers = model.idx_centers
         self.rho_idx_centers = model.rho[self.idx_centers]
         cluster_label = model.cluster_label
@@ -50,9 +52,6 @@ class DGRAPH:
                 if k not in self.nn_list[e]:
                     self.nn_list[e].add(k)
 
-        self.fit_all_clf(model, X)
-        return self
-    
     def fit_all_clf(self, model:FDC, X):
         """ Fit clf on all graph edges """
 
@@ -172,6 +171,8 @@ class DGRAPH:
 
                 merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
                 
+                self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
+                
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
                 pos_idx1 = (self.cluster_label[self.idx_centers] == worst_edge[1])
                 rho_0 = self.rho_idx_centers[pos_idx0]
@@ -186,7 +187,6 @@ class DGRAPH:
                 self.idx_centers = self.idx_centers[pos_del]
                 self.rho_idx_centers = self.rho_idx_centers[pos_del]
 
-                self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
 
                 self.merge_edge(X, worst_edge)
         
@@ -295,13 +295,16 @@ def decision_graph(merging_hist):
         score.append(s)
         n_cluster.append(len(idx))
     
-    plt.plot(n_cluster[1:],np.diff(score),alpha=0.8,c="#30a2da")
-    plt.scatter(n_cluster[1:],np.diff(score),alpha=0.8,c="#30a2da", edgecolors='k')
+    a= plt.plot(n_cluster[1:],np.diff(score), c="#30a2da",label='$\\leftarrow$',zorder=1)
+    plt.scatter(n_cluster[1:],np.diff(score), c="#30a2da", edgecolors='k',zorder=2)
     plt.ylabel('$\Delta s = s(N_c+1)-s(N_c)$')
     plt.xlabel('$N_c$, $\#$ of clusters')
     ax = plt.twinx()
-    plt.plot(n_cluster, score, alpha=0.8,c="#fc4f30")
-    plt.scatter(n_cluster, score, alpha=0.8,c="#fc4f30", edgecolors='k')
+    b=plt.plot(n_cluster, score, c="#fc4f30",label='$\\rightarrow$',zorder=1)
+    plt.scatter(n_cluster, score,  c="#fc4f30", edgecolors='k',zorder=2)
     ax.set_ylabel('cross-validation score $s(N_c)$')
     plt.title('Decision Graph\n CV score difference (left), cv score(right) vs. $\#$ of clusters')
+    lns = a+b
+    labs = [l.get_label() for l in lns]
+    ax.legend(lns, labs, loc='best')
     plt.show()

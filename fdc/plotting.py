@@ -276,8 +276,12 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
         plt.title(title,fontsize=fontsize)
 
     plt.tight_layout()
+    if savefile is not None:
+        plt.savefig(savefile)
+        
     if show is True:
         plt.show()
+
 
 
 ''' def cluster_w_label(X, model:FDC,
