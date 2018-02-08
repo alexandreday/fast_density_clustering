@@ -238,8 +238,9 @@ def inferred_label(model, eta=None, show=True, savefile = None, eta_show = True,
 
     plt.clf()
 
-def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, title=None, w_label = True):
-    
+def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, title=None, w_label = True, figsize=None,dpi=200):
+    if figsize is not None:
+        plt.figure(figsize=figsize)
     y_unique = np.sort(np.unique(y))
     n_center = len(y_unique)
     palette = COLOR_PALETTE()
@@ -277,8 +278,8 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
 
     plt.tight_layout()
     if savefile is not None:
-        plt.savefig(savefile)
-        
+        plt.savefig(savefile,dpi=dpi)
+
     if show is True:
         plt.show()
 
