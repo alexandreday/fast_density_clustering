@@ -185,12 +185,11 @@ class DGRAPH:
                 pos_del = self.idx_centers > -1
                 self.idx_centers = self.idx_centers[pos_del]
                 self.rho_idx_centers = self.rho_idx_centers[pos_del]
-                
+
                 self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
 
                 self.merge_edge(X, worst_edge)
         
-
             else:
                 break
 
