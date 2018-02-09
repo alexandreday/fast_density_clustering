@@ -245,9 +245,12 @@ class DGRAPH:
                 return s,y,idx
         assert False, 'number of cluster chosen incompatible with merging, no such number achieved'
     
-    def cluster_label_standard(self):
+    def cluster_label_standard(self, y=None):
         " instead of using self.cluster_label, relabels cluster so that labels start from 0 and so on"
-        ytmp = self.cluster_label
+        if y is None:
+            ytmp = self.cluster_label
+        else:
+            ytmp =y
         new_y = np.zeros(len(ytmp),dtype=int)
         for i, yu in enumerate(np.unique(ytmp)):
             new_y[yu == ytmp]=i
