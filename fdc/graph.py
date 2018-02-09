@@ -171,6 +171,7 @@ class DGRAPH:
 
                 merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
                 
+                # info before the merge -> this score goes with these labels
                 self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
                 
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
@@ -192,6 +193,11 @@ class DGRAPH:
         
             else:
                 break
+
+        if len(self.idx_centers) == 1:
+            self.history.append([1.0, np.copy(self.cluster_label),np.copy(self.idx_centers)])
+        else:
+            self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
 
     def classify_edge(self, edge_tuple, X, C=1.0):
         """ Trains a classifier on the childs of "root" and returns a classifier for these types.
@@ -240,6 +246,7 @@ class DGRAPH:
         return self.history
 
     def get_cluster_label(self, n_cluster):
+        """return score, y, idx_centers"""
         for s, y, idx in self.history:
             if len(idx) == n_cluster:
                 return s,y,idx

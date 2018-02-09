@@ -279,7 +279,10 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
 
     plt.tight_layout()
     if savefile is not None:
-        plt.savefig(savefile,dpi=dpi)
+        if dpi is None:
+            plt.savefig(savefile)
+        else:
+            plt.savefig(savefile,dpi=dpi)
 
     if show is True:
         plt.show()
