@@ -1,7 +1,7 @@
 from .fdc import FDC
 from .classify import CLF
 import numpy as np
-from collections import Counter
+from collections import Counter, OrderedDict
 from matplotlib import pyplot as plt
 import pickle
 
@@ -30,8 +30,8 @@ class DGRAPH:
         self.current_n_merge = 0
 
 
-        self.graph = {} # adjacency "matrix" -> indexed by tuple
-        self.nn_list = {} # list of neighboring clusters
+        self.graph = OrderedDict() # adjacency "matrix" -> indexed by tuple
+        self.nn_list = OrderedDict() # list of neighboring clusters
 
         for idx in self.idx_centers:
             nh_idx = model.find_NH_tree_search(idx, -10, cluster_label)
@@ -177,19 +177,33 @@ class DGRAPH:
                 
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
                 pos_idx1 = (self.cluster_label[self.idx_centers] == worst_edge[1])
+                
                 rho_0 = self.rho_idx_centers[pos_idx0]
                 rho_1 = self.rho_idx_centers[pos_idx1]
 
                 if rho_0 > rho_1:
-                    self.idx_centers[pos_idx1] = -20
+                    tmp_idx = self.idx_centers[pos_idx0]
+                    tmp_rho = rho_0
                 else:
-                    self.idx_centers[pos_idx0] = -20
+                    tmp_idx = self.idx_centers[pos_idx1]
+                    tmp_rho = rho_1
+
+                self.idx_centers[pos_idx0] = -20
+                self.idx_centers[pos_idx1] = -20
 
                 pos_del = self.idx_centers > -1
-                self.idx_centers = self.idx_centers[pos_del]
-                self.rho_idx_centers = self.rho_idx_centers[pos_del]
 
+                # new "center" should go to end of list
+                tmp_idx_center_array = np.zeros(len(self.idx_centers)-1,dtype=int)
+                tmp_idx_center_array[:-1] = self.idx_centers[pos_del]
+                tmp_idx_center_array[-1] = tmp_idx
+                self.idx_centers = tmp_idx_center_array
 
+                tmp_rho_array = np.zeros(len(self.rho_idx_centers)-1,dtype=float)
+                tmp_rho_array[:-1] = self.rho_idx_centers[pos_del]
+                tmp_rho_array[-1] = tmp_rho
+                self.rho_idx_centers = tmp_rho_array
+                
                 self.merge_edge(X, worst_edge)
         
             else:
