@@ -47,6 +47,7 @@ class DGRAPH:
         
         # symmetrizing neighborhoods (sometimes this is necessary)
 
+        #print(self.nn_list)
         for k, nnls in self.nn_list.items():
             for e in nnls:
                 if k not in self.nn_list[e]:
