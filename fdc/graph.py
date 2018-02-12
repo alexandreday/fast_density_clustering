@@ -251,7 +251,7 @@ class DGRAPH:
                 fake_clf.cv_score_std = -1.
                 return fake_clf '''
         n_sample = len(ysubset)
-        return CLF(clf_type=self.clf_type, n_average=n_average, test_size=self.test_size_ratio, down_sample=None, clf_args=self.clf_args).fit(Xsubset, ysubset)
+        return CLF(clf_type=self.clf_type, n_average=n_average, test_size=self.test_size_ratio,clf_args=self.clf_args).fit(Xsubset, ysubset)
     
     def merging_history(self):
         """ Returns the merging history (starting from low cv score and merging iteratively) 

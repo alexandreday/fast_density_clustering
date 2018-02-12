@@ -122,7 +122,7 @@ class CLF:
         zero_eps = 1e-6
 
         y_unique = np.unique(y) # different labels
-        assert len(y_unique) > 1, "Cluster provided only has a unique label, can't classify !"
+        assert len(y_unique)>1, "Cluster provided only has a unique label, can't classify !"
 
         n_sample = X.shape[0]
         idx = np.arange(n_sample)
