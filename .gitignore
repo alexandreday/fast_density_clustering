@@ -1,4 +1,5 @@
 *.pdf
+graph_test
 .vscode
 clf_test
 tree_old.py

@@ -173,7 +173,7 @@ class DGRAPH:
                 merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
                 
                 # info before the merge -> this score goes with these labels
-                self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
+                self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers), self.nn_list.copy()])
                 
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
                 pos_idx1 = (self.cluster_label[self.idx_centers] == worst_edge[1])
@@ -262,9 +262,9 @@ class DGRAPH:
 
     def get_cluster_label(self, n_cluster):
         """return score, y, idx_centers"""
-        for s, y, idx in self.history:
+        for s, y, idx, nnlist in self.history:
             if len(idx) == n_cluster:
-                return s,y,idx
+                return s,y,idx, nnlist
         assert False, 'number of cluster chosen incompatible with merging, no such number achieved'
     
     def cluster_label_standard(self, y=None):
@@ -298,6 +298,36 @@ class DGRAPH:
     
     def plot_decision_graph(self):
         decision_graph(self.merging_history())
+
+    def plot_density_graph(self, Xss, n_cluster=None, label=None, name = 'graph.pdf', dpi=100, c="#fc4f30"):
+        from lattice import draw_graph # internal package
+
+        if n_cluster is not None:
+            _, _, idx_centers, nn_list = self.get_cluster_label(n_cluster)
+        else:
+            idx_centers = self.idx_centers
+            nn_list = self.nn_list
+        
+        xcenter = Xss[idx_centers]
+        # careful here with ordering of idx centers ...
+        # does not follow the nn_list order !
+        n_cluster=len(idx_centers)
+        n_cluster = len(nn_list)
+        node_label = list(nn_list.keys())
+        print(nn_list)
+        order = {node_label[i]:i for i in range(len(node_label))}
+        print('Order for labels:',order)
+
+        A = np.zeros((n_cluster,n_cluster),dtype=int)
+        for i, kv in enumerate(nn_list.items()):
+            for j, k2 in enumerate(kv[1]):
+                #print(k,v)
+                idx1 = order[kv[0]]
+                idx2 = order[k2]
+                A[idx1, idx2] = 1
+        
+        #xcenter =  xcenter[::-1]
+        draw_graph(xcenter, A, label=label, savefig=name,radius=0.15, dpi=dpi, cnode=c, fontsize=20, figsize=(6,6))
 
 def edge_info(edge_tuple, cv_score, std_score, min_score):
     edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(edge_tuple[0]," -- ",edge_tuple[1])
