@@ -265,7 +265,8 @@ class DGRAPH:
         """return score, y, idx_centers"""
         for s, y, idx, nnlist in self.history:
             if len(idx) == n_cluster:
-                return s,y,idx, nnlist
+                return {'cv':s, 'y':y, 'idx_centers':idx, 'nn_list':nnlist}
+                #return s,y,idx, nnlist
         assert False, 'number of cluster chosen incompatible with merging, no such number achieved'
     
     def cluster_label_standard(self, y=None):
@@ -304,7 +305,8 @@ class DGRAPH:
         from lattice import draw_graph # internal package
 
         if n_cluster is not None:
-            _, y, idx_centers, nn_list = self.get_cluster_label(n_cluster)
+            data = self.get_cluster_label(n_cluster)
+            y, idx_centers, nn_list = data['y'], data['idx_centers'], data['nn_list']
         else:
             idx_centers = self.idx_centers
             nn_list = self.nn_list
