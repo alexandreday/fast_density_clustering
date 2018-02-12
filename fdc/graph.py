@@ -1,6 +1,7 @@
 from .fdc import FDC
 from .classify import CLF
 import numpy as np
+from copy import deepcopy
 from collections import Counter, OrderedDict
 from matplotlib import pyplot as plt
 import pickle
@@ -173,7 +174,7 @@ class DGRAPH:
                 merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
                 
                 # info before the merge -> this score goes with these labels
-                self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers), self.nn_list.copy()])
+                self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers), deepcopy(self.nn_list)])
                 
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
                 pos_idx1 = (self.cluster_label[self.idx_centers] == worst_edge[1])
@@ -210,9 +211,9 @@ class DGRAPH:
                 break
 
         if len(self.idx_centers) == 1:
-            self.history.append([1.0, np.copy(self.cluster_label),np.copy(self.idx_centers)])
+            self.history.append([1.0, np.copy(self.cluster_label),np.copy(self.idx_centers), deepcopy(self.nn_list)])
         else:
-            self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers)])
+            self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers), deepcopy(self.nn_list)])
 
     def classify_edge(self, edge_tuple, X, C=1.0):
         """ Trains a classifier on the childs of "root" and returns a classifier for these types.
@@ -303,10 +304,15 @@ class DGRAPH:
         from lattice import draw_graph # internal package
 
         if n_cluster is not None:
-            _, _, idx_centers, nn_list = self.get_cluster_label(n_cluster)
+            _, y, idx_centers, nn_list = self.get_cluster_label(n_cluster)
         else:
             idx_centers = self.idx_centers
             nn_list = self.nn_list
+
+        ''' print(nn_list)
+        print(np.unique(y))
+        exit()
+ '''
         
         xcenter = Xss[idx_centers]
         # careful here with ordering of idx centers ...
@@ -314,9 +320,9 @@ class DGRAPH:
         n_cluster=len(idx_centers)
         n_cluster = len(nn_list)
         node_label = list(nn_list.keys())
-        print(nn_list)
+        #print(nn_list)
         order = {node_label[i]:i for i in range(len(node_label))}
-        print('Order for labels:',order)
+        #print('Order for labels:',order)
 
         A = np.zeros((n_cluster,n_cluster),dtype=int)
         for i, kv in enumerate(nn_list.items()):
@@ -327,7 +333,7 @@ class DGRAPH:
                 A[idx1, idx2] = 1
         
         #xcenter =  xcenter[::-1]
-        draw_graph(xcenter, A, label=label, savefig=name,radius=0.15, dpi=dpi, cnode=c, fontsize=20, figsize=(6,6))
+        draw_graph(xcenter, A, label=label, savefig=name,radius=0.1, dpi=dpi, cnode=c, fontsize=20, figsize=(6,6))
 
 def edge_info(edge_tuple, cv_score, std_score, min_score):
     edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(edge_tuple[0]," -- ",edge_tuple[1])
