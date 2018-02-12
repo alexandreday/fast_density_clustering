@@ -308,11 +308,6 @@ class DGRAPH:
         else:
             idx_centers = self.idx_centers
             nn_list = self.nn_list
-
-        ''' print(nn_list)
-        print(np.unique(y))
-        exit()
- '''
         
         xcenter = Xss[idx_centers]
         # careful here with ordering of idx centers ...
@@ -327,7 +322,7 @@ class DGRAPH:
         A = np.zeros((n_cluster,n_cluster),dtype=int)
         for i, kv in enumerate(nn_list.items()):
             for j, k2 in enumerate(kv[1]):
-                #print(k,v)
+    
                 idx1 = order[kv[0]]
                 idx2 = order[k2]
                 A[idx1, idx2] = 1
