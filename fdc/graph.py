@@ -7,7 +7,7 @@ import pickle
 
 class DGRAPH:
     """ Check for neighbors """
-    def __init__(self, n_average = 10, cv_score = 0., test_size_ratio = 0.5, clf_type='svm', clf_args=None):
+    def __init__(self, n_average = 10, cv_score = 0., test_size_ratio = 0.8, clf_type='svm', clf_args=None):
         self.n_average = n_average
         self.cv_score_threshold = cv_score
         self.test_size_ratio = test_size_ratio
