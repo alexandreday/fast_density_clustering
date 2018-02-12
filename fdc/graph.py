@@ -16,7 +16,7 @@ class DGRAPH:
         self.cluster_label = None
 
     def fit(self, model:FDC, X):
-        self.find_nn_list(model)
+        self.find_nn_list(model) # still need to fit a density map !
         self.fit_all_clf(model, X)
         return self
     
