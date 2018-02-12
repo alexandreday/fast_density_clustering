@@ -18,12 +18,10 @@ class CLF:
     
     """
 
-    def __init__(self, clf_type='svm', n_average=10, n_iter_max = 100, test_size = 0.5, down_sample=None, clf_args=None):
+    def __init__(self, clf_type='svm', n_average=10, test_size = 0.8, clf_args=None):
         self.clf_type = clf_type
         self.n_average = n_average
-        self.n_iter_max = n_iter_max
         self.test_size = test_size
-        self.down_sample = down_sample
 
         self.clf_args = clf_args
 
@@ -47,36 +45,6 @@ class CLF:
         
         self.trained = True
         return self.fit_CLF(X,y)
-
-    def predict(self, X):
-        """Returns labels for X (-1, 1)"""
-
-        if self.clf_type == 'trivial':
-            self._n_sample = len(X)
-            return np.zeros(len(X))
-
-        if self.trained is False:
-            assert False, "Must train model first !"
-
-        # col is clf, row are different data points
-        n_clf = len(self.clf_list)
-        vote = []
-
-        for i in range(n_clf):
-            clf = self.clf_list[i]
-            mu, inv_sigma = self.scaler_list[i]
-            xstandard = inv_sigma*(X-mu)
-
-            vote.append(clf.predict(inv_sigma*(X-mu)))
-
-        vote = np.vstack(vote).T
-        # row are data, col are clf
-    
-        y_pred = []
-        for x_vote in vote: # majority voting here !
-            y_pred.append(most_common(list(x_vote)))
-
-        return np.array(y_pred).reshape(-1,1)
 
     ''' def prob_predict(self, X):
         """ Makes a prediction but also returns the probability for that prediction (based on the vote)
@@ -120,14 +88,8 @@ class CLF:
         self.n_average : int
             number of classifiers to train (will then take majority vote)
         
-        self.n_iter_max: int 
-            maximum number of iteration for fitting
-        
-        self.down_sample: int
-            size of the train set
-        
         self.test_size: float
-            ratio of test size (between 0 and 1), useful only when down_sample is None
+            ratio of test size (between 0 and 1). 
 
         Return
         -------
@@ -150,10 +112,7 @@ class CLF:
                 clf = RandomForestClassifier()
 
         n_average = self.n_average
-        n_iter_max = self.n_iter_max
-        down_sample = self.down_sample
-        test_size = self.test_size
-
+    
         predict_score = []
         training_score = []
         clf_list = []
@@ -163,33 +122,18 @@ class CLF:
         zero_eps = 1e-6
 
         y_unique = np.unique(y) # different labels
+        assert len(y_unique) > 1, "Cluster provided only has a unique label, can't classify !"
+
         n_sample = X.shape[0]
         idx = np.arange(n_sample)
         yu_pos = {yu : idx[(y == yu)] for yu in y_unique}
         n_class = len(y_unique)
 
         for _ in range(n_average):
-            if down_sample is not None: 
-                # down sampling data
-                pos_rand = []
-                all_elem = np.ones(len(y),dtype=bool)
-                for pos in yu_pos.values():
-                    pos_rand.append(np.random.choice(pos, size = down_sample, replace = False))
-        
-                pos_rand = np.hstack(pos_rand)
-                ytrain = y[pos_rand]
-                xtrain = X[pos_rand]
-                all_elem[pos_rand] = False
-                
-                ytest = y[all_elem]
-                xtest = X[all_elem]
-            else:
-                ytmp = y
-                Xtmp = X
-                while True:
-                    ytrain, ytest, xtrain, xtest = train_test_split(ytmp, Xtmp, test_size=test_size)
-                    if len(np.unique(ytrain)) > 1:
-                        break
+            while True:
+                ytrain, ytest, xtrain, xtest = train_test_split(y, X, test_size=self.test_size)
+                if len(np.unique(ytrain)) > 1: # could create a bug otherwise
+                    break
 
             #print("train size, test size:", len(ytrain),len(ytest),sep='\t')
             
@@ -221,3 +165,33 @@ class CLF:
         self._n_sample = len(y)
 
         return self
+
+
+    def predict(self, X):
+        """Returns labels for X (-1, 1)"""
+
+        if self.clf_type == 'trivial':
+            self._n_sample = len(X)
+            return np.zeros(len(X))
+
+        assert self.trained is True, "Must train model first !" 
+
+        # col is clf, row are different data points
+        n_clf = len(self.clf_list)
+        vote = []
+
+        for i in range(n_clf):
+            clf = self.clf_list[i]
+            mu, inv_sigma = self.scaler_list[i]
+            xstandard = inv_sigma*(X-mu)
+
+            vote.append(clf.predict(inv_sigma*(X-mu)))
+
+        vote = np.vstack(vote).T
+        # row are data, col are clf
+    
+        y_pred = []
+        for x_vote in vote: # majority voting here !
+            y_pred.append(most_common(list(x_vote)))
+
+        return np.array(y_pred).reshape(-1,1)
