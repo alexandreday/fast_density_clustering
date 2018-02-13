@@ -301,7 +301,7 @@ class DGRAPH:
     def plot_decision_graph(self):
         decision_graph(self.merging_history())
 
-    def plot_density_graph(self, Xss, n_cluster=None, label=None, name = 'graph.pdf', dpi=100, c="#fc4f30"):
+    def plot_density_graph(self, Xss, n_cluster=None, label=None, name = 'graph.pdf', dpi=100, c="#fc4f30", radius=0.1):
         from lattice import draw_graph # internal package
 
         if n_cluster is not None:
@@ -330,7 +330,7 @@ class DGRAPH:
                 A[idx1, idx2] = 1
         
         #xcenter =  xcenter[::-1]
-        draw_graph(xcenter, A, label=label, savefig=name,radius=0.1, dpi=dpi, cnode=c, fontsize=20, figsize=(6,6))
+        draw_graph(xcenter, A, label=label, savefig=name,radius=radius, dpi=dpi, cnode=c, fontsize=20, figsize=(6,6))
 
 def edge_info(edge_tuple, cv_score, std_score, min_score):
     edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(edge_tuple[0]," -- ",edge_tuple[1])
