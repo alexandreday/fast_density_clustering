@@ -23,10 +23,11 @@ class FDC:
     Parameters
     ----------
 
-    nh_size : int, optional (default = 40)
-        Neighborhood size. This is the scale used for identifying modes in the density distribution.
-        If a point has the maximum density among it's nh_size neighbors, it is marked as 
-        a potential cluster center.
+    nh_size : int, optional (default = 'auto')
+        Neighborhood size. This is the scale used for identifying the initial modes in the density distribution, regardless
+        of the covariance. If a point has the maximum density among it's nh_size neighbors, it is marked as 
+        a potential cluster center. 'auto' means that the nh_size is scaled with number of samples. We 
+        use nh_size = 40 for 10000 samples.
     
     eta : float, optional (default = 0.4)
         Noise threshold used to merge clusters. This is done by quenching directly to the specified noise threshold
@@ -70,7 +71,7 @@ class FDC:
         expanding. This drastically slows the coarse-graining if chosen to be too big !
     """
 
-    def __init__(self, nh_size=40, eta=0.5,
+    def __init__(self, nh_size='auto', eta=0.5,
                 random_state=0, test_ratio_size=0.8, verbose=1, bandwidth=None,
                 merge=True,
                 atol=0.000005,
@@ -111,6 +112,12 @@ class FDC:
         t = time.time()
 
         self.X = X  # shallow copy
+        n_sample = X.shape[0]
+
+        if self.nh_size is 'auto':
+            self.nh_size = int(n_sample/10000.*100)
+        
+        self.display_main_parameters()
 
         self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
 
