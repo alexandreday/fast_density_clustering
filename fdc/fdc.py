@@ -117,7 +117,7 @@ class FDC:
         if self.nh_size is 'auto':
             self.nh_size = int(n_sample/10000.*100)
         
-        self.display_main_parameters()
+    
 
         self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
 
@@ -125,6 +125,8 @@ class FDC:
 
         if self.verbose == 0:
             blockPrint()
+        
+        self.display_main_parameters()
 
         print("[fdc] Starting clustering with n=%i samples..." % X.shape[0])
         start = time.time()
@@ -353,8 +355,16 @@ class FDC:
             NH = self.find_NH_tree_search(idx, eta, cluster_label)
             label_centers_nn = np.unique([cluster_label[ni] for ni in NH])
 
-
-
+    def display_main_parameters(self):
+        out = [
+        "[fdc] {0:<20s}{1:<4s}{2:<6d}".format("nh_size",":",self.nh_size),
+        "[fdc] {0:<20s}{1:<4s}{2:<6.3f}".format("eta",":",self.eta),
+        "[fdc] {0:<20s}{1:<4s}{2:<6s}".format("merge",":",str(self.merge)),
+        "[fdc] {0:<20s}{1:<4s}{2:<6d}".format("search_size",":",self.search_size),
+        "[fdc] {0:<20s}{1:<4s}{2:<6.3f}".format("test_size_ratio",":",self.test_ratio_size)
+        ]
+        for o in out:
+            print(o)
 
 
 #####################################################
