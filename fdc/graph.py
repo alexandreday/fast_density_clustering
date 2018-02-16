@@ -264,12 +264,16 @@ class DGRAPH:
         """
         return self.history
 
-    def get_cluster_label(self, n_cluster):
+    def get_cluster_label(self, n_cluster = None):
         """return dict with keys {cv, y, idx_centers, nn_List} """
-        for s, y, idx, nnlist in self.history:
-            if len(idx) == n_cluster:
-                return {'cv':s, 'y':y, 'idx_centers':idx, 'nn_list':nnlist}
-                #return s,y,idx, nnlist
+        if n_cluster is None:
+            tmp = np.array(self.edge_score.values())
+            return {'cv':np.min(tmp[:,0]-tmp[:,1]), 'y':self.cluster_label, 'idx_centers':self.idx_centers, 'nn_list':self.nn_list}
+        else:
+            for s, y, idx, nnlist in self.history:
+                if len(idx) == n_cluster:
+                    return {'cv':s, 'y':y, 'idx_centers':idx, 'nn_list':nnlist}
+                    #return s,y,idx, nnlist
         assert False, 'number of cluster chosen incompatible with merging, no such number achieved'
     
     def cluster_label_standard(self, y=None):
