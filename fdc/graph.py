@@ -15,6 +15,7 @@ class DGRAPH:
         self.clf_type = clf_type
         self.clf_args = clf_args
         self.cluster_label = None
+        self.edge_score = {}
 
     def fit(self, model:FDC, X):
         self.find_nn_list(model) # still need to fit a density map !
@@ -67,6 +68,7 @@ class DGRAPH:
                     self.graph[idx_tuple] = self.graph[idx_tuple_reverse]
                 else: # hasn't been computed yet
                     clf = self.classify_edge(idx_tuple, X)
+                    self.edge_score[idx_tuple] = [clf.cv_score, clf.cv_score_std]
                     edge_info(idx_tuple, clf.cv_score, clf.cv_score_std, self.cv_score_threshold)
                     self.graph[idx_tuple] = clf
     
@@ -134,6 +136,7 @@ class DGRAPH:
 
         for idx_tuple in new_idx_set:
             clf = self.classify_edge(idx_tuple, X)
+            self.edge_score[idx_tuple] = [clf.cv_score, clf.cv_score_std]
             edge_info(idx_tuple, clf.cv_score, clf.cv_score_std, self.cv_score_threshold)
             self.graph[idx_tuple] = clf
             idx_tuple_reverse = (idx_tuple[1], idx_tuple[0])
