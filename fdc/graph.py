@@ -262,7 +262,7 @@ class DGRAPH:
         return self.history
 
     def get_cluster_label(self, n_cluster):
-        """return score, y, idx_centers"""
+        """return dict with keys {cv, y, idx_centers, nn_List} """
         for s, y, idx, nnlist in self.history:
             if len(idx) == n_cluster:
                 return {'cv':s, 'y':y, 'idx_centers':idx, 'nn_list':nnlist}
