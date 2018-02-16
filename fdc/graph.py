@@ -15,7 +15,7 @@ class DGRAPH:
         self.clf_type = clf_type
         self.clf_args = clf_args
         self.cluster_label = None
-        self.edge_score = {}
+        self.edge_score = OrderedDict()
 
     def fit(self, model:FDC, X):
         self.find_nn_list(model) # still need to fit a density map !
