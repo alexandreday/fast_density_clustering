@@ -286,6 +286,9 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
 
     if show is True:
         plt.show()
+    
+    plt.clf()
+    plt.close()
 
 
 
@@ -536,3 +539,9 @@ def my_scatter(x, y, z, ax):
     ax.scatter(x_mid, y_mid, c = z_mid, cmap = cmap, s=6)
     ax.scatter(x_bot, y_bot, c = "purple", s=4)
     ax.scatter(x_top, y_top, c = "#00FF00",s=4)
+
+def select_data(X, y, option = None):
+    # Taking selection from the user, will plot an histogram of the underlying data (default)
+    # Other options are {mnist, etc. etc.}
+
+    
