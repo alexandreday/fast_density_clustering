@@ -561,15 +561,13 @@ def select_data(X, y, X_original=None, option = None):
         count = 0
         for i in range(4):
             for j in range(4):
-
+                count+=1
+                if count > n_plot:
+                    break
                 ax[i,j].imshow(X_sub[rpos[4*i+j]].reshape(28,28),cmap="Greys")
                 ax[i,j].set_xticks([])
                 ax[i,j].set_yticks([])
-                
-                if count > n_plot:
-                    break
-                count+=1
-
+            
         plt.tight_layout()
         plt.show()
 
