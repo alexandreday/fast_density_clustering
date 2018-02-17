@@ -5,5 +5,6 @@ from .mycolors import COLOR_PALETTE
 from . import plotting
 from .classify import CLF
 from .graph import DGRAPH
+from .widget import Highlighter
 
 __all__ = ['FDC', 'KDE', 'TREE', 'COLOR_PALETTE','plotting', 'CLF','DGRAPH']

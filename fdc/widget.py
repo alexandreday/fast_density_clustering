@@ -1,3 +1,7 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import RectangleSelector
+
 class Highlighter(object):
     def __init__(self, ax, x, y):
         self.ax = ax
@@ -8,6 +12,9 @@ class Highlighter(object):
         self._highlight = ax.scatter([], [], s=200, color='yellow', zorder=10)
 
         self.selector = RectangleSelector(ax, self, useblit=False)
+        if self.selector.active:
+            self.selector.update()
+        plt.show()
 
     def __call__(self, event1, event2):
         self.mask |= self.inside(event1, event2)
