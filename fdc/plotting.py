@@ -541,7 +541,7 @@ def my_scatter(x, y, z, ax):
     ax.scatter(x_bot, y_bot, c = "purple", s=4)
     ax.scatter(x_top, y_top, c = "#00FF00",s=4)
 
-def select_data(X, y, X_original=None, option = None, loop=False):
+def select_data(X, y, X_original = None, option = None, loop=False):
     from .widget import Highlighter
     # Taking selection from the user, will plot an histogram of the underlying data (default)
     # Other options are {mnist, etc. etc.}
@@ -550,8 +550,9 @@ def select_data(X, y, X_original=None, option = None, loop=False):
         n_repeat = 10
 
     if option == 'mnist':
+
         for _ in range(n_repeat):
-            
+
             ax = cluster_w_label(X, y, show=False)
             highlighter = Highlighter(ax, X[:,0], X[:,1])
             selected_regions = highlighter.mask
@@ -575,4 +576,5 @@ def select_data(X, y, X_original=None, option = None, loop=False):
                 
             plt.tight_layout()
             plt.show()
+            plt.clf()
 
