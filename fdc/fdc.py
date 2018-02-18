@@ -93,7 +93,7 @@ class FDC:
         self.cluster_label = None
         self.search_size = search_size
 
-    def fit(self,X):
+    def fit(self, X):
         """ Performs density clustering on given data set
 
         Parameters
@@ -126,15 +126,8 @@ class FDC:
         start = time.time()
 
         print("[fdc] Fitting kernel model for density estimation ...")
-        self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
-            atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
-
-        self.density_model.fit(X)
-        self.bandwidth = self.density_model.bandwidth
-        
-        print("[fdc] Computing density ...")
-        self.rho = self.density_model.evaluate_density(X)
-        
+        self.fit_density(X)
+    
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
         
@@ -158,14 +151,13 @@ class FDC:
 
         return self
 
-    def save(self, name=None, tag=None):
+    def save(self, name=None):
         """ Saves current model to specified path 'name' """
         if name is None:
-            name = self.make_file_name()
-        if tag is not None:
-            fname = tag+name
+            fname = self.make_file_name()
         else:
             fname = name
+
         fopen = open(fname,'wb')
         pickle.dump(self,fopen)
         fopen.close()
@@ -209,6 +201,7 @@ class FDC:
             atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
         
         # fit density model to data
+        print("[fdc] Computing density ...")
         self.density_model.fit(X)
 
         self.bandwidth = self.density_model.bandwidth
