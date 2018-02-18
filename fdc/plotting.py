@@ -541,33 +541,38 @@ def my_scatter(x, y, z, ax):
     ax.scatter(x_bot, y_bot, c = "purple", s=4)
     ax.scatter(x_top, y_top, c = "#00FF00",s=4)
 
-def select_data(X, y, X_original=None, option = None):
+def select_data(X, y, X_original=None, option = None, loop=False):
     from .widget import Highlighter
     # Taking selection from the user, will plot an histogram of the underlying data (default)
     # Other options are {mnist, etc. etc.}
 
-    if option == 'mnist':
-        ax = cluster_w_label(X, y, show=False)
-        highlighter = Highlighter(ax, X[:,0], X[:,1])
-        selected_regions = highlighter.mask
-        plt.close()
-        X_sub = X_original[selected_regions]
-        n_plot = min([len(X_sub), 16])
-    #print(xcluster.shape)
+    if loop is True:
+        n_repeat = 10
 
-        rpos = np.random.choice(np.arange(len(X_sub)), size=n_plot)
-    #print(rpos)
-        fig, ax = plt.subplots(4,4,figsize=(8,8))
-        count = 0
-        for i in range(4):
-            for j in range(4):
-                count+=1
-                if count > n_plot:
-                    break
-                ax[i,j].imshow(X_sub[rpos[4*i+j]].reshape(28,28),cmap="Greys")
-                ax[i,j].set_xticks([])
-                ax[i,j].set_yticks([])
+    if option == 'mnist':
+        for _ in range(n_repeat):
             
-        plt.tight_layout()
-        plt.show()
+            ax = cluster_w_label(X, y, show=False)
+            highlighter = Highlighter(ax, X[:,0], X[:,1])
+            selected_regions = highlighter.mask
+            plt.close()
+            X_sub = X_original[selected_regions]
+            n_plot = min([len(X_sub), 16])
+            #print(xcluster.shape)
+
+            rpos = np.random.choice(np.arange(len(X_sub)), size=n_plot)
+            #print(rpos)
+            fig, ax = plt.subplots(4,4,figsize=(8,8))
+            count = 0
+            for i in range(4):
+                for j in range(4):
+                    count+=1
+                    if count > n_plot:
+                        break
+                    ax[i,j].imshow(X_sub[rpos[4*i+j]].reshape(28,28),cmap="Greys")
+                    ax[i,j].set_xticks([])
+                    ax[i,j].set_yticks([])
+                
+            plt.tight_layout()
+            plt.show()
 

@@ -15,6 +15,7 @@ import sys, os
 from .density_estimation import KDE
 import pickle
 from collections import OrderedDict as OD
+from sklearn.neighbors import NearestNeighbors
     
 class FDC:
 
@@ -86,7 +87,7 @@ class FDC:
         self.nh_size = nh_size
         self.bandwidth = bandwidth
         self.eta = eta
-        self.merge=merge
+        self.merge = merge
         self.atol = atol
         self.rtol = rtol
         self.xtol = xtol 
@@ -107,8 +108,6 @@ class FDC:
         self : fdc object
             To obtain new cluster labels use self.cluster_label
         """
-        from sklearn.neighbors import NearestNeighbors
-
         t = time.time()
 
         self.X = X  # shallow copy
