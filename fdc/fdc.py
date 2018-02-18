@@ -117,12 +117,6 @@ class FDC:
         if self.nh_size is 'auto':
             self.nh_size = int(n_sample/10000.*100)
         
-    
-
-        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
-
-        self.nn_dist, self.nn_list = self.nbrs.kneighbors(X) # this scales like X.shape[0] * self.nh_size 
-
         if self.verbose == 0:
             blockPrint()
         
@@ -164,13 +158,18 @@ class FDC:
 
         return self
 
-    def save(self, name=None):
+    def save(self, name=None, tag=None):
         """ Saves current model to specified path 'name' """
         if name is None:
             name = self.make_file_name()
-        fopen = open(name,'wb')
+        if tag is not None:
+            fname = tag+name
+        else:
+            fname = name
+        fopen = open(fname,'wb')
         pickle.dump(self,fopen)
         fopen.close()
+        return fname
         
     def load(self, name=None):
         if name is None:
@@ -197,6 +196,26 @@ class FDC:
                 break
                 
         enablePrint()
+
+    def fit_density(self, X):
+        # nearest neighbors class
+        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
+
+        # get k-NN
+        self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
+
+        # density model class
+        self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
+            atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
+        
+        # fit density model to data
+        self.density_model.fit(X)
+
+        self.bandwidth = self.density_model.bandwidth
+        
+        print("[fdc] Computing density ...")
+        # compute density map based on kernel density model
+        self.rho = self.density_model.evaluate_density(X)
 
     def coarse_grain(self, noise_iterable):
         """Started from an initial noise scale, progressively merges clusters.
