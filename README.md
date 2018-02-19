@@ -5,9 +5,6 @@ size and a noise threshold measure. The later detects spurious cluster centers w
 The underlying code is based on fast KD-trees for nearest-neighbor searches O(n log n). While the algorithm is well suited for small datasets with meaningful densities, it works quite well on large datasets 
 (c.g. for N=10000, run time is a few seconds).
 
-  # High-dimensional data clustering
-  Our approach can be combined with high-dimensional data. Density maps are estimated on a projected or a low dimensional representation of the high-dimensional data. The statistical significance of each clusters (wether it is noise or not) is then evaluated using multi-class random forest with logistic regression or SVMs. Example of the full method coming soon !
-
 # Installing
 I suggest you install the code using ```pip``` from an [Anaconda](https://conda.io/docs/user-guide/tasks/manage-environments.html) Python 3 environment. From that environment:
 ```
