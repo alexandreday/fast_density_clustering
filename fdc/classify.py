@@ -29,50 +29,6 @@ class CLF:
         self.cv_score = 1.0
 
     def fit(self, X, y):
-        """Fits classifier
-
-        Important attributes are:
-
-        self.scaler_list -> [mu, std]
-        self.cv_score -> mean cv score
-        self.mean_train_score -> mean train score
-        self.clf_list -> list of sklearn classifiers (for taking majority vote)
-
-        Returns
-        -----------
-        CLF object (self)
-        """
-        
-        self.trained = True
-        return self.fit_CLF(X,y)
-
-    ''' def prob_predict(self, X):
-        """ Makes a prediction but also returns the probability for that prediction (based on the vote)
-        Returns an array of shape (-1, 2)
-        """
-        if self.trained is False:
-            assert False, "Must train model first !"
-
-        n_clf = len(self.clf_list)
-
-        vote = []
-        for i in range(n_clf):
-            clf = self.clf_list[i]
-            mu, inv_sigma = self.prob_predict[i]
-            vote.append(clf.predict(inv_sigma*(X-mu)))
-
-        vote = np.hstack(vote)
-        y_pred = []
-
-        for x_vote in vote:
-            count = Counter(x_vote)
-            p = count.values / n_clf
-            pos_max = np.argmax(p)
-            y_pred.append([count.keys[pos_max], p[pos_max]])
-
-        return np.array(y_pred).reshape(-1, 2) '''
-
-    def fit_CLF(self, X, y):
         """ Fit clf to data.
 
         Parameters
@@ -99,6 +55,8 @@ class CLF:
         #### ----------
         #         #### ----------
 
+        self.trained = True
+        
         if self.clf_type == 'svm':
             if self.clf_args is not None:
                 clf = SVC(**self.clf_args)
