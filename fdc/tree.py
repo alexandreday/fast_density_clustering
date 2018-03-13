@@ -323,6 +323,7 @@ class TREE:
         """
 
         n_average = self.n_average
+        
         if cv_score is None:
             cv_score = self.cv_score
         else:

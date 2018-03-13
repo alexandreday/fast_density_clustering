@@ -125,8 +125,11 @@ class CLF:
         return self
 
 
-    def predict(self, X):
+    def predict(self, X, option='fast'):
         """Returns labels for X (-1, 1)"""
+        if option is 'fast':
+            mu, inv_sigma = self.scaler_list[0]
+            return self.clf_list[0].predict(inv_sigma*(X-mu))
 
         if self.clf_type == 'trivial':
             self._n_sample = len(X)

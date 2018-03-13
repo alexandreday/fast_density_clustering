@@ -240,6 +240,7 @@ def inferred_label(model, eta=None, show=True, savefile = None, eta_show = True,
 
 def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, title=None, w_label = True, figsize=None,
      dpi=200, alpha=0.7, edgecolors=None, cp_style=1):
+    
     if figsize is not None:
         plt.figure(figsize=figsize)
     y_unique = np.sort(np.unique(y))
@@ -252,7 +253,9 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
         pos=(y==yu)
         Xsub = X[pos]
         plt.scatter(Xsub[:,0],Xsub[:,1],c=palette[i], s=psize, rasterized=True, alpha=alpha, edgecolors=edgecolors)
-        Xmean = np.mean(Xsub,axis=0)
+        
+        Xmean = Xsub[0]
+        #Xmean = np.mean(Xsub,axis=0)
         idx_centers.append(np.argmin(np.linalg.norm(X - Xmean, axis=1)))
      
     if w_label is True:
