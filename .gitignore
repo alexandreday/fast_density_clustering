@@ -18,3 +18,4 @@ test2.py
 .DS_Store
 __pycache__/
 fdc/testing/*
+example_cytof
