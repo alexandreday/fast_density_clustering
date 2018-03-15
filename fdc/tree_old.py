@@ -680,7 +680,7 @@ def classify_root(root, model, X, n_average = 10, C=1.0):
     Xsubset = X[pos_subset] # original space coordinates
     ysubset = y[pos_subset] # labels
 
-    return CLF(clf_type='svm', n_average=n_average, C=C).fit(Xsubset, ysubset)
+    return CLF(clf_type='svm', n_average=n_average).fit(Xsubset, ysubset)
 
 def classification_labels(node_list, model):
     """ Returns a list of labels for the original data according to the classification

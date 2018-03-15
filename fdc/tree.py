@@ -399,11 +399,13 @@ class TREE:
         need to do recursive classification ... 
         
         """
-        
-        terminal_nodes = set(self.robust_terminal_propag_node)
+        terminal_nodes = set(self.robust_terminal_node)
         node_to_cluster = self.node_to_cluster_id
-
+        y_pred = -1*np.ones(len(X))
+    
         for i, x in enumerate(X):
+            if i% 1000 == 0:
+                print(i)
             current_clf_node = self.root # recursively go down the tree, starting from root
             current_id = current_clf_node.get_id()
             while True:
@@ -412,9 +414,10 @@ class TREE:
                     break
                 else:
                     y_branch = self.robust_clf_node[current_id].predict([x])[0]
-    
+                    
                 child_list = current_clf_node.child
                 current_clf_node = child_list[y_branch] # go down one layer
+                current_id = current_clf_node.get_id()
             
         return y_pred
 
@@ -627,7 +630,7 @@ class TREE:
                 fake_clf.cv_score_std = -1.
                 return fake_clf
 
-        return CLF(clf_type='svm', n_average=n_average, C=C, down_sample=min_size).fit(Xsubset, ysubset)
+        return CLF(clf_type='svm', n_average=n_average).fit(Xsubset, ysubset)
 
 def classification_labels(node_list, model):
     """ Returns a list of labels for the original data according to the classification
