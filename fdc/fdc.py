@@ -78,8 +78,9 @@ class FDC:
                 atol=0.000005,
                 rtol=0.00005,
                 xtol=0.01,
-                search_size = 20
-                ):
+                search_size = 20,
+                n_cluster_init = None
+    ):
 
         self.test_ratio_size = test_ratio_size
         self.random_state = random_state
@@ -93,6 +94,7 @@ class FDC:
         self.xtol = xtol 
         self.cluster_label = None
         self.search_size = search_size
+        self.n_cluster_init = n_cluster_init
 
     def fit(self, X):
         """ Performs density clustering on given data set
@@ -179,7 +181,7 @@ class FDC:
         while True: # iterates untill number of cluster does no change ... 
 
             self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
-            self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta) 
+            self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta)
             self.idx_centers_unmerged = self.idx_centers
 
             if n_false_pos == 0:
@@ -236,11 +238,18 @@ class FDC:
         self.max_noise = -1
         n_cluster = 0
 
+
+
         # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
         
         for nt in noise_range:
+
+            if self.n_cluster_init is not None:
+                if len(self.idx_centers) < self.n_cluster_init:
+                    print("[fdc.py]    Reached specificed number of initial clusters %i"%self.n_cluster_init)
+                    break
+
             self.check_cluster_stability_fast(self.X, eta = nt)
-            
             hierarchy.append(OD({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label})) # -> the only required information <- 
             if len(self.idx_centers) != n_cluster:
                 n_cluster = len(self.idx_centers)
