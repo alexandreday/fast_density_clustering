@@ -239,7 +239,8 @@ def inferred_label(model, eta=None, show=True, savefile = None, eta_show = True,
     plt.clf()
 
 def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, title=None, w_label = True, figsize=None,
-     dpi=200, alpha=0.7, edgecolors=None, cp_style=1):
+     dpi=200, alpha=0.7, edgecolors=None, cp_style=1, w_legend=False):
+
     
     if figsize is not None:
         plt.figure(figsize=figsize)
@@ -252,12 +253,12 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
     for i, yu in enumerate(y_unique):
         pos=(y==yu)
         Xsub = X[pos]
-        plt.scatter(Xsub[:,0],Xsub[:,1],c=palette[i], s=psize, rasterized=True, alpha=alpha, edgecolors=edgecolors)
+        plt.scatter(Xsub[:,0],Xsub[:,1],c=palette[i], s=psize, rasterized=True, alpha=alpha, edgecolors=edgecolors, label = yu)
         
         Xmean = Xsub[0]
         #Xmean = np.mean(Xsub,axis=0)
         idx_centers.append(np.argmin(np.linalg.norm(X - Xmean, axis=1)))
-     
+
     if w_label is True:
         centers = X[idx_centers]
         for xy, i in zip(centers, y_unique) :
@@ -279,6 +280,8 @@ def cluster_w_label(X, y, show=True, savefile = None, fontsize =15, psize = 20, 
     
     if title is not None:
         plt.title(title,fontsize=fontsize)
+    if w_legend is True:
+        plt.legend(loc='best')
 
     plt.tight_layout()
     if savefile is not None:
