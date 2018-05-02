@@ -19,7 +19,7 @@ from sklearn.neighbors import NearestNeighbors
     
 class FDC:
 
-    """ Fast Density Clustering via kernel density modelling 
+    """ Fast Density Clustering via kernel density modelling for low-dimensional data (D <~ 8)
 
     Parameters
     ----------
@@ -28,7 +28,7 @@ class FDC:
         Neighborhood size. This is the scale used for identifying the initial modes in the density distribution, regardless
         of the covariance. If a point has the maximum density among it's nh_size neighbors, it is marked as 
         a potential cluster center. 'auto' means that the nh_size is scaled with number of samples. We 
-        use nh_size = 40 for 10000 samples.
+        use nh_size = 40 for 10000 samples. The minimum neighborhood size is set to 10.
     
     eta : float, optional (default = 0.4)
         Noise threshold used to merge clusters. This is done by quenching directly to the specified noise threshold
@@ -116,7 +116,7 @@ class FDC:
         n_sample = X.shape[0]
 
         if self.nh_size is 'auto':
-            self.nh_size = int(n_sample/10000.*100)
+            self.nh_size = max([int(n_sample/10000.*100),10])
         
         if self.verbose == 0:
             blockPrint()
