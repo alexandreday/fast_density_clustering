@@ -19,5 +19,13 @@ should produce a plot similar to this: ![alt tag](https://github.com/alexandreda
 
 In another example (example2.py), the algorithm is benchmarked against some sklearn datasets (note that the same parameters are used across all datasets). This is to be compared with other clustering methods easily accesible from [sklearn](http://scikit-learn.org/stable/modules/clustering.html). ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
 # Citation
-
-If you use this code in a scientific publication, I would appreciate citation/reference to this repository
+If you use this code in a scientific publication, I would appreciate citation/reference to this repository. Also, for further references on clustering
+and machine learning check out our machine learning review:
+```
+@article{mehta2018high,
+  title={A high-bias, low-variance introduction to Machine Learning for physicists},
+  author={Mehta, Pankaj and Bukov, Marin and Wang, Ching-Hao and Day, Alexandre GR and Richardson, Clint and Fisher, Charles K and Schwab, David J},
+  journal={arXiv preprint arXiv:1803.08823},
+  year={2018}
+}
+```
