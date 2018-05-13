@@ -155,7 +155,7 @@ class CLF:
         for x_vote in vote: # majority voting here !
             y_pred.append(most_common(list(x_vote)))
 
-        return np.array(y_pred).reshape(-1,1)
+        return np.array(y_pred)#.reshape(-1,1)
 
     def score(self, X, y):
         y_pred = self.predict(X).flatten()

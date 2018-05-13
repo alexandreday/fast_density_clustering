@@ -250,6 +250,7 @@ def cluster_w_label(X, y, Xcluster=None, show=True, savefile = None, fontsize =1
     idx_centers = []
     ax = plt.subplot(111)
 
+    all_idx = np.arange(len(X))
     for i, yu in enumerate(y_unique):
         pos=(y==yu)
         Xsub = X[pos]
@@ -258,9 +259,9 @@ def cluster_w_label(X, y, Xcluster=None, show=True, savefile = None, fontsize =1
         if Xcluster is not None:
             Xmean = Xcluster[i]
         else:
-            Xmean = np.mean(Xsub)
+            Xmean = np.mean(Xsub, axis=0)
         #Xmean = np.mean(Xsub,axis=0)
-        idx_centers.append(np.argmin(np.linalg.norm(X - Xmean, axis=1)))
+        idx_centers.append(all_idx[pos][np.argmin(np.linalg.norm(Xsub - Xmean, axis=1))])
 
     if w_label is True:
         centers = X[idx_centers]
