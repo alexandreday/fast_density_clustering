@@ -258,7 +258,7 @@ def cluster_w_label(X, y, Xcluster=None, show=True, savefile = None, fontsize =1
         if Xcluster is not None:
             Xmean = Xcluster[i]
         else:
-            Xmean = Xsub[0]
+            Xmean = np.mean(Xsub)
         #Xmean = np.mean(Xsub,axis=0)
         idx_centers.append(np.argmin(np.linalg.norm(X - Xmean, axis=1)))
 
@@ -299,74 +299,7 @@ def cluster_w_label(X, y, Xcluster=None, show=True, savefile = None, fontsize =1
         plt.close()
 
     return ax
-
-
-
-''' def cluster_w_label(X, model:FDC,
-                xlabel=None,ylabel=None,zlabel=None,label=None, 
-                psize=20,
-                out_file=None,title=None,
-                show=True,
-                remove_tick=False,
-                rasterize=False,
-                fontsize = 15
-                ):
-
-    """Plots the data point X colored with the clustering assignment found by FDC class
-
-    """
-    from matplotlib.offsetbox import AnchoredText
-
-    fontsize = fontsize
-
-    n_center = len(model.idx_centers)
-    cluster_label = model.cluster_label
-    idx_centers = model.idx_centers
-    palette=COLOR_PALETTE()
-
-    ax = plt.subplot(111)
     
-    for i in range(n_center):
-        pos = (cluster_label==i)
-        plt.scatter(X[pos,0], X[pos,1], c=palette[i], s=psize, rasterized=rasterize)
-    
-    centers = X[idx_centers]
-    for xy, i in zip(centers, range(n_center)) :
-        # Position of each label.
-        txt = ax.annotate(str(i),xy,
-        xytext=(0,0), textcoords='offset points',
-        fontsize=20, horizontalalignment='center', verticalalignment='center'
-        )
-        txt.set_path_effects([
-            PathEffects.Stroke(linewidth=5, foreground="w"),
-            PathEffects.Normal()])
-
-    if remove_tick:
-        plt.tick_params(labelbottom='off',labelleft='off')
-    if label is not None:
-        anchored_text = AnchoredText(label, loc=2)
-        ax.add_artist(anchored_text)
-        #axupdate_frame(bbox, fontsize=None)
-
-    if xlabel is not None:
-        plt.xlabel(xlabel,fontsize=fontsize)
-    if ylabel is not None:
-        plt.ylabel(ylabel,fontsize=fontsize)
-    if zlabel is not None:
-        cb.set_label(label=zlabel,labelpad=10)
-    if title is not None:
-        plt.title(title,fontsize=fontsize)
-
-    plt.tight_layout(pad = 1.2)
-
-    if out_file is not None:
-        plt.savefig(out_file)
-    if show:
-        plt.show()
-    
-    plt.clf() '''
-    
-
 def summary_v2(idx_centers, cluster_label, rho, X, n_true_center=1, y=None, psize=20, savefile=None, show=False):
     """ Summary plots w/o density map """
 
