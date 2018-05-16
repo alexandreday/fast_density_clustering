@@ -66,6 +66,7 @@ class CLF:
         elif self.clf_type == 'rf':
             if self.clf_args is not None:
                 clf = RandomForestClassifier(**self.clf_args)
+                #clf = RandomForestClassifier(**self.clf_args, warm_start=True)
             else:
                 clf = RandomForestClassifier()
 
@@ -86,6 +87,11 @@ class CLF:
         idx = np.arange(n_sample)
         yu_pos = {yu : idx[(y == yu)] for yu in y_unique}
         n_class = len(y_unique)
+        import time 
+
+        dt=0.0
+
+        import pickle
 
         for _ in range(n_average):
             while True:
@@ -101,8 +107,11 @@ class CLF:
 
             xtrain = (xtrain - mu)*inv_sigma # zscoring the data 
             xtest = (xtest - mu)*inv_sigma
-
+            pickle.dump([xtrain, ytrain], open('test.pkl','wb'))
+            s=time.time()
+            print(len(xtrain))
             clf.fit(xtrain, ytrain)
+            dt += (time.time() - s)
 
             t_score = clf.score(xtrain, ytrain) # predict on test set
             training_score.append(t_score)
@@ -113,6 +122,7 @@ class CLF:
 
             clf_list.append(clf)
             xtrain_scaler_list.append([mu,inv_sigma])
+        print("TRAINING ONLY\t",dt)
 
         self.scaler_list = xtrain_scaler_list # scaling transformations (zero mean, unit std)
         self.cv_score = np.mean(predict_score)

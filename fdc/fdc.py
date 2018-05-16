@@ -117,7 +117,8 @@ class FDC:
 
         if self.nh_size is 'auto':
             self.nh_size = max([int(n_sample/10000.*100),10])
-        
+        if self.search_size > self.nh_size:
+            self.search_size = self.nh_size
         if self.verbose == 0:
             blockPrint()
         
@@ -343,26 +344,36 @@ class FDC:
         rho = self.rho
         nn_list = self.nn_list
         
-        new_leaves=nn_list[idx][1:self.nh_size]
-        NH=set(nn_list[idx][1:self.nh_size])  # starts from the initial minimal neighborhood set by user 
+        
+        new_leaves=nn_list[idx][:self.search_size]
+        
+        is_NH = np.zeros(len(self.nn_list),dtype=np.int)
+        #is_NH[new_leaves] =1
+        is_NH[new_leaves[rho[new_leaves] > eta]] = 1
+        #is_NH[nn_list[idx][1:self.nh_size]] = 1 
+        #NH=set(nn_list[idx][1:self.nh_size])  # starts from the initial minimal neighborhood set by user 
         current_label = cluster_label[idx]
-
+        # ideally here we cythonize what's below... this is highly ineficient ...
         while True:
-            if len(new_leaves) == 0: 
-                break
-            leaves=new_leaves
+            update = False
+            leaves=np.hstack(new_leaves)
             new_leaves=[]
 
-            for leaf in leaves:
-                if cluster_label[leaf] == current_label : # search neighbors only if in current cluster !
-                    nn_leaf = nn_list[leaf][1:self.search_size] # note, this search_size can be greater than self.nh_size !
+            y_leave = cluster_label[leaves]
+            leaves_cluster = leaves[y_leave == current_label]        
+            nn_leaf = nn_list[leaves_cluster]
 
-                    for nn in nn_leaf:
-                        if (rho[nn] > eta) & (nn not in NH):
-                            NH.add(nn)
-                            new_leaves.append(nn)
+            for i in range(1, self.search_size):
+                res = nn_leaf[is_NH[nn_leaf[:,i]] == 0, i]
+                pos = rho[res] > eta
+                if np.count_nonzero(pos) > 0: update = True;
+                is_NH[res[pos]] = 1
+                new_leaves.append(res[pos])
 
-        return np.array(list(NH))
+            if update is False:
+                break
+
+        return np.where(is_NH == 1)[0]
 
     def make_file_name(self):
         t_name = "fdc_nhSize=%i_eta=%.3f_ratio=%.2f.pkl"

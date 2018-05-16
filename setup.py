@@ -1,4 +1,5 @@
-from setuptools import setup
+from distutils.core import setup
+from Cython.Build import cythonize
 
 setup(name='fdc',
       version='0.1',
@@ -8,4 +9,5 @@ setup(name='fdc',
       author_email='alexandre.day1@gmail.com',
       license='MIT',
       packages=['fdc'],
-      zip_safe=False)
+      zip_safe=False,
+      )
