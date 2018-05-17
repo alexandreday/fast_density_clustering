@@ -1,8 +1,8 @@
 # Fast density clustering (fdc)
-Python package for clustering low-dimensional data using kernel density maps to construct a density graph. Examples for gaussian mixtures and some benchmarks are provided. Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters. It uses cross-validation and is regularized by two main global parameters : a neighborhood
+Python package for clustering low-dimensional data using kernel density maps and density graph. Examples for gaussian mixtures and some benchmarks are provided. Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters. It uses cross-validation and is regularized by two main global parameters : a neighborhood
 size and a noise threshold measure. The later detects spurious cluster centers while the former guarantees that only local information is used to infer cluster centers. 
 
-The underlying code is based on fast KD-trees for nearest-neighbor searches. For low-dimensional spaces, the algorithm has a O(n log n) scaling and is thus applicable to very large datasets. Is also has a linear memory complexity.
+The underlying code is based on fast KD-trees for nearest-neighbor searches. For low-dimensional spaces, the algorithm has a O(n log n), where n is the size of the dataset. Is also has a memory complexity of O(n).
 
 # Installing
 I suggest you install the code using ```pip``` from an [Anaconda](https://conda.io/docs/user-guide/tasks/manage-environments.html) Python 3 environment. From that environment:
