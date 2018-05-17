@@ -236,11 +236,9 @@ class FDC:
 
         noise_range = [n for n in noise_iterable]
             
-        hierarchy = []
+        #hierarchy = []
         self.max_noise = -1
         n_cluster = 0
-
-
 
         # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
         
@@ -248,16 +246,16 @@ class FDC:
 
             if self.n_cluster_init is not None:
                 if len(self.idx_centers) < self.n_cluster_init:
-                    print("[fdc.py]    Reached specificed number of initial clusters %i"%self.n_cluster_init)
+                    print("[fdc.py]    Reached number of specified clusters [= %i] (or close to), n_cluster = %i"%(self.n_cluster_init,len(self.idx_centers)))
                     break
 
             self.check_cluster_stability_fast(self.X, eta = nt)
-            hierarchy.append(OD({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label})) # -> the only required information <- 
+            #hierarchy.append(OD({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label})) # -> the only required information <- 
             if len(self.idx_centers) != n_cluster:
                 n_cluster = len(self.idx_centers)
                 self.max_noise = nt
 
-        self.hierarchy = hierarchy
+        #self.hierarchy = hierarchy
         self.noise_range = noise_range
         self.noise_threshold = noise_range[-1]
 
