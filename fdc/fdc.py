@@ -211,6 +211,7 @@ class FDC:
         print("[fdc] Computing density ...")
         # compute density map based on kernel density model
         self.rho = self.density_model.evaluate_density(X)
+        return self
 
     def coarse_grain(self, noise_iterable):
         """Started from an initial noise scale, progressively merges clusters.
