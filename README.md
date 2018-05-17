@@ -17,7 +17,10 @@ in the file ```example``` and see if you can run the scripts provided.
 Check out the example for gaussian mixtures (example.py). You should be able to run it directly. It
 should produce a plot similar to this: ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/result.png)
 
-In another example (example2.py), the algorithm is benchmarked against some sklearn datasets (note that the same parameters are used across all datasets). This is to be compared with other clustering methods easily accesible from [sklearn](http://scikit-learn.org/stable/modules/clustering.html). ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
+In another example (example2.py), the algorithm is benchmarked against some sklearn datasets (note that the same parameters are used across all datasets). This is to be compared with other clustering methods easily accesible from [sklearn](http://scikit-learn.org/stable/modules/clustering.html).
+
+![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
+
 # Citation
 If you use this code in a scientific publication, I would appreciate citation/reference to this repository. Also, for further references on clustering
 and machine learning check out our machine learning review:
