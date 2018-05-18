@@ -289,7 +289,7 @@ class FDC:
         density_graph = [[] for i in range(n_sample)] # store incoming leaves
         
         ### ----------->
-        nn_list = self.nn_list[:,:self.nh_size] # restricted over neighborhood defined by user !
+        nn_list = self.nn_list # restricted over neighborhood defined by user !
         ### ----------->
 
         for i in range(n_sample):
@@ -416,7 +416,7 @@ def index_greater(array, prec=1e-8):
         int or None
     """
     item=array[0]
-    for idx, val in np.ndenumerate(array):
+    for idx, val in np.ndenumerate(array): # slow ! : could be cythonized
         if val > (item + prec):
             return idx[0]
 
