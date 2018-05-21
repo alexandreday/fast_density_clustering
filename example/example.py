@@ -23,6 +23,9 @@ X, y = make_blobs(10000, 2, n_true_center) # Generating random gaussian mixture
 
 model = FDC(eta=0.05, test_ratio_size=0.1)
 
+#@profile
+#np.sum(np.arange(0,1000))
+
 model.fit(X) # performing the clustering
 
 plotting.set_nice_font() # nicer plotting font !

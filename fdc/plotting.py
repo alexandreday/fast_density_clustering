@@ -187,8 +187,7 @@ plot_to_show = None
         plt.savefig(savefile, dpi=300)
     if show is True:
         plt.show()
-
-    plt.clf()
+        plt.clf()
 
 def summary_model(model, eta=None, ytrue = None, show=True, savefile = None, eta_show = True):
     """ Summary figure passing in only an FDC object (model), noise can be specified via the eta parameter """
@@ -500,7 +499,7 @@ def my_scatter(x, y, z, ax):
     ax.scatter(x_bot, y_bot, c = "purple", s=4)
     ax.scatter(x_top, y_top, c = "#00FF00",s=4)
 
-def select_data(X, y, X_original = None, option = None, loop=False):
+def select_data(X, y, X_original = None, option = None, loop=False, kwargs=None):
     from .widget import Highlighter
     # Taking selection from the user, will plot an histogram of the underlying data (default)
     # Other options are {mnist, etc. etc.}
@@ -511,8 +510,11 @@ def select_data(X, y, X_original = None, option = None, loop=False):
     if option == 'mnist':
 
         for _ in range(n_repeat):
+            if kwargs is not None:
+                ax = cluster_w_label(X, y, show=False, **kwargs)
+            else:
+                ax = cluster_w_label(X, y, show=False)
 
-            ax = cluster_w_label(X, y, show=False)
             highlighter = Highlighter(ax, X[:,0], X[:,1])
             selected_regions = highlighter.mask
             plt.close()

@@ -28,7 +28,7 @@ class KDE():
 
     def __init__(self, bandwidth = None, test_ratio_size = 0.1,
                 xtol = 0.01, atol=0.000005, rtol=0.00005, extreme_dist = False,
-                nn_dist = None):
+                nn_dist = None, kernel = 'gaussian'):
                 
         self.bandwidth = bandwidth
         self.test_ratio_size = test_ratio_size
@@ -37,6 +37,7 @@ class KDE():
         self.rtol = rtol
         self.extreme_dist = extreme_dist
         self.nn_dist = nn_dist
+        self.kernel = kernel # epanechnikov other option
     
     def fit(self, X):
         """Fit kernel model to X"""
@@ -45,7 +46,7 @@ class KDE():
         else:
             self.kde=KernelDensity(
                 bandwidth=self.bandwidth, algorithm='kd_tree', 
-                kernel='gaussian', metric='euclidean',
+                kernel=self.kernel, metric='euclidean',
                 atol=self.atol, rtol=self.rtol, 
                 breadth_first=True, leaf_size=40
             )
@@ -117,7 +118,7 @@ class KDE():
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
         """
-        self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40)
+        self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40, kernel=self.kernel)
         self.kde.fit(X_train) 
         return -self.kde.score(X_test)
 

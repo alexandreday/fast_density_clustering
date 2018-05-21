@@ -59,8 +59,6 @@ fig= plt.figure(figsize=(7, 10))
 Setting FDC parameters (note these are the same across all datasets)
 """
 
-noise_threshold = 0.5
-
 datasets = [noisy_circles, noisy_moons, varied, aniso, blobs, no_structure]
 for i_dataset, dataset in enumerate(datasets):
     X, y = dataset
@@ -69,7 +67,7 @@ for i_dataset, dataset in enumerate(datasets):
 
     # create clustering estimators
 
-    model = FDC(eta=noise_threshold, test_ratio_size=0.9)
+    model = FDC(kernel='linear')
 
     s=time.time()
 
@@ -90,7 +88,7 @@ for i_dataset, dataset in enumerate(datasets):
 
     plot_num+=1
 
-plt.suptitle("Local density clustering with noise threshold = %.2f \n Number of data points = %i"%(noise_threshold,n_samples))
+plt.suptitle("Local density clustering with linear kernels \n Number of data points = %i"%(n_samples))
 
 plt.savefig("sklearn_datasets.png")
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])

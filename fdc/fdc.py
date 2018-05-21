@@ -70,6 +70,9 @@ class FDC:
     search_size: int, optional (default = 20)
         when performing search over neighborhoods, size of each local neighborhood to check when
         expanding. This drastically slows the coarse-graining if chosen to be too big !
+
+    kernel: str, optional (default='gaussian')
+        Type of Kernel to use for density estimates. Other options are {'epanechnikov'|'linear','tophat'}.
     """
 
     def __init__(self, nh_size='auto', eta=0.5,
@@ -79,7 +82,8 @@ class FDC:
                 rtol=0.00005,
                 xtol=0.01,
                 search_size = 20,
-                n_cluster_init = None
+                n_cluster_init = None,
+                kernel = 'gaussian'
     ):
 
         self.test_ratio_size = test_ratio_size
@@ -95,7 +99,8 @@ class FDC:
         self.cluster_label = None
         self.search_size = search_size
         self.n_cluster_init = n_cluster_init
-
+        self.kernel = kernel
+    #@profile
     def fit(self, X):
         """ Performs density clustering on given data set
 
@@ -172,6 +177,7 @@ class FDC:
         self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
         return self
 
+    #@profile
     def check_cluster_stability_fast(self, X, eta = None): # given 
         if self.verbose == 0:
             blockPrint()
@@ -191,6 +197,7 @@ class FDC:
                 
         enablePrint()
 
+   # @profile
     def fit_density(self, X):
         # nearest neighbors class
         self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
@@ -200,19 +207,21 @@ class FDC:
 
         # density model class
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
-            atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist)
+            atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist, kernel=self.kernel)
         
         # fit density model to data
         print("[fdc] Computing density ...")
+        
         self.density_model.fit(X)
-
+        
         self.bandwidth = self.density_model.bandwidth
         
         print("[fdc] Computing density ...")
         # compute density map based on kernel density model
         self.rho = self.density_model.evaluate_density(X)
         return self
-
+    
+    #@profile
     def coarse_grain(self, noise_iterable):
         """Started from an initial noise scale, progressively merges clusters.
         If specified, saves the cluster assignments at every level of the coarse graining if specified.
@@ -262,7 +271,8 @@ class FDC:
         enablePrint()
 
         return self 
- 
+    
+    #@profile
     def compute_delta(self, X, rho = None):
         """
         Purpose:
@@ -327,7 +337,7 @@ class FDC:
         self.idx_centers = idx_centers
         self.cluster_label = cluster_label
 
-
+    #@profile
     def find_NH_tree_search(self, idx, eta, cluster_label):
         """
         Function for searching for nearest neighbors within
@@ -347,11 +357,11 @@ class FDC:
         new_leaves=nn_list[idx][:self.search_size]
         
         is_NH = np.zeros(len(self.nn_list),dtype=np.int)
-        #is_NH[new_leaves] =1
+
         is_NH[new_leaves[rho[new_leaves] > eta]] = 1
-        #is_NH[nn_list[idx][1:self.nh_size]] = 1 
-        #NH=set(nn_list[idx][1:self.nh_size])  # starts from the initial minimal neighborhood set by user 
+  
         current_label = cluster_label[idx]
+
         # ideally here we cythonize what's below... this is highly ineficient ...
         while True:
             update = False
@@ -405,6 +415,7 @@ class FDC:
 #####################################################
 #####################################################
 
+#@profile
 def index_greater(array, prec=1e-8):
     """
     Purpose:
