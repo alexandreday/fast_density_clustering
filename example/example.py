@@ -9,6 +9,8 @@ Created on Feb 1, 2017
 
 from fdc import FDC
 from sklearn.datasets import make_blobs
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import normalized_mutual_info_score as nmi
 from fdc import plotting
 import pickle
 import numpy as np
@@ -20,14 +22,15 @@ np.random.seed(0)
 print("------> Example with %i true cluster centers <-------"%n_true_center)
 
 X, y = make_blobs(10000, 2, n_true_center) # Generating random gaussian mixture
+X = StandardScaler().fit_transform(X) # always normalize your data :) 
 
-model = FDC(eta=0.05, test_ratio_size=0.1)
-
-#@profile
-#np.sum(np.arange(0,1000))
+# set eta=0.0 if you have excellent density profile fit (lots of data say)
+model = FDC(eta=0.0)
 
 model.fit(X) # performing the clustering
 
+print("Normalized mutual information = %.4f"%nmi(y, model.cluster_label))
 plotting.set_nice_font() # nicer plotting font !
-
 plotting.summary_model(model, ytrue=y, show=True, savefile="result.png")
+
+

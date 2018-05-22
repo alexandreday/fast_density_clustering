@@ -119,9 +119,12 @@ class FDC:
 
         self.X = X  # shallow copy
         n_sample = X.shape[0]
+        if n_sample < 10:
+            assert False, "Too few samples for computing densities !"
 
         if self.nh_size is 'auto':
-            self.nh_size = max([int(n_sample/10000.*100),10])
+            self.nh_size = max([int(25*np.log10(n_sample)), 10])
+
         if self.search_size > self.nh_size:
             self.search_size = self.nh_size
         if self.verbose == 0:
@@ -177,29 +180,10 @@ class FDC:
         self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
         return self
 
-    #@profile
-    def check_cluster_stability_fast(self, X, eta = None): # given 
-        if self.verbose == 0:
-            blockPrint()
-
-        if eta is None:
-            eta =  self.eta
-
-        while True: # iterates untill number of cluster does no change ... 
-
-            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
-            self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta)
-            self.idx_centers_unmerged = self.idx_centers
-
-            if n_false_pos == 0:
-                print("      # of stable clusters with noise %.6f : %i" % (eta, self.idx_centers.shape[0]))
-                break
-                
-        enablePrint()
-
    # @profile
     def fit_density(self, X):
-        # nearest neighbors class
+
+        # nearest neighbors class        
         self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
 
         # get k-NN
@@ -320,6 +304,25 @@ class FDC:
 
         return self
 
+    def check_cluster_stability_fast(self, X, eta = None): # given 
+        if self.verbose == 0:
+            blockPrint()
+
+        if eta is None:
+            eta =  self.eta
+
+        while True: # iterates untill number of cluster does no change ... 
+
+            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
+            self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta)
+            self.idx_centers_unmerged = self.idx_centers
+
+            if n_false_pos == 0:
+                print("      # of stable clusters with noise %.6f : %i" % (eta, self.idx_centers.shape[0]))
+                break
+                
+        enablePrint()
+
     def get_cluster_info(self, eta = None):
         """ Returns (cluster_label, idx_center) """
 
@@ -364,6 +367,7 @@ class FDC:
 
         # ideally here we cythonize what's below... this is highly ineficient ...
         while True:
+
             update = False
             leaves=np.hstack(new_leaves)
             new_leaves=[]
@@ -374,8 +378,10 @@ class FDC:
 
             for i in range(1, self.search_size):
                 res = nn_leaf[is_NH[nn_leaf[:,i]] == 0, i]
-                pos = rho[res] > eta
-                if np.count_nonzero(pos) > 0: update = True;
+                pos = np.where(rho[res] > eta)[0]
+
+                if len(pos) > 0: update=True
+                
                 is_NH[res[pos]] = 1
                 new_leaves.append(res[pos])
 

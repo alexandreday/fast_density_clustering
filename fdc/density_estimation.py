@@ -114,7 +114,8 @@ class KDE():
             assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"
 
         return h_optimal
-
+    
+    
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
         """
