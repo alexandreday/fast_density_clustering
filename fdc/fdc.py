@@ -75,7 +75,7 @@ class FDC:
         Type of Kernel to use for density estimates. Other options are {'epanechnikov'|'linear','tophat'}.
     """
 
-    def __init__(self, nh_size='auto', eta=0.5,
+    def __init__(self, nh_size='auto', eta='auto',
                 random_state=0, test_ratio_size=0.8, verbose=1, bandwidth=None,
                 merge=True,
                 atol=0.000005,
@@ -118,12 +118,13 @@ class FDC:
         t = time.time()
 
         self.X = X  # shallow copy
-        n_sample = X.shape[0]
-        if n_sample < 10:
+        self.n_sample = X.shape[0]
+
+        if self.n_sample < 10:
             assert False, "Too few samples for computing densities !"
 
         if self.nh_size is 'auto':
-            self.nh_size = max([int(25*np.log10(n_sample)), 10])
+            self.nh_size = max([int(25*np.log10(self.n_sample)), 10])
 
         if self.search_size > self.nh_size:
             self.search_size = self.nh_size
@@ -137,10 +138,14 @@ class FDC:
 
         print("[fdc] Fitting kernel model for density estimation ...")
         self.fit_density(X)
-    
+
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
-        
+
+        if self.eta is 'auto':
+            self.eta=0.5
+            #self.eta = self.estimate_eta()
+            
         print("[fdc] Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
         # temporary idx for the centers :
@@ -303,6 +308,51 @@ class FDC:
         self.density_graph = density_graph
 
         return self
+    
+    def estimate_eta(self):
+        """ Based on the density distribution, computes a scale for eta
+        Need more experimenting, this is not quite working ...
+        """ 
+        from matplotlib import pyplot as plt
+
+        idx = int(self.n_sample/10.)
+        idx = np.argsort(self.rho)[:-5*idx]#[2:idx:4*idx]
+        drho = []
+
+        for i in idx:
+            rho_init = self.rho[i]
+            nn_i = self.nn_delta[i]
+            while nn_i != -1:
+                rho_c = self.rho[nn_i]
+                nn_i = self.nn_delta[nn_i]
+            drho.append(rho_c- rho_init)
+
+        """ plt.his(drho,bins=60)
+        plt.show()
+        exit() """
+        eta = np.mean(drho)#+0.5*np.std(drho)
+
+        self.cout("Using std eta of %.3f"%eta)
+
+        return eta
+
+        """ from matplotlib import pyplot as plt
+
+        # Do a random walk on the nn graph ?
+        # Find the mean fluctuation needed to jump over a barrier ...
+        # This should be the eta parameter.   
+
+        #std = np.std(self.rho[self.nn_list[self.search_size:]], axis=1)
+        #eta = np.median(std)+np.std(std)
+        x=30
+        eta = 2*(np.percentile(self.rho,100-x)-np.percentile(self.rho,x))
+        #plt.hist(self.rho,bins=50)
+        #plt.show()
+        #eta = 0.5
+
+        self.cout("Using std eta of %.3f"%eta)
+
+        return eta """
 
     def check_cluster_stability_fast(self, X, eta = None): # given 
         if self.verbose == 0:
@@ -390,6 +440,9 @@ class FDC:
 
         return np.where(is_NH == 1)[0]
 
+    def cout(self, s):
+        print('[fdc] '+s)
+
     def make_file_name(self):
         t_name = "fdc_nhSize=%i_eta=%.3f_ratio=%.2f.pkl"
         return t_name%(self.nh_size, self.eta, self.test_ratio_size)
@@ -402,9 +455,13 @@ class FDC:
             label_centers_nn = np.unique([cluster_label[ni] for ni in NH])
 
     def display_main_parameters(self):
+        if self.eta is not 'auto':
+            eta = "%.3f"%self.eta
+        else:
+            eta = self.eta
         out = [
         "[fdc] {0:<20s}{1:<4s}{2:<6d}".format("nh_size",":",self.nh_size),
-        "[fdc] {0:<20s}{1:<4s}{2:<6.3f}".format("eta",":",self.eta),
+        "[fdc] {0:<20s}{1:<4s}{2:<6s}".format("eta",":",eta),
         "[fdc] {0:<20s}{1:<4s}{2:<6s}".format("merge",":",str(self.merge)),
         "[fdc] {0:<20s}{1:<4s}{2:<6d}".format("search_size",":",self.search_size),
         "[fdc] {0:<20s}{1:<4s}{2:<6.3f}".format("test_size_ratio",":",self.test_ratio_size)
@@ -508,6 +565,7 @@ def assign_cluster_deep(root,cluster_label,density_graph,label):
         for child in root:
             cluster_label[child]=label
             assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
+        
 
 
 def blockPrint():
