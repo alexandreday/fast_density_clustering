@@ -67,7 +67,7 @@ for i_dataset, dataset in enumerate(datasets):
 
     # create clustering estimators
 
-    model = FDC(kernel='linear')
+    model = FDC(eta=0.6)
 
     s=time.time()
 
@@ -88,7 +88,7 @@ for i_dataset, dataset in enumerate(datasets):
 
     plot_num+=1
 
-plt.suptitle("Local density clustering with linear kernels \n Number of data points = %i"%(n_samples))
+plt.suptitle("Local density clustering with %s kernels \n Number of data points = %i"%(model.kernel,n_samples))
 
 plt.savefig("sklearn_datasets.png")
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])

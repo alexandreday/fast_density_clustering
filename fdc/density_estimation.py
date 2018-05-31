@@ -41,6 +41,9 @@ class KDE():
     
     def fit(self, X):
         """Fit kernel model to X"""
+        if X.shape[1] > 8 :
+            print('Careful, you are trying to do density estimation for data in a D > 8 dimensional space\n ... you are warned !')
+
         if self.bandwidth is None:
             self.bandwidth = self.find_optimal_bandwidth(X)
         else:
@@ -50,7 +53,6 @@ class KDE():
                 atol=self.atol, rtol=self.rtol, 
                 breadth_first=True, leaf_size=40
             )
-        
         self.kde.fit(X)
         return self
 
@@ -69,7 +71,7 @@ class KDE():
         """
         return self.kde.score_samples(X)
     
-    def bandwidth_estimate(self, X):
+    def bandwidth_estimate(self, X_train, X_test):
         """Gives a rough estimate of the optimal bandwidth (based on the notion of some effective neigborhood)
         
         Return
@@ -77,51 +79,62 @@ class KDE():
         bandwidth estimate, minimum possible value : tuple, shape(2)
         """
         if self.nn_dist is None:
-            nn = NearestNeighbors(n_neighbors=2,algorithm='kd_tree')
-            nn.fit(X)
-            nn_dist, _ = nn.kneighbors(X, n_neighbors=2, return_distance=True)
+            nn = NearestNeighbors(n_neighbors=2, algorithm='kd_tree')
+            nn.fit(X_train)
+            nn_dist, _ = nn.kneighbors(X_test, n_neighbors=2, return_distance=True)
         else:
             nn_dist = self.nn_dist
 
-        h_min = np.mean(nn_dist[:,1])
-        h_max = 5*h_min # heuristic bound !! careful !!
+        dim = X_train.shape[1]
 
-        return h_max, h_min
+        # Computation of minimum bound
+        # This can be computed by taking the limit h -> 0 and making a saddle-point approx.
+        mean_nn2_dist = np.mean(nn_dist[:,1]*nn_dist[:,1])
+        h_min = np.sqrt(mean_nn2_dist/dim)
+        
+        idx_1 = np.random.choice(np.arange(len(X_train)), size=min([1000, len(X_train)]), replace=False)
+        idx_2 = np.random.choice(np.arange(len(X_test)), size=min([1000, len(X_test)]), replace=False)
+
+        max_size = min([len(idx_1),len(idx_2)])
+
+        tmp = np.linalg.norm(X_train[idx_1[:max_size]] - X_test[idx_2[:max_size]], axis=1)
+        
+        h_max = np.sqrt(np.mean(tmp*tmp)/dim)
+        h_est = 10*h_min 
+        return h_est, h_min, h_max
     
     def find_optimal_bandwidth(self, X):
         """Performs maximum likelihood estimation on a test set of the density model fitted on a training set
         """
         from scipy.optimize import fminbound
-
-        hest, hmin = self.bandwidth_estimate(X)
-        print("[kde] Minimum bound = %.4f \t Rough estimate of h = %.4f"%(hmin, hest))
-
         X_train, X_test = train_test_split(X, test_size = self.test_ratio_size)
         args = (X_train, X_test)
 
-        # We are trying to find reasonable tight bounds (hmin,1.5*hest) to bracket the error function minima
-        if self.xtol > hmin:
-            tmp = round_float(hmin)
-            print('[kde] Bandwidth tolerance (xtol) greater than minimum bound, adjusting xtol: %.5f -> %.5f'%(self.xtol, tmp))
-            self.xtol = tmp
+        hest, hmin, hmax = self.bandwidth_estimate(X_train, X_test)
 
-        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, 1.5*hest, args, maxfun=100, xtol=self.xtol, full_output=True)
+        print("[kde] Minimum bound = %.4f \t Rough estimate of h = %.4f \t Maximum bound = %.4f"%(hmin, hest, hmax))
+
+        # We are trying to find reasonable tight bounds (hmin, 4.0*hest) to bracket the error function minima
+        # Would be nice to have some hard accurate bounds
+        self.xtol = round_float(hmin)
+        print('[kde] Bandwidth tolerance (xtol) set to precision of minimum bound : %.5f '%(self.xtol))
+
+        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, hmax, args, maxfun=100, xtol=self.xtol, full_output=True)
         
         print("[kde] Found log-likelihood minima in %i evaluations, h = %.5f"%(niter, h_optimal))
         
-        if self.extreme_dist is False: # in the case of distribution with extreme variances in density, these bounds will fail ...
-            assert abs(h_optimal - 1.5*hest) > 1e-4, "Upper boundary reached for bandwidth"
+        if self.extreme_dist is False: # These bounds should always be satisfied ...
+            assert abs(h_optimal - hmax) > 1e-4, "Upper boundary reached for bandwidth"
             assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"
 
         return h_optimal
-    
-    
+     
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
         """
         self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40, kernel=self.kernel)
         self.kde.fit(X_train) 
-        return -self.kde.score(X_test)
+        return -self.kde.score(X_test[:10000]) # this should be accurate enough !
 
 def round_float(x):
     """ Rounds a float to it's first significant digit
