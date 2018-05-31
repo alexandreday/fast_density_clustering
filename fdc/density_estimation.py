@@ -121,7 +121,7 @@ class KDE():
 
         h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, hmax, args, maxfun=100, xtol=self.xtol, full_output=True)
         
-        print("[kde] Found log-likelihood minima in %i evaluations, h = %.5f"%(niter, h_optimal))
+        print("[kde] Found log-likelihood maximum in %i evaluations, h = %.5f"%(niter, h_optimal))
         
         if self.extreme_dist is False: # These bounds should always be satisfied ...
             assert abs(h_optimal - hmax) > 1e-4, "Upper boundary reached for bandwidth"
@@ -130,7 +130,7 @@ class KDE():
         return h_optimal
      
     def log_likelihood_test_set(self, bandwidth, X_train, X_test):
-        """Fit the kde model on the training set given some bandwidth and evaluates the log-likelihood of the test set
+        """Fit the kde model on the training set given some bandwidth and evaluates the negative log-likelihood of the test set
         """
         self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40, kernel=self.kernel)
         self.kde.fit(X_train) 
