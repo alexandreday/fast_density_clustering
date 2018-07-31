@@ -39,6 +39,7 @@ class KDE():
         self.nn_dist = nn_dist
         self.kernel = kernel # epanechnikov other option
     
+    
     def fit(self, X):
         """Fit kernel model to X"""
         if X.shape[1] > 8 :
@@ -108,7 +109,7 @@ class KDE():
         """
         from scipy.optimize import fminbound
         X_train, X_test = train_test_split(X, test_size = self.test_ratio_size)
-        args = (X_train, X_test)
+        args = (X_test,)
 
         hest, hmin, hmax = self.bandwidth_estimate(X_train, X_test)
 
@@ -117,7 +118,12 @@ class KDE():
         # We are trying to find reasonable tight bounds (hmin, 4.0*hest) to bracket the error function minima
         # Would be nice to have some hard accurate bounds
         self.xtol = round_float(hmin)
+
         print('[kde] Bandwidth tolerance (xtol) set to precision of minimum bound : %.5f '%(self.xtol))
+        
+        self.kde = KernelDensity(algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40, kernel=self.kernel)
+
+        self.kde.fit(X_train)
 
         h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, hmax, args, maxfun=100, xtol=self.xtol, full_output=True)
         
@@ -128,13 +134,14 @@ class KDE():
             assert abs(h_optimal - hmin) > 1e-4, "Lower boundary reached for bandwidth"
 
         return h_optimal
-     
-    def log_likelihood_test_set(self, bandwidth, X_train, X_test):
+
+    #@profile
+    def log_likelihood_test_set(self, bandwidth, X_test):
         """Fit the kde model on the training set given some bandwidth and evaluates the negative log-likelihood of the test set
         """
-        self.kde = KernelDensity(bandwidth=bandwidth, algorithm='kd_tree', atol=self.atol, rtol=self.rtol,leaf_size=40, kernel=self.kernel)
-        self.kde.fit(X_train) 
-        return -self.kde.score(X_test[:10000]) # this should be accurate enough !
+        self.kde.bandwidth = bandwidth
+        #l_test = len(X_test)
+        return -self.kde.score(X_test[:2000])#X_test[np.random.choice(np.arange(0, l_test), size=min([int(0.5*l_test), 1000]), replace=False)]) # this should be accurate enough !
 
 def round_float(x):
     """ Rounds a float to it's first significant digit

@@ -1,18 +1,3 @@
-""" from distutils.core import setup
-from Cython.Build import cythonize
-
-setup(name='fdc',
-      version='0.1',
-      description='Clustering in low dimensional space',
-      url='https://github.com/alexandreday/fast_density_clustering',
-      author='Alexandre Day',
-      author_email='alexandre.day1@gmail.com',
-      license='MIT',
-      packages=['fdc'],
-      zip_safe=False,
-      )
-
-"""
 from setuptools import setup
   
 with open("READMEpypi.md", "r") as fh:
@@ -20,13 +5,13 @@ with open("READMEpypi.md", "r") as fh:
 
 setup(
       name='fdc',
-      version='0.99',
-      description='Fast Densitiy Clustering in low dimensional space',
+      version='1.01',
+      description='Fast Densitiy Clustering in low-dimension',
       author='Alexandre Day',
       author_email='alexandre.day1@gmail.com',
       license='MIT',
       packages=['fdc'],
-      install_requires =['scikit-learn'],
+      install_requires =['scikit-learn>=0.19'],
       zip_safe=False,
       long_description=long_description,
       long_description_content_type="text/markdown",

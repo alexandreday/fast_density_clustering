@@ -67,7 +67,7 @@ for i_dataset, dataset in enumerate(datasets):
 
     # create clustering estimators
 
-    model = FDC(eta=0.6)
+    model = FDC(eta=0.75, test_ratio_size=0.5)
 
     s=time.time()
 
