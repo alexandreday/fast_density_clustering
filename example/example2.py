@@ -66,8 +66,8 @@ for i_dataset, dataset in enumerate(datasets):
     X = StandardScaler().fit_transform(X)
 
     # create clustering estimators
-
-    model = FDC(eta=0.75, test_ratio_size=0.5)
+    # atol and rtol set the precision of the density map, higher value improves performanc but reduces accuracy
+    model = FDC(eta=0.4)
 
     s=time.time()
 

@@ -16,6 +16,7 @@ from .density_estimation import KDE
 import pickle
 from collections import OrderedDict as OD
 from sklearn.neighbors import NearestNeighbors
+import multiprocessing
     
 class FDC:
 
@@ -75,17 +76,18 @@ class FDC:
         Type of Kernel to use for density estimates. Other options are {'epanechnikov'|'linear','tophat'}.
     """
 
-    def __init__(self, nh_size='auto', eta='auto',
+    def __init__(self, nh_size='auto', eta=0.5,
                 random_state=0, test_ratio_size=0.8, verbose=1, bandwidth=None,
                 merge=True,
-                atol=0.000005,
-                rtol=0.00005,
+                atol=0.01,
+                rtol=0.0001,
                 xtol=0.01,
                 search_size = 20,
                 n_cluster_init = None,
-                kernel = 'gaussian'
+                kernel = 'gaussian',
+                n_job='auto'
     ):
-
+        
         self.test_ratio_size = test_ratio_size
         self.random_state = random_state
         self.verbose = verbose
@@ -100,7 +102,14 @@ class FDC:
         self.search_size = search_size
         self.n_cluster_init = n_cluster_init
         self.kernel = kernel
-    #@profile
+        if n_job == 'auto':
+            self.n_job=multiprocessing.cpu_count()
+        else:
+            if n_job > multiprocessing.cpu_count():
+                self.n_job=multiprocessing.cpu_count()
+            else:
+                self.n_job=n_job
+
     def fit(self, X):
         """ Performs density clustering on given data set
 
@@ -138,13 +147,10 @@ class FDC:
 
         print("[fdc] Fitting kernel model for density estimation ...")
         self.fit_density(X)
+        #print("here")
 
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
-
-        if self.eta is 'auto':
-            self.eta=0.5
-            #self.eta = self.estimate_eta()
             
         print("[fdc] Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
@@ -154,11 +160,10 @@ class FDC:
 
         if self.merge: # usually by default one should perform this minimal merging .. 
             print("[fdc] Merging overlapping minimal clusters ...")
-            self.check_cluster_stability_fast(X, 0.) # given 
-        
-        if self.eta >= 1e-3 :
-            print("[fdc] Iterating merging up to specified noise threshold ...")
-            self.check_cluster_stability_fast(X, self.eta) # merging 'unstable' clusters
+            self.check_cluster_stability_fast(X, 0.) # given
+            if self.eta >= 1e-3 :
+                print("[fdc] Iterating merging up to specified noise threshold ...")
+                self.check_cluster_stability_fast(X, self.eta) # merging 'unstable' clusters
         
         print("[fdc] Done in %.3f s" % (time.time()-start))
         
@@ -185,7 +190,7 @@ class FDC:
         self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
         return self
 
-   # @profile
+
     def fit_density(self, X):
 
         # nearest neighbors class        
@@ -199,17 +204,37 @@ class FDC:
             atol=self.atol,rtol=self.rtol,xtol=self.xtol, nn_dist = self.nn_dist, kernel=self.kernel)
         
         # fit density model to data
-        print("[fdc] Computing density ...")
-        
+        #     
         self.density_model.fit(X)
         
         self.bandwidth = self.density_model.bandwidth
-        
+
+    
         print("[fdc] Computing density ...")
         # compute density map based on kernel density model
-        self.rho = self.density_model.evaluate_density(X)
+        if self.n_sample > 30000:
+            p = multiprocessing.Pool(self.n_job)
+            size_split = X.shape[0]//self.n_job
+            results =[]
+
+            for i in range(self.n_job):
+                results.append(p.apply_async(self.f_tmp, [X[i*size_split:(i+1)*size_split], i]))
+            results = [res.get() for res in results]
+            asort = np.argsort([results[i][0] for i in range(self.n_job)]) # reordering
+            print(asort)
+            self.rho=np.hstack([results[a][1] for a in asort])
+
+        else:
+            self.rho = self.density_model.evaluate_density(X)
+
+        
+        #print("DONE")
+        #self.rho = self.density_model.evaluate_density(X)
         return self
     
+    def f_tmp(self, X_, i_):
+         return (i_, self.density_model.evaluate_density(X_))
+
     #@profile
     def coarse_grain(self, noise_iterable):
         """Started from an initial noise scale, progressively merges clusters.

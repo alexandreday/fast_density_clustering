@@ -25,7 +25,7 @@ X, y = make_blobs(10000, 2, n_true_center) # Generating random gaussian mixture
 X = StandardScaler().fit_transform(X) # always normalize your data :) 
 
 # set eta=0.0 if you have excellent density profile fit (lots of data say)
-model = FDC(eta = 0.01)
+model = FDC(eta = 0.01)#, atol=0.0001, rtol=0.0001)
 
 model.fit(X) # performing the clustering
 

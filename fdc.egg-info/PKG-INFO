@@ -1,7 +1,7 @@
 Metadata-Version: 2.1
 Name: fdc
-Version: 0.99
-Summary: Fast Densitiy Clustering in low dimensional space
+Version: 1.12
+Summary: Fast Densitiy Clustering in low-dimension
 Home-page: https://alexandreday.github.io/
 Author: Alexandre Day
 Author-email: alexandre.day1@gmail.com
