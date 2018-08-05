@@ -1,33 +1,36 @@
+'''
+Created on Feb 1, 2017
+
+@author: Alexandre Day
+
+    Purpose:
+        Perform density clustering on gaussian mixture
+'''
+
+from fdc import FDC
 from sklearn.datasets import make_blobs
 from sklearn.preprocessing import StandardScaler
-from fdc import FDC, plotting
-import time
-from matplotlib import pyplot as plt
+from sklearn.metrics import normalized_mutual_info_score as nmi
+from fdc import plotting
+import pickle
 import numpy as np
+
+n_true_center = 15
 
 np.random.seed(0)
 
-random_state=170
-n_samples = 10000
-X,y = make_blobs(n_samples=n_samples,
-                             cluster_std=[1.0, 2.5, 0.5],
-                             random_state=random_state)
-X = StandardScaler().fit_transform(X)
+print("------> Example with %i true cluster centers <-------"%n_true_center)
 
+X, y = make_blobs(50007, 2, n_true_center) # Generating random gaussian mixture
+X = StandardScaler().fit_transform(X) # always normalize your data :) 
 
-model = FDC(kernel='linear')#, eta=0.9)#, test_ratio_size=0.8)
-model.fit(X)
-y= model.cluster_label
-rho = model.rho
-print("here:",np.std(np.sort(rho)[1000:]))
-print("moment3:\t",np.percentile(rho,75)-np.percentile(rho,25))
-print("moment2:\t",np.mean(np.abs(rho-np.mean(rho))))
-plt.hist(rho,bins=50)
-plt.show()
-plotting.cluster_w_label(X,y)
-plotting.density_map(X,rho)
+# set eta=0.0 if you have excellent density profile fit (lots of data say)
+model = FDC(eta = 0.01)#, atol=0.0001, rtol=0.0001)
 
-plt.show()
-
+model.fit(X) # performing the clustering
+exit()
+print("Normalized mutual information = %.4f"%nmi(y, model.cluster_label))
+plotting.set_nice_font() # nicer plotting font !
+plotting.summary_model(model, ytrue=y, show=True, savefile="result.png")
 
 
