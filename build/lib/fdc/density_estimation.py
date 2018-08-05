@@ -125,7 +125,8 @@ class KDE():
 
         self.kde.fit(X_train)
 
-        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, hmax, args, maxfun=100, xtol=self.xtol, full_output=True)
+        # hmax is the upper bound, however, heuristically it appears to always be way above the actual bandwidth. hmax*0.2 seems much better but still convservative
+        h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, hmax*0.2, args, maxfun=100, xtol=self.xtol, full_output=True)
         
         print("[kde] Found log-likelihood maximum in %i evaluations, h = %.5f"%(niter, h_optimal))
         
