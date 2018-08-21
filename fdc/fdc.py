@@ -272,7 +272,7 @@ class FDC:
         for nt in noise_range:
 
             if self.n_cluster_init is not None:
-                if len(self.idx_centers) < self.n_cluster_init:
+                if len(self.idx_centers) =< self.n_cluster_init:
                     print("[fdc.py]    Reached number of specified clusters [= %i] (or close to), n_cluster = %i"%(self.n_cluster_init,len(self.idx_centers)))
                     break
 
