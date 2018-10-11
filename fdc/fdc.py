@@ -220,6 +220,7 @@ class FDC:
             p = multiprocessing.Pool(self.n_job)
             size_split = X.shape[0]//self.n_job
             results =[]
+            
             idx_split = chunkIt(len(X), self.n_job) # find the index to split the array in approx. n_job equal parts. 
 
             for i in range(self.n_job):
@@ -319,7 +320,7 @@ class FDC:
         ### ----------->
         nn_list = self.nn_list # restricted over neighborhood (nh_size)
         ### ----------->
-
+        
         for i in range(n_sample):
             idx = index_greater(rho[nn_list[i]])
             if idx:
@@ -659,7 +660,10 @@ def chunkIt(length_seq, num):
 
     while last < length_seq:
         idx_list.append([int(last),int(last + avg)])
-        #out.append(seq[int(last):int(last + avg)])
         last += avg
+    
+    if len(idx_list) > num:
+        idx_list.pop()
+        idx_list[-1] = [idx_list[-1][0], length_seq]
 
     return idx_list

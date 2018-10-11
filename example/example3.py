@@ -21,7 +21,7 @@ np.random.seed(0)
 
 print("------> Example with %i true cluster centers <-------"%n_true_center)
 
-X, y = make_blobs(50007, 2, n_true_center) # Generating random gaussian mixture
+X, y = make_blobs(500007, 2, n_true_center) # Generating random gaussian mixture
 X = StandardScaler().fit_transform(X) # always normalize your data :) 
 
 # set eta=0.0 if you have excellent density profile fit (lots of data say)
