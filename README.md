@@ -1,5 +1,5 @@
 # Fast density clustering (fdc)
-A Python package for efficiently clustering low-dimensional data. The core of the algorithm is based on using kernel density maps and density graphs. See below for some speficic examples for gaussian mixtures and some test benchmarks that shows the performance against standard clustering algorithms that may be easily imported from sklearn for instance. 
+A Python package for efficiently clustering low-dimensional data. The core of the algorithm is based on using kernel density maps and density graphs. See below for some specific examples for gaussian mixtures and some test benchmarks that shows the performance against standard clustering algorithms that may be easily imported from sklearn for instance. 
 
 Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters. It uses cross-validation and is regularized by two main global parameters : a neighborhood
 size and a noise threshold measure. The later detects spurious cluster centers while the former guarantees that only local information is used to infer cluster centers. Perhaps one of it's main advantage is that it does not require the user to select the number of clusters and is usually fairly robust to variation of the parameters (within reason!). 
