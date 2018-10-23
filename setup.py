@@ -5,7 +5,7 @@ with open("READMEpypi.md", "r") as fh:
 
 setup(
       name='fdc',
-      version='1.15',
+      version='1.16',
       description='Fast Density Clustering in low-dimension',
       author='Alexandre Day',
       author_email='alexandre.day1@gmail.com',

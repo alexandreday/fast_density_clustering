@@ -8,6 +8,7 @@ Last major update : June 29, 2017
         Fast density clustering
 '''
 
+
 import numpy as np
 import time
 from numpy.random import random
