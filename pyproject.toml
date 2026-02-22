@@ -25,6 +25,13 @@ dependencies = [
 
 [project.optional-dependencies]
 plotting = ["matplotlib>=3.4"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [project.urls]
 Homepage = "https://alexandreday.github.io/"
