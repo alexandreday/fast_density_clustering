@@ -1,32 +1,72 @@
-# Fast density clustering (fdc)
-A Python package for efficiently clustering low-dimensional data. The core of the algorithm is based on using kernel density maps and density graphs. See below for some specific examples for gaussian mixtures and some test benchmarks that shows the performance against standard clustering algorithms that may be easily imported from sklearn for instance. 
+# fdc — Fast Density Clustering
 
-Our algorithm solves multiscale problems (multiple variances/densities and population sizes) and works for non-convex clusters. It uses cross-validation and is regularized by two main global parameters : a neighborhood
-size and a noise threshold measure. The later detects spurious cluster centers while the former guarantees that only local information is used to infer cluster centers. Perhaps one of it's main advantage is that it does not require the user to select the number of clusters and is usually fairly robust to variation of the parameters (within reason!). 
+A Python package for efficiently clustering low-dimensional data using kernel density maps and density graphs.
 
-The underlying code is based on fast KD-trees for nearest-neighbor searches. For low-dimensional spaces, the algorithm has a O(n log n), where n is the size of the dataset. Is also has a memory complexity of O(n).
+- Works without specifying the number of clusters upfront
+- Handles non-convex clusters and multiscale problems (varying densities, population sizes)
+- O(n log n) time and O(n) memory complexity via KD-tree nearest-neighbor search
+- Regularized by two interpretable parameters: neighborhood size and noise threshold
 
-# Installing
-I suggest you install the code using ```pip``` from an [Anaconda](https://conda.io/docs/user-guide/tasks/manage-environments.html) Python 3 environment. From that environment:
+## Installation
+
+### From PyPI
+
+```bash
+pip install fdc
+
+# With optional plotting support
+pip install "fdc[plotting]"
 ```
+
+### From source (development)
+
+We use [uv](https://docs.astral.sh/uv/) for environment and dependency management.
+
+```bash
+# 1. Install uv (one-time)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. Clone and set up
 git clone https://github.com/alexandreday/fast_density_clustering.git
 cd fast_density_clustering
-pip install .
+uv python install 3.11
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -e ".[plotting]"
 ```
-That's it ! You can now import the package ```fdc``` from your Python scripts. Check out the examples
-in the file ```example``` and see if you can run the scripts provided.
-# Examples and comparison with other methods
-Check out the example for gaussian mixtures (example.py). You should be able to run it directly. It
-should produce a plot similar to this: ![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/result.png)
 
-In another example (example2.py), the algorithm is benchmarked against some sklearn datasets (note that the same parameters are used across all datasets). This is to be compared with other clustering methods easily accesible from [sklearn](http://scikit-learn.org/stable/modules/clustering.html).
+## Quick start
 
-![alt tag](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
+```python
+from fdc import FDC
+from sklearn.datasets import make_blobs
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import normalized_mutual_info_score as nmi
 
-# Citation
-If you use this code in a scientific publication, I would appreciate citation/reference to this repository. Also, for further references on clustering
-and machine learning check out our machine learning review:
+X, y = make_blobs(n_samples=10000, n_features=2, centers=15)
+X = StandardScaler().fit_transform(X)
+
+model = FDC(eta=0.01)
+model.fit(X)
+
+print("NMI:", nmi(y, model.cluster_label))
 ```
+
+## Examples
+
+`example/example.py` — Gaussian mixture clustering. Produces a plot like this:
+
+![Gaussian mixture result](https://github.com/alexandreday/fast_density_clustering/blob/master/example/result.png)
+
+`example/example2.py` — Benchmark against standard [sklearn datasets](http://scikit-learn.org/stable/modules/clustering.html), using the same parameters across all datasets:
+
+![sklearn datasets benchmark](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
+
+## Citation
+
+If you use this code in a scientific publication, please cite this repository. For further reading on clustering and machine learning:
+
+```bibtex
 @article{mehta2018high,
   title={A high-bias, low-variance introduction to Machine Learning for physicists},
   author={Mehta, Pankaj and Bukov, Marin and Wang, Ching-Hao and Day, Alexandre GR and Richardson, Clint and Fisher, Charles K and Schwab, David J},
@@ -34,3 +74,7 @@ and machine learning check out our machine learning review:
   year={2018}
 }
 ```
+
+## License
+
+MIT

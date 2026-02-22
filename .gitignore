@@ -19,5 +19,17 @@ linkage.txt
 test2.py
 .DS_Store
 __pycache__/
+*.py[cod]
 fdc/testing/*
 example_cytof
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
