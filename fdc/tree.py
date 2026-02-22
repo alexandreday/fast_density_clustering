@@ -345,7 +345,7 @@ class TREE:
         cluster_n = len(robust_terminal_node)
 
         n_sample = len(model.X)
-        y_robust = -1*np.ones(n_sample,dtype=np.int)
+        y_robust = -1*np.ones(n_sample,dtype=int)
         y_original = model.hierarchy[0]['cluster_labels']
         cluster_to_node_id = OD()
 
@@ -649,7 +649,7 @@ def classification_labels(node_list, model):
     """
     
     n_sample = len(model.X)
-    y = -1*np.ones(n_sample,dtype=np.int)
+    y = -1*np.ones(n_sample,dtype=int)
     y_init = model.hierarchy[0]['cluster_labels'] # full set of labels at smallest scale ... 
 
     for i, node in enumerate(node_list): # all data points contained a node take label i

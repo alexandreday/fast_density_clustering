@@ -17,8 +17,8 @@ def gaussian_mixture(n_sample=1000,n_center=2,sigma_range=[1.0],pop_range=[0.1,0
     boundx=10
     boundy=10
      
-    X=np.empty((n_sample,2),dtype=np.float)
-    y=np.empty(n_sample,dtype=np.int)
+    X=np.empty((n_sample,2),dtype=float)
+    y=np.empty(n_sample,dtype=int)
     total_sample=0
      
     for c in range(n_center):
@@ -33,7 +33,7 @@ def gaussian_mixture(n_sample=1000,n_center=2,sigma_range=[1.0],pop_range=[0.1,0
         C = np.array([[sig_1, sig_12], [sig_12, sig_2]])
         
         X[total_sample:total_sample+n_sample_c] = np.random.multivariate_normal([xcenter,ycenter], C, n_sample_c)
-        y[total_sample:total_sample+n_sample_c]=np.full(n_sample_c,c,dtype=np.int)
+        y[total_sample:total_sample+n_sample_c]=np.full(n_sample_c,c,dtype=int)
         total_sample+=n_sample_c
 
     return X,y

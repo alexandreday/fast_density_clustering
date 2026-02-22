@@ -138,7 +138,7 @@ class FDC:
         if self.n_sample < 10:
             assert False, "Too few samples for computing densities !"
 
-        if self.nh_size is 'auto':
+        if self.nh_size == 'auto':
             self.nh_size = max([int(25*np.log10(self.n_sample)), 10])
 
         if self.search_size > self.nh_size:
@@ -313,8 +313,8 @@ class FDC:
         n_sample, n_feature = X.shape
 
         maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
-        delta = maxdist*np.ones(n_sample, dtype=np.float)
-        nn_delta = np.ones(n_sample, dtype=np.int)
+        delta = maxdist*np.ones(n_sample, dtype=float)
+        nn_delta = np.ones(n_sample, dtype=int)
         
         density_graph = [[] for i in range(n_sample)] # store incoming leaves
         
@@ -486,7 +486,7 @@ class FDC:
         
         new_leaves=nn_list[idx][:self.search_size]
         
-        is_NH = np.zeros(len(self.nn_list),dtype=np.int)
+        is_NH = np.zeros(len(self.nn_list),dtype=int)
 
         is_NH[new_leaves[rho[new_leaves] > eta]] = 1
   
@@ -532,7 +532,7 @@ class FDC:
             label_centers_nn = np.unique([cluster_label[ni] for ni in NH]) """
 
     def display_main_parameters(self):
-        if self.eta is not 'auto':
+        if self.eta != 'auto':
             eta = "%.3f"%self.eta
         else:
             eta = self.eta
@@ -600,7 +600,7 @@ def check_cluster_stability(self, X, threshold):
             idx_true_centers.append(idx)
 
         
-    return np.array(idx_true_centers,dtype=np.int), n_false_pos
+    return np.array(idx_true_centers,dtype=int), n_false_pos
 
 def assign_cluster(idx_centers, nn_delta, density_graph):
     """ 
@@ -610,7 +610,7 @@ def assign_cluster(idx_centers, nn_delta, density_graph):
     
     n_center = idx_centers.shape[0]
     n_sample = nn_delta.shape[0]
-    cluster_label = -1*np.ones(n_sample,dtype=np.int) # reinitialized every time.
+    cluster_label = -1*np.ones(n_sample,dtype=int) # reinitialized every time.
     
     for c, label in zip(idx_centers, range(n_center) ):
         cluster_label[c] = label
