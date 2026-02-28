@@ -120,7 +120,6 @@ class KDE():
         """
         from scipy.optimize import fminbound
         X_train, X_test = train_test_split(X, test_size = self.test_ratio_size)
-        args = (X_test,)
 
         hest, hmin, hmax = self.bandwidth_estimate(X_train, X_test)
 
@@ -137,6 +136,7 @@ class KDE():
         self.kde.fit(X_train)
 
         # hmax is the upper bound, however, heuristically it appears to always be way above the actual bandwidth. hmax*0.2 seems much better but still convservative
+        args = (X_test, X_train)
         h_optimal, score_opt, _, niter = fminbound(self.log_likelihood_test_set, hmin, hmax*0.2, args, maxfun=100, xtol=self.xtol, full_output=True)
         
         print("[kde] Found log-likelihood maximum in %i evaluations, h = %.5f"%(niter, h_optimal))
@@ -148,12 +148,12 @@ class KDE():
         return h_optimal
 
     #@profile
-    def log_likelihood_test_set(self, bandwidth: float, X_test: NDArray[np.float64]) -> float:
+    def log_likelihood_test_set(self, bandwidth: float, X_test: NDArray[np.float64], X_train: NDArray[np.float64]) -> float:
         """Fit the kde model on the training set given some bandwidth and evaluates the negative log-likelihood of the test set
         """
-        self.kde.bandwidth = bandwidth
-        #l_test = len(X_test)
-        return -self.kde.score(X_test[:2000])#X_test[np.random.choice(np.arange(0, l_test), size=min([int(0.5*l_test), 1000]), replace=False)]) # this should be accurate enough !
+        self.kde.set_params(bandwidth=bandwidth)
+        self.kde.fit(X_train)
+        return -self.kde.score(X_test[:2000])
 
 def round_float(x: float) -> float:
     """ Rounds a float to it's first significant digit
