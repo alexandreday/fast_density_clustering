@@ -3,6 +3,7 @@ import pytest
 
 from fdc.fdc import index_greater, chunkIt
 from fdc.density_estimation import round_float
+from fdc.utils import transform
 
 
 class TestIndexGreater:
@@ -55,3 +56,21 @@ class TestRoundFloat:
 
     def test_returns_float(self):
         assert isinstance(round_float(0.0056), float)
+
+
+class TestTransform:
+    def test_identity_transform(self):
+        X = np.arange(6.0).reshape(2, 3)
+        result = transform(X, [(lambda x: x, slice(None))])
+        np.testing.assert_array_equal(result, X)
+
+    def test_scaling_transform(self):
+        X = np.ones((3, 2))
+        result = transform(X, [(lambda x: x * 5, slice(None))])
+        np.testing.assert_array_equal(result, np.full((3, 2), 5.0))
+
+    def test_does_not_modify_original(self):
+        X = np.array([[1.0, 2.0], [3.0, 4.0]])
+        original = X.copy()
+        transform(X, [(lambda x: x * 0, slice(None))])
+        np.testing.assert_array_equal(X, original)
