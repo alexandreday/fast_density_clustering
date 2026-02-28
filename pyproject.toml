@@ -28,6 +28,7 @@ plotting = ["matplotlib>=3.4"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "mypy>=1.8",
 ]
 
 [tool.pytest.ini_options]
@@ -40,3 +41,14 @@ Repository = "https://github.com/alexandreday/fast_density_clustering"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["fdc*"]
+
+[tool.mypy]
+python_version = "3.9"
+files = ["fdc/fdc.py", "fdc/density_estimation.py"]
+disallow_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "scipy.*"]
+ignore_missing_imports = true

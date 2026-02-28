@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KernelDensity, NearestNeighbors
 
@@ -26,9 +29,17 @@ class KDE():
         ratio of the test size for determining the bandwidth.
     """
 
-    def __init__(self, bandwidth = None, test_ratio_size = 0.1,
-                xtol = 0.01, atol=0.000005, rtol=0.00005, extreme_dist = False,
-                nn_dist = None, kernel = 'gaussian'):
+    def __init__(
+        self,
+        bandwidth: float | None = None,
+        test_ratio_size: float = 0.1,
+        xtol: float = 0.01,
+        atol: float = 0.000005,
+        rtol: float = 0.00005,
+        extreme_dist: bool = False,
+        nn_dist: NDArray[np.float64] | None = None,
+        kernel: str = 'gaussian',
+    ) -> None:
                 
         self.bandwidth = bandwidth
         self.test_ratio_size = test_ratio_size
@@ -40,7 +51,7 @@ class KDE():
         self.kernel = kernel # epanechnikov other option
     
     
-    def fit(self, X):
+    def fit(self, X: NDArray[np.float64]) -> KDE:
         """Fit kernel model to X"""
         if X.shape[1] > 8 :
             print('Careful, you are trying to do density estimation for data in a D > 8 dimensional space\n ... you are warned !')
@@ -57,7 +68,7 @@ class KDE():
         self.kde.fit(X)
         return self
 
-    def evaluate_density(self, X):
+    def evaluate_density(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         """Given an array of data, computes the local density of every point using kernel density estimation
 
         Input
@@ -72,7 +83,7 @@ class KDE():
         """
         return self.kde.score_samples(X)
     
-    def bandwidth_estimate(self, X_train, X_test):
+    def bandwidth_estimate(self, X_train: NDArray[np.float64], X_test: NDArray[np.float64]) -> tuple[float, float, float]:
         """Gives a rough estimate of the optimal bandwidth (based on the notion of some effective neigborhood)
         
         Return
@@ -104,7 +115,7 @@ class KDE():
         h_est = 10*h_min 
         return h_est, h_min, h_max
     
-    def find_optimal_bandwidth(self, X):
+    def find_optimal_bandwidth(self, X: NDArray[np.float64]) -> float:
         """Performs maximum likelihood estimation on a test set of the density model fitted on a training set
         """
         from scipy.optimize import fminbound
@@ -137,14 +148,14 @@ class KDE():
         return h_optimal
 
     #@profile
-    def log_likelihood_test_set(self, bandwidth, X_test):
+    def log_likelihood_test_set(self, bandwidth: float, X_test: NDArray[np.float64]) -> float:
         """Fit the kde model on the training set given some bandwidth and evaluates the negative log-likelihood of the test set
         """
         self.kde.bandwidth = bandwidth
         #l_test = len(X_test)
         return -self.kde.score(X_test[:2000])#X_test[np.random.choice(np.arange(0, l_test), size=min([int(0.5*l_test), 1000]), replace=False)]) # this should be accurate enough !
 
-def round_float(x):
+def round_float(x: float) -> float:
     """ Rounds a float to it's first significant digit
     """
     a = list(str(x))

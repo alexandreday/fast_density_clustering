@@ -9,7 +9,12 @@ Last major update : June 29, 2017
 '''
 
 
+from __future__ import annotations
+
+from typing import Iterable, Literal
+
 import numpy as np
+from numpy.typing import NDArray
 import time
 import sys, os
 from .density_estimation import KDE
@@ -75,17 +80,23 @@ class FDC:
         Type of Kernel to use for density estimates. Other options are {'epanechnikov'|'linear','tophat'}.
     """
 
-    def __init__(self, nh_size='auto', eta=0.5,
-                random_state=0, test_ratio_size=0.8, verbose=1, bandwidth=None,
-                merge=True,
-                atol=0.01,
-                rtol=0.0001,
-                xtol=0.01,
-                search_size = 20,
-                n_cluster_init = None,
-                kernel = 'gaussian',
-                n_job='auto'
-    ):
+    def __init__(
+        self,
+        nh_size: int | Literal['auto'] = 'auto',
+        eta: float = 0.5,
+        random_state: int = 0,
+        test_ratio_size: float = 0.8,
+        verbose: int = 1,
+        bandwidth: float | None = None,
+        merge: bool = True,
+        atol: float = 0.01,
+        rtol: float = 0.0001,
+        xtol: float = 0.01,
+        search_size: int = 20,
+        n_cluster_init: int | None = None,
+        kernel: str = 'gaussian',
+        n_job: int | Literal['auto'] = 'auto',
+    ) -> None:
         
         self.test_ratio_size = test_ratio_size
         self.random_state = random_state
@@ -97,24 +108,30 @@ class FDC:
         self.atol = atol
         self.rtol = rtol
         self.xtol = xtol 
-        self.cluster_label = None
+        self.cluster_label: NDArray[np.int_] | None = None
         self.search_size = search_size
         self.n_cluster_init = n_cluster_init
         self.kernel = kernel
-        self.nbrs= None
-        self.nn_dist= None
-        self.nn_list= None
-        self.density_model = None
+        self.nbrs: NearestNeighbors | None = None
+        self.nn_dist: NDArray[np.float64] | None = None
+        self.nn_list: NDArray[np.int_] | None = None
+        self.density_model: KDE | None = None
+        self.X: NDArray[np.float64] | None = None
+        self.rho: NDArray[np.float64] | None = None
+        self.delta: NDArray[np.float64] | None = None
+        self.nn_delta: NDArray[np.int_] | None = None
+        self.idx_centers: NDArray[np.int_] | None = None
+        self.idx_centers_unmerged: NDArray[np.int_] | None = None
+        self.density_graph: list[list[int]] | None = None
 
         if n_job == 'auto':
-            self.n_job=multiprocessing.cpu_count()
+            self.n_job = multiprocessing.cpu_count()
+        elif n_job > multiprocessing.cpu_count():
+            self.n_job = multiprocessing.cpu_count()
         else:
-            if n_job > multiprocessing.cpu_count():
-                self.n_job=multiprocessing.cpu_count()
-            else:
-                self.n_job=n_job
+            self.n_job = n_job
 
-    def fit(self, X):
+    def fit(self, X: NDArray[np.float64]) -> FDC:
         """ Performs density clustering on given data set
 
         Parameters
@@ -138,6 +155,7 @@ class FDC:
 
         if self.nh_size == 'auto':
             self.nh_size = max([int(25*np.log10(self.n_sample)), 10])
+        assert isinstance(self.nh_size, int)
 
         if self.search_size > self.nh_size:
             self.search_size = self.nh_size
@@ -155,7 +173,10 @@ class FDC:
 
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
-            
+        assert self.idx_centers_unmerged is not None
+        assert self.nn_delta is not None
+        assert self.density_graph is not None
+
         print("[fdc] Found %i potential centers ..." % self.idx_centers_unmerged.shape[0])
 
         # temporary idx for the centers :
@@ -175,7 +196,7 @@ class FDC:
 
         return self
 
-    def save(self, name=None):
+    def save(self, name: str | None = None) -> str:
         """ Saves current model to specified path 'name' """
         if name is None:
             fname = self.make_file_name()
@@ -187,7 +208,7 @@ class FDC:
         fopen.close()
         return fname
         
-    def load(self, name=None):
+    def load(self, name: str | None = None) -> FDC:
         if name is None:
             name = self.make_file_name()
 
@@ -195,7 +216,7 @@ class FDC:
         return self
 
 
-    def fit_density(self, X):
+    def fit_density(self, X: NDArray[np.float64]) -> FDC:
 
         # nearest neighbors class        
         self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
@@ -224,8 +245,8 @@ class FDC:
 
             for i in range(self.n_job):
                 results.append(p.apply_async(self.f_tmp, [X[idx_split[i][0]:idx_split[i][1]], i]))
-            results = [res.get() for res in results]
-            asort = np.argsort([results[i][0] for i in range(self.n_job)]) # reordering
+            results = [res.get() for res in results]  # type: ignore[misc]
+            asort = np.argsort([results[i][0] for i in range(self.n_job)])  # type: ignore[index]
             #print(asort)
             self.rho=np.hstack([results[a][1] for a in asort])
 
@@ -235,12 +256,13 @@ class FDC:
 
         return self        
     
-    def f_tmp(self, X_, i_):
+    def f_tmp(self, X_: NDArray[np.float64], i_: int) -> tuple[int, NDArray[np.float64]]:
         """evaluating density and keeping track of threading order"""
+        assert self.density_model is not None
         return (i_, self.density_model.evaluate_density(X_))
 
     #@profile
-    def coarse_grain(self, noise_iterable):
+    def coarse_grain(self, noise_iterable: Iterable[float]) -> FDC:
         """Started from an initial noise scale, progressively merges clusters.
         If specified, saves the cluster assignments at every level of the coarse graining.
 
@@ -256,15 +278,17 @@ class FDC:
         self
         
         """
+        assert self.X is not None
+        assert self.idx_centers is not None
         if self.verbose == 0:
             blockPrint()
-        
+
         print("[fdc] Coarse graining until desired noise threshold ...")
 
         noise_range = [n for n in noise_iterable]
             
         #hierarchy = []
-        self.max_noise = -1
+        self.max_noise: float = -1
         n_cluster = 0
 
         # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
@@ -291,7 +315,7 @@ class FDC:
         return self 
     
     #@profile
-    def compute_delta(self, X, rho = None):
+    def compute_delta(self, X: NDArray[np.float64], rho: NDArray[np.float64] | None = None) -> FDC:
         """
         Purpose:
             Computes distance to nearest-neighbor with higher density
@@ -306,20 +330,23 @@ class FDC:
         """
 
         if rho is None:
+            assert self.rho is not None
             rho = self.rho
+        assert self.nn_list is not None
+        assert self.nn_dist is not None
 
         n_sample, n_feature = X.shape
 
         maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
         delta = maxdist*np.ones(n_sample, dtype=float)
         nn_delta = np.ones(n_sample, dtype=int)
-        
-        density_graph = [[] for i in range(n_sample)] # store incoming leaves
-        
+
+        density_graph: list[list[int]] = [[] for i in range(n_sample)] # store incoming leaves
+
         ### ----------->
         nn_list = self.nn_list # restricted over neighborhood (nh_size)
         ### ----------->
-        
+
         for i in range(n_sample):
             idx = index_greater(rho[nn_list[i]])
             if idx:
@@ -338,10 +365,12 @@ class FDC:
 
         return self
     
-    def estimate_eta(self):
+    def estimate_eta(self) -> float:
         """ Based on the density distribution, computes a scale for eta
         Need more experimenting, this is not quite working ...
-        """ 
+        """
+        assert self.rho is not None
+        assert self.nn_delta is not None
         idx = int(self.n_sample/10.)
         idx = np.argsort(self.rho)[:-5*idx]#[2:idx:4*idx]
         drho = []
@@ -357,23 +386,26 @@ class FDC:
         """ plt.his(drho,bins=60)
         plt.show()
         exit() """
-        eta = np.mean(drho)#+0.5*np.std(drho)
+        eta = float(np.mean(drho))#+0.5*np.std(drho)
 
         self.cout("Using std eta of %.3f"%eta)
 
         return eta
 
 
-    def check_cluster_stability_fast(self, X, eta = None): # given 
+    def check_cluster_stability_fast(self, X: NDArray[np.float64], eta: float | None = None) -> None:
+        assert self.idx_centers_unmerged is not None
+        assert self.nn_delta is not None
+        assert self.density_graph is not None
         if self.verbose == 0:
             blockPrint()
 
         if eta is None:
-            eta =  self.eta
+            eta = self.eta
 
-        while True: # iterates untill number of cluster does not change ... 
+        while True: # iterates untill number of cluster does not change ...
 
-            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments 
+            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments
             self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta)
             self.idx_centers_unmerged = self.idx_centers
 
@@ -400,12 +432,12 @@ class FDC:
         self.cluster_label = cluster_label """
 
     #@profile
-    def find_NH_tree_search(self, idx, eta, cluster_label):
+    def find_NH_tree_search(self, idx: int, eta: float, cluster_label: NDArray[np.int_]) -> NDArray[np.int_]:
         """
-        Function for searching for nearest neighbors within some density threshold. 
+        Function for searching for nearest neighbors within some density threshold.
         NH should be an empty set for the inital function call.
         Note to myself : lots of optimization, this is pretty time/memory consumming !
-        
+
         Parameters
         -----------
         idx : int
@@ -414,17 +446,19 @@ class FDC:
             maximum density you can spill over (this is "density_center - eta")
         cluster_label: array of int
             cluster label for every datapoint.
-    
+
         Returns
         -----------
         List of points in the neighborhood of point idx : 1D array
         """
+        assert self.rho is not None
+        assert self.nn_list is not None
         rho = self.rho
 
-        zero_array = np.zeros(len(self.nn_list),dtype=bool)
+        zero_array: NDArray[np.bool_] = np.zeros(len(self.nn_list), dtype=bool)
 
         nn_list = self.nn_list
-        
+
         zero_array[nn_list[idx, :self.search_size]] = True
 
         new_leaves = zero_array
@@ -464,25 +498,26 @@ class FDC:
 
         return np.where(is_NH)[0]
 
-    def find_NH_tree_search_v1(self, idx, eta, cluster_label):
+    def find_NH_tree_search_v1(self, idx: int, eta: float, cluster_label: NDArray[np.int_]) -> NDArray[np.int_]:
         """
         Function for searching for nearest neighbors within
-        some density threshold. 
+        some density threshold.
         NH should be an empty set for the inital function call.
 
         Note to myself : lots of optimization, this is pretty time consumming !
-        
+
         Returns
         -----------
         List of points in the neighborhood of point idx : 1D array
         """
+        assert self.rho is not None
+        assert self.nn_list is not None
         rho = self.rho
         nn_list = self.nn_list
-        
-        
+
         new_leaves=nn_list[idx][:self.search_size]
-        
-        is_NH = np.zeros(len(self.nn_list),dtype=int)
+
+        is_NH: NDArray[np.int_] = np.zeros(len(self.nn_list), dtype=int)
 
         is_NH[new_leaves[rho[new_leaves] > eta]] = 1
   
@@ -513,10 +548,10 @@ class FDC:
 
         return np.where(is_NH == 1)[0]
 
-    def cout(self, s):
+    def cout(self, s: str) -> None:
         print('[fdc] '+s)
 
-    def make_file_name(self):
+    def make_file_name(self) -> str:
         t_name = "fdc_nhSize=%i_eta=%.3f_ratio=%.2f.pkl"
         return t_name%(self.nh_size, self.eta, self.test_ratio_size)
 
@@ -527,11 +562,12 @@ class FDC:
             NH = self.find_NH_tree_search(idx, eta, cluster_label)
             label_centers_nn = np.unique([cluster_label[ni] for ni in NH]) """
 
-    def display_main_parameters(self):
+    def display_main_parameters(self) -> None:
+        assert isinstance(self.nh_size, int)
         if self.eta != 'auto':
-            eta = "%.3f"%self.eta
+            eta: str = "%.3f" % self.eta
         else:
-            eta = self.eta
+            eta = str(self.eta)
         out = [
         "[fdc] {0:<20s}{1:<4s}{2:<6d}".format("nh_size",":",self.nh_size),
         "[fdc] {0:<20s}{1:<4s}{2:<6s}".format("eta",":",eta),
@@ -542,7 +578,7 @@ class FDC:
         for o in out:
             print(o)
 
-    def reset(self):
+    def reset(self) -> None:
         self.bandwidth = None
 
 #####################################################
@@ -551,7 +587,7 @@ class FDC:
 #####################################################
 #####################################################
 
-def check_cluster_stability(self, X, threshold): 
+def check_cluster_stability(self: FDC, X: NDArray[np.float64], threshold: float) -> tuple[NDArray[np.int_], int]:
     """
     Given the identified cluster centers, performs a more rigourous
     neighborhood search (based on some noise threshold) for points with higher densities.
@@ -561,12 +597,19 @@ def check_cluster_stability(self, X, threshold):
     This has bad memory complexity, needs improvement if we want to run on N>10^5 data points.
     """
 
+    assert self.density_graph is not None
+    assert self.nn_delta is not None
+    assert self.delta is not None
+    assert self.rho is not None
+    assert self.nn_list is not None
+    assert self.idx_centers_unmerged is not None
+    assert self.cluster_label is not None
     density_graph = self.density_graph
     nn_delta = self.nn_delta
     delta = self.delta
     rho = self.rho
     nn_list = self.nn_list
-    idx_centers = self.idx_centers_unmerged 
+    idx_centers = self.idx_centers_unmerged
     cluster_label = self.cluster_label
 
     n_false_pos = 0             
@@ -598,7 +641,7 @@ def check_cluster_stability(self, X, threshold):
         
     return np.array(idx_true_centers,dtype=int), n_false_pos
 
-def assign_cluster(idx_centers, nn_delta, density_graph):
+def assign_cluster(idx_centers: NDArray[np.int_], nn_delta: NDArray[np.int_], density_graph: list[list[int]]) -> NDArray[np.int_]:
     """ 
     Given the cluster centers and the local gradients (nn_delta) assign to every
     point a cluster label
@@ -613,7 +656,7 @@ def assign_cluster(idx_centers, nn_delta, density_graph):
         assign_cluster_deep(density_graph[c], cluster_label, density_graph, label)    
     return cluster_label    
 
-def assign_cluster_deep(root,cluster_label,density_graph,label):
+def assign_cluster_deep(root: list[int], cluster_label: NDArray[np.int_], density_graph: list[list[int]], label: int) -> None:
     """
     Recursive function for assigning labels for a tree graph.
     Stopping condition is met when the root is empty (i.e. a leaf has been reached)
@@ -626,7 +669,7 @@ def assign_cluster_deep(root,cluster_label,density_graph,label):
             cluster_label[child]=label
             assign_cluster_deep(density_graph[child],cluster_label,density_graph,label)
         
-def index_greater(array, prec=1e-8):
+def index_greater(array: NDArray[np.float64], prec: float = 1e-8) -> int | None:
     """
     Purpose:
         Function for finding first item in an array that has a value greater than the first element in that array
@@ -639,21 +682,21 @@ def index_greater(array, prec=1e-8):
     item=array[0]
     for idx, val in np.ndenumerate(array): # slow ! : could be cythonized
         if val > (item + prec):
-            return idx[0]
+            return int(idx[0])
+    return None
 
-def blockPrint():
+def blockPrint() -> None:
     """Blocks printing to screen"""
     sys.stdout = open(os.devnull, 'w')
 
-def enablePrint():
+def enablePrint() -> None:
     """Enables printing to screen"""
     sys.stdout = sys.__stdout__
 
-def chunkIt(length_seq, num):
+def chunkIt(length_seq: int, num: int) -> list[list[int]]:
     avg = length_seq / float(num)
-    out = []
     last = 0.0
-    idx_list = []
+    idx_list: list[list[int]] = []
 
     while last < length_seq:
         idx_list.append([int(last),int(last + avg)])
