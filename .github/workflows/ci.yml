@@ -25,7 +25,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv pip install --system -e ".[dev,plotting]"
 
       - name: Run tests
         run: pytest -v
@@ -45,7 +45,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv pip install --system -e ".[dev,plotting]"
 
       - name: Run mypy
         run: mypy fdc/fdc.py fdc/density_estimation.py

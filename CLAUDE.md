@@ -16,11 +16,13 @@ uv pip install -e ".[dev,plotting]"
 ```
 
 ## Key commands
+Always run commands inside the uv virtual environment. Prefix with `uv run` or activate first:
+
 ```bash
-pytest -v                        # run all tests
-pytest tests/test_fdc.py -v      # run a specific test file
-python example/example.py        # run the main example
-python example/benchmark_sklearn.py  # run sklearn benchmark
+uv run pytest -v                            # run all tests
+uv run pytest tests/test_fdc.py -v          # run a specific test file
+uv run python example/example.py            # run the main example
+uv run python example/benchmark_sklearn.py  # run sklearn benchmark
 ```
 
 ## Repo layout
