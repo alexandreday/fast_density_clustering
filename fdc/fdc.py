@@ -11,11 +11,9 @@ Last major update : June 29, 2017
 
 import numpy as np
 import time
-from numpy.random import random
 import sys, os
 from .density_estimation import KDE
 import pickle
-from collections import OrderedDict as OD
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing
     
@@ -344,8 +342,6 @@ class FDC:
         """ Based on the density distribution, computes a scale for eta
         Need more experimenting, this is not quite working ...
         """ 
-        from matplotlib import pyplot as plt
-
         idx = int(self.n_sample/10.)
         idx = np.argsort(self.rho)[:-5*idx]#[2:idx:4*idx]
         drho = []

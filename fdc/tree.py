@@ -1,11 +1,7 @@
-from .fdc import FDC
 from .classify import CLF
 import numpy as np
 import pickle
-from scipy.cluster.hierarchy import dendrogram as scipydendroed
-from scipy.cluster.hierarchy import to_tree
-from .hierarchy import compute_linkage_matrix
-import copy
+import pandas as pd
 from collections import OrderedDict as OD
 from collections import Counter
 

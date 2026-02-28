@@ -8,7 +8,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.patheffects as PathEffects
 from .mycolors import COLOR_PALETTE
-from .fdc import FDC
 import math
 
 def set_nice_font(size = 18, usetex=False):

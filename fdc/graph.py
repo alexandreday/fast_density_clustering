@@ -347,17 +347,12 @@ def edge_info(edge_tuple, cv_score, std_score, min_score):
     else:
         out = "[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6.5f}".format("reject edge ",edge_str,"score =",cv_score,"\t+-",std_score)
     print(out)
-    self.fout.write(out)
-
-    
 
 def merge_info(c1, c2, score, new_c, n_cluster):
     edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(c1," -- ",c2)
     out = "[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6d}{6:>15s}{7:>5d}".format("merge edge ",edge_str,"score - std =",score,
     "\tnew label ->",new_c,'n_cluster=',n_cluster)
     print(out)
-    self.fout.write(out)
-
 
 def decision_graph(merging_hist):
     plt.rc('text', usetex=True)

@@ -1,3 +1,5 @@
+import numpy as np
+
 def transform(X, transform_list):
     Xnew = np.copy(X)
     for f, c in transform_list:

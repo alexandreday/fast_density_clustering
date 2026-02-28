@@ -2,7 +2,6 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 import numpy as np
-from collections import Counter
 
 def most_common(lst):
     return max(set(lst), key=lst.count)
@@ -137,7 +136,7 @@ class CLF:
 
     def predict(self, X, option='fast'):
         """Returns labels for X (-1, 1)"""
-        if option is 'fast':
+        if option == 'fast':
             mu, inv_sigma = self.scaler_list[0]
             return self.clf_list[0].predict(inv_sigma*(X-mu))
 

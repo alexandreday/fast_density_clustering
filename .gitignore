@@ -20,6 +20,15 @@ test2.py
 .DS_Store
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+# Generated output files
+result.png
+sklearn_datasets.png
+example/benchmark_sklearn.png
+
+# Dependency lockfile (not needed for library installs)
+uv.lock
 fdc/testing/*
 example_cytof
 
