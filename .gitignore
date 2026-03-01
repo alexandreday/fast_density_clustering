@@ -1,4 +1,6 @@
 dev/*
+!dev/*.py
+!dev/*.ipynb
 test_cython/*
 *.pdf
 graph_test
