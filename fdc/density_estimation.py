@@ -38,7 +38,7 @@ class KDE():
         rtol: float = 0.00005,
         extreme_dist: bool = False,
         nn_dist: NDArray[np.float64] | None = None,
-        kernel: str = 'gaussian',
+        kernel: str = 'epanechnikov',
         random_state: int | None = None,
     ) -> None:
 

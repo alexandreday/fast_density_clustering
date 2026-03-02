@@ -76,8 +76,8 @@ class FDC:
         when performing search over neighborhoods, size of each local neighborhood to check when
         expanding. This drastically slows the coarse-graining if chosen to be too big !
 
-    kernel: str, optional (default='gaussian')
-        Type of Kernel to use for density estimates. Other options are {'epanechnikov'|'linear','tophat'}.
+    kernel: str, optional (default='epanechnikov')
+        Type of Kernel to use for density estimates. Other options are {'gaussian'|'linear','tophat'}.
     """
 
     def __init__(
@@ -94,7 +94,7 @@ class FDC:
         xtol: float = 0.01,
         search_size: int = 20,
         n_cluster_init: int | None = None,
-        kernel: str = 'gaussian',
+        kernel: str = 'epanechnikov',
         n_job: int | Literal['auto'] = 'auto',
     ) -> None:
 
