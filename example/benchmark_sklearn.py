@@ -48,7 +48,7 @@ dataset_list  = [noisy_circles, noisy_moons, varied, aniso, blobs, no_structure]
 def make_algorithms(X):
     bw = estimate_bandwidth(X, quantile=0.2, n_samples=500)
     return {
-        "FDC":       FDC(eta=0.1, verbose=0),
+        "FDC":       FDC(eta=0.6, verbose=0, random_state=43),
         "DBSCAN":    DBSCAN(eps=0.3, min_samples=5),
         "HDBSCAN":   HDBSCAN(min_cluster_size=15),
         "OPTICS":    OPTICS(min_samples=10, xi=0.05, min_cluster_size=0.05),
@@ -61,7 +61,9 @@ def make_algorithms(X):
 algo_names = ["FDC", "DBSCAN", "HDBSCAN", "OPTICS", "MeanShift"]
 
 # results[dataset][algo] = (ari, runtime)
+# pred_labels[dataset][algo] = predicted labels (reused for plotting)
 results = {d: {} for d in dataset_names}
+pred_labels = {d: {} for d in dataset_names}
 
 for ds_name, (X, y_true) in zip(dataset_names, dataset_list):
     X = StandardScaler().fit_transform(X)
@@ -73,10 +75,12 @@ for ds_name, (X, y_true) in zip(dataset_names, dataset_list):
         algo.fit(X)
         dt = time.time() - t0
 
+        labels = algo.cluster_label if hasattr(algo, "cluster_label") else algo.labels_
+        pred_labels[ds_name][algo_name] = labels
+
         if y_true is None:
             ari = float("nan")
         else:
-            labels = algo.cluster_label if hasattr(algo, "cluster_label") else algo.labels_
             ari = adjusted_rand_score(y_true, labels)
 
         results[ds_name][algo_name] = (ari, dt)
@@ -130,19 +134,13 @@ n_alg = len(algo_names)
 fig, axes = plt.subplots(n_ds, n_alg, figsize=(n_alg * 2.8, n_ds * 2.2))
 fig.subplots_adjust(hspace=0.45, wspace=0.15)
 
-# re-run to get labels for plotting (store them this time)
-np.random.seed(42)
-dataset_list_plot = [noisy_circles, noisy_moons, varied, aniso, blobs, no_structure]
-
-for row, (ds_name, (X_raw, y_true)) in enumerate(zip(dataset_names, dataset_list_plot)):
+# Reuse stored labels from the first run (no re-fitting needed)
+for row, (ds_name, (X_raw, y_true)) in enumerate(zip(dataset_names, dataset_list)):
     X = StandardScaler().fit_transform(X_raw)
-    algos = make_algorithms(X)
 
     for col, algo_name in enumerate(algo_names):
         ax = axes[row][col]
-        algo = algos[algo_name]
-        algo.fit(X)
-        labels = algo.cluster_label if hasattr(algo, "cluster_label") else algo.labels_
+        labels = pred_labels[ds_name][algo_name]
 
         ari, dt = results[ds_name][algo_name]
 

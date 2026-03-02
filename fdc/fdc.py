@@ -226,7 +226,8 @@ class FDC:
 
         # density model class
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
-            atol=self.atol, rtol=self.rtol, xtol=self.xtol, nn_dist = self.nn_dist, kernel=self.kernel)
+            atol=self.atol, rtol=self.rtol, xtol=self.xtol, nn_dist=self.nn_dist, kernel=self.kernel,
+            random_state=self.random_state)
         
         # fit density model to data
         self.density_model.fit(X)

@@ -39,8 +39,9 @@ class KDE():
         extreme_dist: bool = False,
         nn_dist: NDArray[np.float64] | None = None,
         kernel: str = 'gaussian',
+        random_state: int | None = None,
     ) -> None:
-                
+
         self.bandwidth = bandwidth
         self.test_ratio_size = test_ratio_size
         self.xtol = xtol
@@ -49,6 +50,7 @@ class KDE():
         self.extreme_dist = extreme_dist
         self.nn_dist = nn_dist
         self.kernel = kernel # epanechnikov other option
+        self.random_state = random_state
     
     
     def fit(self, X: NDArray[np.float64]) -> KDE:
@@ -119,7 +121,7 @@ class KDE():
         """Performs maximum likelihood estimation on a test set of the density model fitted on a training set
         """
         from scipy.optimize import fminbound
-        X_train, X_test = train_test_split(X, test_size = self.test_ratio_size)
+        X_train, X_test = train_test_split(X, test_size=self.test_ratio_size, random_state=self.random_state)
 
         hest, hmin, hmax = self.bandwidth_estimate(X_train, X_test)
 
