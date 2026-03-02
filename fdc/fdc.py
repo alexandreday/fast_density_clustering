@@ -97,7 +97,7 @@ class FDC:
         kernel: str = 'gaussian',
         n_job: int | Literal['auto'] = 'auto',
     ) -> None:
-        
+
         self.test_ratio_size = test_ratio_size
         self.random_state = random_state
         self.verbose = verbose
@@ -107,7 +107,7 @@ class FDC:
         self.merge = merge
         self.atol = atol
         self.rtol = rtol
-        self.xtol = xtol 
+        self.xtol = xtol
         self.cluster_label: NDArray[np.int_] | None = None
         self.search_size = search_size
         self.n_cluster_init = n_cluster_init
@@ -364,7 +364,7 @@ class FDC:
         self.density_graph = density_graph
 
         return self
-    
+
     def estimate_eta(self) -> float:
         """ Based on the density distribution, computes a scale for eta
         Need more experimenting, this is not quite working ...
@@ -462,9 +462,9 @@ class FDC:
         zero_array[nn_list[idx, :self.search_size]] = True
 
         new_leaves = zero_array
-        
+
         is_NH = (rho > eta) & (new_leaves)
-  
+
         current_label = cluster_label[idx]
 
         # This could probably be improved, but at least it's fully vectorized and scalable (NlogN in time and N in memory)
@@ -472,16 +472,16 @@ class FDC:
         while True:
 
             update = False
-            
+
             leaves=np.copy(new_leaves)
-            
+
             #y_leave = cluster_label[leaves]
 
             leaves_cluster = (leaves) & (cluster_label == current_label)
 
             new_leaves=np.zeros(len(self.nn_list), dtype=bool)
-  
-            nn_leaf = np.unique(nn_list[leaves_cluster][:self.search_size].flatten())
+
+            nn_leaf = np.unique(nn_list[leaves_cluster, :self.search_size].flatten())
             
             res = nn_leaf[is_NH[nn_leaf]==False]
             

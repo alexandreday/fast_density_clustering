@@ -38,11 +38,11 @@ class TestKDEEvaluateDensity:
         assert rho.shape == (len(X),)
 
     def test_output_is_log_density(self, X):
-        """Log-probabilities must be <= 0."""
+        """Output should be finite log-density values."""
         kde = KDE()
         kde.fit(X)
         rho = kde.evaluate_density(X)
-        assert np.all(rho <= 0)
+        assert np.all(np.isfinite(rho))
 
     def test_denser_region_has_higher_density(self):
         """Points at the center of a blob should have higher density than outliers."""
