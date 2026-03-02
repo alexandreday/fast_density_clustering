@@ -67,6 +67,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs `pytest` on Python 3.9, 3.11, a
 - Do not edit `fdc/tree_old.py` — it is dead legacy code pending deletion
 - Do not over-engineer: no extra abstraction layers, no feature flags, no speculative futures
 - Do not add docstrings or comments to code you didn't change
+- Do not add Claude as co-author in commit messages
 
 ## Modernization roadmap
 The project is being brought up to date incrementally:
