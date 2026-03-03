@@ -30,6 +30,11 @@ dev = [
     "pytest-cov>=4.0",
     "mypy>=1.8",
 ]
+benchmark = [
+    "clustering-benchmarks>=1.1",
+    "tabulate>=0.9",
+    "matplotlib>=3.4",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -28,6 +28,8 @@ __pycache__/
 result.png
 sklearn_datasets.png
 example/benchmark_sklearn.png
+# Benchmark output (except committed result images)
+benchmarks/benchmark_scaling.png
 
 # Dependency lockfile (not needed for library installs)
 uv.lock
