@@ -5,6 +5,7 @@ A Python package for efficiently clustering low-dimensional data using kernel de
 - Works without specifying the number of clusters upfront
 - Handles non-convex clusters and multiscale problems (varying densities, population sizes)
 - O(n log n) time and O(n) memory complexity via KD-tree nearest-neighbor search
+- Adaptive neighborhood sizing: automatically adjusts to the data's density scale using the optimized KDE bandwidth
 - Regularized by two interpretable parameters: neighborhood size and noise threshold
 
 ## Installation

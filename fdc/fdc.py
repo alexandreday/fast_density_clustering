@@ -154,7 +154,10 @@ class FDC:
             assert False, "Too few samples for computing densities !"
 
         if self.nh_size == 'auto':
-            self.nh_size = max([int(25*np.log10(self.n_sample)), 10])
+            # Start with a generous neighborhood for k-NN computation;
+            # after bandwidth optimization, it will be adaptively trimmed
+            # to neighbors within a few bandwidths.
+            self.nh_size = max(int(25*np.log10(self.n_sample)), 10)
         assert isinstance(self.nh_size, int)
 
         if self.search_size > self.nh_size:
@@ -169,6 +172,11 @@ class FDC:
 
         print("[fdc] Fitting kernel model for density estimation ...")
         self.fit_density(X)
+
+        # Adaptively restrict neighborhood to neighbors within a few bandwidths.
+        # This prevents the neighborhood from bleeding across cluster boundaries
+        # when nh_size (set by the auto heuristic) is larger than the cluster size.
+        self._adaptive_trim_neighbors()
 
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
@@ -307,6 +315,41 @@ class FDC:
 
         return self 
     
+    def _adaptive_trim_neighbors(self, alpha: float = 2.0, min_nh: int = 10) -> None:
+        """Restrict nn_list/nn_dist to neighbors within alpha * bandwidth.
+
+        After bandwidth optimization, we know the natural length scale of the
+        density.  Neighbors beyond a few bandwidths cannot belong to the same
+        local density peak, so including them in compute_delta only causes
+        cross-cluster bleeding.
+
+        Parameters
+        ----------
+        alpha : float
+            Multiplier on bandwidth to set the distance cutoff.
+        min_nh : int
+            Floor on the effective neighborhood size to avoid instability.
+        """
+        assert self.nn_dist is not None
+        assert self.nn_list is not None
+        assert self.bandwidth is not None
+
+        cutoff = alpha * self.bandwidth
+
+        # Per-point count of neighbors within cutoff
+        within = np.sum(self.nn_dist <= cutoff, axis=1)
+        effective_nh = max(int(np.median(within)), min_nh)
+
+        if effective_nh < self.nh_size:
+            print("[fdc] Adaptive neighborhood: %i -> %i (cutoff=%.3f*h=%.4f)"
+                  % (self.nh_size, effective_nh, alpha, cutoff))
+            self.nn_dist = self.nn_dist[:, :effective_nh]
+            self.nn_list = self.nn_list[:, :effective_nh]
+            self.nh_size = effective_nh
+
+            if self.search_size > self.nh_size:
+                self.search_size = self.nh_size
+
     def compute_delta(self, X: NDArray[np.float64], rho: NDArray[np.float64] | None = None) -> FDC:
         """
         Purpose:
