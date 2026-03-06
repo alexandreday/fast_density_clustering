@@ -1,6 +1,11 @@
+from __future__ import annotations
+
+from typing import Any
+
 from .fdc import FDC
 from .classify import CLF
 import numpy as np
+from numpy.typing import NDArray
 from copy import deepcopy
 from collections import Counter, OrderedDict
 from matplotlib import pyplot as plt
@@ -8,22 +13,39 @@ import pickle
 
 class DGRAPH:
     """ Check for neighbors """
-    def __init__(self, n_average = 10, cv_score = 0., test_size_ratio = 0.8, clf_type='svm', clf_args=None):
+    def __init__(
+        self,
+        n_average: int = 10,
+        cv_score: float = 0.,
+        test_size_ratio: float = 0.8,
+        clf_type: str = 'svm',
+        clf_args: dict[str, object] | None = None,
+    ) -> None:
         self.n_average = n_average
         self.cv_score_threshold = cv_score
         self.test_size_ratio = test_size_ratio
         self.clf_type = clf_type
         self.clf_args = clf_args
-        self.cluster_label = None
-        self.edge_score = OrderedDict()
+        self.cluster_label: NDArray[np.int_] | None = None
+        self.idx_centers: NDArray[np.int_] = np.array([], dtype=int)
+        self.rho_idx_centers: NDArray[np.float64] = np.array([], dtype=float)
+        self.init_n_cluster: int = 0
+        self.current_n_merge: int = 0
+        self.edge_score: OrderedDict[tuple[int, int], list[float]] = OrderedDict()
+        self.graph: OrderedDict[tuple[int, int], CLF] = OrderedDict()
+        self.nn_list: OrderedDict[int, set[int]] = OrderedDict()
+        self.history: list[list[Any]] = []
         self.fout = open('out.txt','a')
 
-    def fit(self, model:FDC, X):
+    def fit(self, model: FDC, X: NDArray[np.float64]) -> DGRAPH:
         self.find_nn_list(model) # still need to fit a density map !
         self.fit_all_clf(model, X)
         return self
     
-    def find_nn_list(self, model:FDC):
+    def find_nn_list(self, model: FDC) -> None:
+        assert model.idx_centers is not None
+        assert model.rho is not None
+        assert model.cluster_label is not None
         self.idx_centers = model.idx_centers
         self.rho_idx_centers = model.rho[self.idx_centers]
         cluster_label = model.cluster_label
@@ -32,9 +54,8 @@ class DGRAPH:
         self.init_n_cluster = len(np.unique(cluster_label))
         self.current_n_merge = 0
 
-
-        self.graph = OrderedDict() # adjacency "matrix" -> indexed by tuple
-        self.nn_list = OrderedDict() # list of neighboring clusters
+        self.graph.clear()
+        self.nn_list.clear()
 
         for idx in self.idx_centers:
             nh_idx = model.find_NH_tree_search(idx, -10, cluster_label)
@@ -55,7 +76,7 @@ class DGRAPH:
                 if k not in self.nn_list[e]:
                     self.nn_list[e].add(k)
 
-    def fit_all_clf(self, model:FDC, X):
+    def fit_all_clf(self, model: FDC, X: NDArray[np.float64]) -> None:
         """ Fit clf on all graph edges """
 
         for center_label, nn_list in self.nn_list.items():
@@ -72,9 +93,9 @@ class DGRAPH:
                     edge_info(idx_tuple, clf.cv_score, clf.cv_score_std, self.cv_score_threshold)
                     self.graph[idx_tuple] = clf
     
-    def merge_edge(self, X, edge_tuple):
+    def merge_edge(self, X: NDArray[np.float64], edge_tuple: tuple[int, int]) -> None:
         """ relabels data according to merging, and recomputing new classifiers for new edges """
-        
+        assert self.cluster_label is not None
         idx_1, idx_2 = edge_tuple
         pos_1 = (self.cluster_label == idx_1)
         pos_2 = (self.cluster_label == idx_2)
@@ -142,26 +163,27 @@ class DGRAPH:
             idx_tuple_reverse = (idx_tuple[1], idx_tuple[0])
             self.graph[idx_tuple_reverse] = self.graph[idx_tuple]
         
-        k0_update = []
-        k1_update = []
-        for k, v in self.graph.items():
-            if (k[0] == idx_1) or (k[0] == idx_2): # old index still present !
-                k0_update.append(k)        
-            elif (k[1] == idx_1) or (k[1] == idx_2):
-                k1_update.append(k)
+        k0_update: list[tuple[int, int]] = []
+        k1_update: list[tuple[int, int]] = []
+        for gk, gv in self.graph.items():
+            if (gk[0] == idx_1) or (gk[0] == idx_2): # old index still present !
+                k0_update.append(gk)
+            elif (gk[1] == idx_1) or (gk[1] == idx_2):
+                k1_update.append(gk)
         
         for k0 in k0_update:
             self.graph[(new_cluster_label, k0[1])] = self.graph.pop(k0)
         for k1 in k1_update:
             self.graph[(k1[0], new_cluster_label)] = self.graph.pop(k1)
 
-    def merge_until_robust(self, X, cv_robust):
+    def merge_until_robust(self, X: NDArray[np.float64], cv_robust: float) -> None:
+        assert self.cluster_label is not None
         self.history = []
-    
+
         while True:
             all_robust = True
-            worst_effect_cv = 10
-            worst_edge = -1
+            worst_effect_cv = 10.0
+            worst_edge: tuple[int, int] | None = None
             for edge, clf in self.graph.items():
                 effect_cv = clf.cv_score - clf.cv_score_std
                 if effect_cv < worst_effect_cv:
@@ -169,16 +191,17 @@ class DGRAPH:
                     worst_edge = edge
                 if effect_cv < cv_robust:
                     all_robust = False
-            
+
             if all_robust is False:
+                assert worst_edge is not None
                 n_cluster = self.init_n_cluster - self.current_n_merge - 1
                 current_label = self.init_n_cluster + self.current_n_merge - 1
 
                 merge_info(worst_edge[0], worst_edge[1], worst_effect_cv, current_label, n_cluster)
-                
+
                 # info before the merge -> this score goes with these labels
                 self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers), deepcopy(self.nn_list)])
-                
+
                 pos_idx0 = (self.cluster_label[self.idx_centers] == worst_edge[0])
                 pos_idx1 = (self.cluster_label[self.idx_centers] == worst_edge[1])
                 
@@ -198,7 +221,7 @@ class DGRAPH:
                 pos_del = self.idx_centers > -1
 
                 # new "center" should go to end of list
-                tmp_idx_center_array = np.zeros(len(self.idx_centers)-1,dtype=int)
+                tmp_idx_center_array = np.zeros(len(self.idx_centers) - 1, dtype=np.int64)
                 tmp_idx_center_array[:-1] = self.idx_centers[pos_del]
                 tmp_idx_center_array[-1] = tmp_idx
                 self.idx_centers = tmp_idx_center_array
@@ -218,7 +241,7 @@ class DGRAPH:
         else:
             self.history.append([worst_effect_cv, np.copy(self.cluster_label),np.copy(self.idx_centers), deepcopy(self.nn_list)])
 
-    def classify_edge(self, edge_tuple, X, C=1.0):
+    def classify_edge(self, edge_tuple: tuple[int, int], X: NDArray[np.float64], C: float = 1.0) -> CLF:
         """ Trains a classifier on the childs of "root" and returns a classifier for these types.
 
         Important attributes are (for CLF object):
@@ -237,6 +260,7 @@ class DGRAPH:
 
         """
         ## ok need to down sample somewhere here
+        assert self.cluster_label is not None
         test_size_ratio = self.test_size_ratio
         n_average = self.n_average
 
@@ -257,14 +281,14 @@ class DGRAPH:
         n_sample = len(ysubset)
         return CLF(clf_type=self.clf_type, n_average=n_average, test_size=self.test_size_ratio,clf_args=self.clf_args).fit(Xsubset, ysubset)
     
-    def merging_history(self):
+    def merging_history(self) -> list[list[Any]]:
         """ Returns the merging history (starting from low cv score and merging iteratively) 
         format is a list with elements of the form [score, y_pred, idx_centers]
         score should be increasing for further elements in the list
         """
         return self.history
 
-    def get_cluster_label(self, n_cluster = None):
+    def get_cluster_label(self, n_cluster: int | None = None) -> dict[str, object]:
         """return dict with keys {cv, y, idx_centers, nn_List} """
         if n_cluster is None:
             tmp = np.array(self.edge_score.values())
@@ -276,18 +300,19 @@ class DGRAPH:
                     #return s,y,idx, nnlist
         assert False, 'number of cluster chosen incompatible with merging, no such number achieved'
     
-    def cluster_label_standard(self, y=None):
+    def cluster_label_standard(self, y: NDArray[np.int_] | None = None) -> NDArray[np.int_]:
         " instead of using self.cluster_label, relabels cluster so that labels start from 0 and so on"
         if y is None:
+            assert self.cluster_label is not None
             ytmp = self.cluster_label
         else:
-            ytmp =y
-        new_y = np.zeros(len(ytmp),dtype=int)
+            ytmp = y
+        new_y = np.zeros(len(ytmp), dtype=np.int64)
         for i, yu in enumerate(np.unique(ytmp)):
             new_y[yu == ytmp]=i
         return new_y
 
-    def save(self, name=None):
+    def save(self, name: str | None = None) -> None:
         """ Saves current model to specified path 'name' """
         if name is None:
             name = self.make_file_name()
@@ -295,41 +320,49 @@ class DGRAPH:
         pickle.dump(self,fopen)
         fopen.close()
         
-    def load(self, name=None):
+    def load(self, name: str | None = None) -> DGRAPH:
         if name is None:
             name = self.make_file_name()
         self.__dict__.update(pickle.load(open(name,'rb')).__dict__)
         return self
 
-    def make_file_name(self):
+    def make_file_name(self) -> str:
         t_name = "clf_tree.pkl"
         return t_name
     
-    def plot_decision_graph(self):
+    def plot_decision_graph(self) -> None:
         decision_graph(self.merging_history())
 
-    def plot_density_graph(self, Xss, n_cluster=None, label=None, name = 'graph.pdf', dpi=100, c="#fc4f30", radius=0.1, fontsize=20):
+    def plot_density_graph(
+        self,
+        Xss: NDArray[np.float64],
+        n_cluster: int | None = None,
+        label: NDArray[np.int_] | None = None,
+        name: str = 'graph.pdf',
+        dpi: int = 100,
+        c: str = "#fc4f30",
+        radius: float = 0.1,
+        fontsize: int = 20,
+    ) -> None:
         from lattice import draw_graph # internal package
 
         if n_cluster is not None:
             data = self.get_cluster_label(n_cluster)
-            y, idx_centers, nn_list = data['y'], data['idx_centers'], data['nn_list']
+            idx_centers_local: Any = data['idx_centers']
+            nn_list_local: Any = data['nn_list']
         else:
-            idx_centers = self.idx_centers
-            nn_list = self.nn_list
-        
-        xcenter = Xss[idx_centers]
+            idx_centers_local = self.idx_centers
+            nn_list_local = self.nn_list
+
+        xcenter = Xss[idx_centers_local]
         # careful here with ordering of idx centers ...
         # does not follow the nn_list order !
-        n_cluster=len(idx_centers)
-        n_cluster = len(nn_list)
-        node_label = list(nn_list.keys())
-        #print(nn_list)
+        n_cluster = len(nn_list_local)
+        node_label = list(nn_list_local.keys())
         order = {node_label[i]:i for i in range(len(node_label))}
-        #print('Order for labels:',order)
 
         A = np.zeros((n_cluster,n_cluster),dtype=int)
-        for i, kv in enumerate(nn_list.items()):
+        for i, kv in enumerate(nn_list_local.items()):
             for j, k2 in enumerate(kv[1]):
     
                 idx1 = order[kv[0]]
@@ -339,7 +372,7 @@ class DGRAPH:
         #xcenter =  xcenter[::-1]
         draw_graph(xcenter, A, label=label, savefig=name,radius=radius, dpi=dpi, cnode=c, fontsize=fontsize, figsize=(6,6))
 
-def edge_info(edge_tuple, cv_score, std_score, min_score):
+def edge_info(edge_tuple: tuple[int, int], cv_score: float, std_score: float, min_score: float) -> None:
     edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(edge_tuple[0]," -- ",edge_tuple[1])
     if cv_score > min_score:
         out = "[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6.5f}".format("robust edge ",edge_str,"score =",cv_score,"\t+-",std_score)
@@ -347,16 +380,16 @@ def edge_info(edge_tuple, cv_score, std_score, min_score):
         out = "[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6.5f}".format("reject edge ",edge_str,"score =",cv_score,"\t+-",std_score)
     print(out)
 
-def merge_info(c1, c2, score, new_c, n_cluster):
+def merge_info(c1: int, c2: int, score: float, new_c: int, n_cluster: int) -> None:
     edge_str = "{0:5<d}{1:4<s}{2:5<d}".format(c1," -- ",c2)
     out = "[graph.py] : {0:<15s}{1:<15s}{2:<15s}{3:<7.4f}{4:<16s}{5:>6d}{6:>15s}{7:>5d}".format("merge edge ",edge_str,"score - std =",score,
     "\tnew label ->",new_c,'n_cluster=',n_cluster)
     print(out)
 
-def decision_graph(merging_hist):
+def decision_graph(merging_hist: list[list[Any]]) -> None:
     plt.rc('text', usetex=True)
-    score = []
-    n_cluster = []
+    score: list[float] = []
+    n_cluster: list[int] = []
     for s, ypred, idx in merging_hist:
         score.append(s)
         n_cluster.append(len(idx))
@@ -372,5 +405,5 @@ def decision_graph(merging_hist):
     plt.title('Decision Graph\n CV score difference (left), cv score(right) vs. $\#$ of clusters')
     lns = a+b
     labs = [l.get_label() for l in lns]
-    ax.legend(lns, labs, loc='best')
+    ax.legend(lns, labs, loc='best')  # type: ignore[attr-defined]
     plt.show()

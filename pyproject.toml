@@ -49,11 +49,15 @@ include = ["fdc*"]
 
 [tool.mypy]
 python_version = "3.10"
-files = ["fdc/fdc.py", "fdc/density_estimation.py"]
+files = ["fdc/fdc.py", "fdc/density_estimation.py", "fdc/graph.py"]
 disallow_untyped_defs = true
 warn_unused_ignores = true
 no_implicit_optional = true
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "scipy.*"]
+module = ["sklearn.*", "scipy.*", "lattice.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fdc.classify"
+disallow_untyped_defs = false
