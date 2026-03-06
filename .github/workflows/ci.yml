@@ -48,4 +48,4 @@ jobs:
         run: uv pip install --system -e ".[dev,plotting]"
 
       - name: Run mypy
-        run: mypy fdc/fdc.py fdc/density_estimation.py
+        run: mypy
