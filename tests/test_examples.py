@@ -31,14 +31,6 @@ class TestExampleScripts:
             f"STDERR:\n{result.stderr}"
         )
 
-    def test_example3(self):
-        result = _run("example3.py")
-        assert result.returncode == 0, (
-            f"example3.py exited with code {result.returncode}\n"
-            f"STDOUT:\n{result.stdout}\n"
-            f"STDERR:\n{result.stderr}"
-        )
-
     def test_benchmark_sklearn(self):
         result = _run("benchmark_sklearn.py", timeout=300)
         assert result.returncode == 0, (

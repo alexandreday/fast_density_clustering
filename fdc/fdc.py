@@ -169,7 +169,6 @@ class FDC:
 
         print("[fdc] Fitting kernel model for density estimation ...")
         self.fit_density(X)
-        #print("here")
 
         print("[fdc] Finding centers ...")
         self.compute_delta(X, self.rho)
@@ -231,24 +230,23 @@ class FDC:
         
         # fit density model to data
         self.density_model.fit(X)
-        
+
         # save bandwidth
         self.bandwidth = self.density_model.bandwidth
-        
+
         # compute density map based on kernel density model
         if (self.n_sample > 30000) & (self.n_job !=1) :
             print("[fdc] Computing density with %i threads..."%self.n_job)
             p = multiprocessing.Pool(self.n_job)
             size_split = X.shape[0]//self.n_job
             results =[]
-            
-            idx_split = chunkIt(len(X), self.n_job) # find the index to split the array in approx. n_job equal parts. 
+
+            idx_split = chunkIt(len(X), self.n_job) # find the index to split the array in approx. n_job equal parts.
 
             for i in range(self.n_job):
                 results.append(p.apply_async(self.f_tmp, [X[idx_split[i][0]:idx_split[i][1]], i]))
             results = [res.get() for res in results]  # type: ignore[misc]
             asort = np.argsort([results[i][0] for i in range(self.n_job)])  # type: ignore[index]
-            #print(asort)
             self.rho=np.hstack([results[a][1] for a in asort])
 
         else:
@@ -262,7 +260,6 @@ class FDC:
         assert self.density_model is not None
         return (i_, self.density_model.evaluate_density(X_))
 
-    #@profile
     def coarse_grain(self, noise_iterable: Iterable[float]) -> FDC:
         """Started from an initial noise scale, progressively merges clusters.
         If specified, saves the cluster assignments at every level of the coarse graining.
@@ -288,12 +285,9 @@ class FDC:
 
         noise_range = [n for n in noise_iterable]
             
-        #hierarchy = []
         self.max_noise: float = -1
         n_cluster = 0
 
-        # note to self, if no merger is done, no need to store hierarchy ... just work with noise_range dict ... 
-        
         for nt in noise_range:
 
             if self.n_cluster_init is not None:
@@ -302,12 +296,10 @@ class FDC:
                     break
 
             self.check_cluster_stability_fast(self.X, eta = nt)
-            #hierarchy.append(OD({'idx_centers': self.idx_centers, 'cluster_labels': self.cluster_label})) # -> the only required information <- 
             if len(self.idx_centers) != n_cluster:
                 n_cluster = len(self.idx_centers)
                 self.max_noise = nt
 
-        #self.hierarchy = hierarchy
         self.noise_range = noise_range
         self.noise_threshold = noise_range[-1]
 
@@ -315,7 +307,6 @@ class FDC:
 
         return self 
     
-    #@profile
     def compute_delta(self, X: NDArray[np.float64], rho: NDArray[np.float64] | None = None) -> FDC:
         """
         Purpose:
@@ -416,23 +407,6 @@ class FDC:
                 
         enablePrint()
 
-    """ def get_cluster_info(self, eta = None):
-
-        if eta is None:
-            return self.cluster_label, self.idx_centers
-        else:
-            pos = np.argmin(np.abs(np.array(self.noise_range)-eta))
-            #delta_ = self.noise_range[pos]
-            #idx_centers = self.hierarchy[pos]['idx_centers']
-            cluster_label = self.hierarchy[pos]['cluster_labels']
-            idx_center = self.hierarchy[pos]['idx_centers']
-            return cluster_label, idx_center """
-
-    """ def update_labels(self, idx_centers, cluster_label):
-        self.idx_centers = idx_centers
-        self.cluster_label = cluster_label """
-
-    #@profile
     def find_NH_tree_search(self, idx: int, eta: float, cluster_label: NDArray[np.int_]) -> NDArray[np.int_]:
         """
         Function for searching for nearest neighbors within some density threshold.
@@ -556,13 +530,6 @@ class FDC:
         t_name = "fdc_nhSize=%i_eta=%.3f_ratio=%.2f.pkl"
         return t_name%(self.nh_size, self.eta, self.test_ratio_size)
 
-    """ def compute_coarse_grain_graph(self):
-        graph = {}
-        
-        for idx in self.idx_centers: # at some scale
-            NH = self.find_NH_tree_search(idx, eta, cluster_label)
-            label_centers_nn = np.unique([cluster_label[ni] for ni in NH]) """
-
     def display_main_parameters(self) -> None:
         assert isinstance(self.nh_size, int)
         if self.eta != 'auto':
@@ -624,7 +591,6 @@ def check_cluster_stability(self: FDC, X: NDArray[np.float64], threshold: float)
         else:
             NH = self.find_NH_tree_search(idx, delta_rho, cluster_label)
 
-        #print(len(NH))
         label_centers_nn = np.unique(self.cluster_label[NH])#[cluster_label[ni] for ni in NH])
         idx_max = idx_centers[ label_centers_nn[np.argmax(rho[idx_centers[label_centers_nn]])] ]
         rho_current = rho[idx]

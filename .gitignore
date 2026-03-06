@@ -6,7 +6,6 @@ test_cython/*
 graph_test
 .vscode
 clf_test
-tree_old.py
 info.pkl
 test.py
 *.

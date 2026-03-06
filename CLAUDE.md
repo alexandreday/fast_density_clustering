@@ -64,7 +64,6 @@ GitHub Actions (`.github/workflows/ci.yml`) runs `pytest` on Python 3.9, 3.11, a
 ## What NOT to do
 - Do not commit build artifacts: `build/`, `dist/`, `*.egg-info/`, `UNKNOWN.egg-info/`
 - Do not add backwards-compatibility shims or `_unused` variable renames
-- Do not edit `fdc/tree_old.py` — it is dead legacy code pending deletion
 - Do not over-engineer: no extra abstraction layers, no feature flags, no speculative futures
 - Do not add docstrings or comments to code you didn't change
 - Do not add Claude as co-author in commit messages
@@ -76,7 +75,7 @@ The project is being brought up to date incrementally:
 - [x] Phase 2 — Add pytest test suite (`tests/`)
 - [x] Phase 3 — Fix deprecated numpy aliases and identity comparisons
 - [x] Phase 4 — GitHub Actions CI (Python 3.9 / 3.11 / 3.12)
-- [ ] Phase 5 — Clean up dead code (`tree_old.py`, unused imports, build artifacts in `.gitignore`)
+- [x] Phase 5 — Clean up dead code (`tree_old.py`, unused imports, build artifacts in `.gitignore`)
 - [ ] Phase 6 — Type annotations on public API (`FDC`, `KDE`, `DGRAPH`)
 - [ ] Phase 7 — Improve test coverage (KDE, graph, hierarchy modules)
 - [ ] Phase 8 — Performance profiling and optional Cython/Numba acceleration
