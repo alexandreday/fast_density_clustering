@@ -256,7 +256,11 @@ class FDC:
         self.bandwidth = self.density_model.bandwidth
 
         # compute density map based on kernel density model
-        if (self.n_sample > 30000) & (self.n_job !=1) :
+        if self.density_model._use_knn_kde:
+            # Fast path: numpy k-NN KDE is already vectorized, no need for multiprocessing
+            print("[fdc] Computing density (fast k-NN path)...")
+            self.rho = self.density_model.evaluate_density(X, nn_dist=self.nn_dist)
+        elif (self.n_sample > 30000) & (self.n_job !=1) :
             print("[fdc] Computing density with %i threads..."%self.n_job)
             p = multiprocessing.Pool(self.n_job)
             size_split = X.shape[0]//self.n_job
