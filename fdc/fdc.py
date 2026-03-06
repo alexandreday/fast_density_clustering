@@ -9,8 +9,6 @@ Last major update : June 29, 2017
 '''
 
 
-from __future__ import annotations
-
 from typing import Iterable, Literal
 
 import numpy as np
@@ -131,7 +129,7 @@ class FDC:
         else:
             self.n_job = n_job
 
-    def fit(self, X: NDArray[np.float64]) -> FDC:
+    def fit(self, X: NDArray[np.float64]) -> 'FDC':
         """ Performs density clustering on given data set
 
         Parameters
@@ -215,7 +213,7 @@ class FDC:
         fopen.close()
         return fname
         
-    def load(self, name: str | None = None) -> FDC:
+    def load(self, name: str | None = None) -> 'FDC':
         if name is None:
             name = self.make_file_name()
 
@@ -223,7 +221,7 @@ class FDC:
         return self
 
 
-    def fit_density(self, X: NDArray[np.float64]) -> FDC:
+    def fit_density(self, X: NDArray[np.float64]) -> 'FDC':
 
         # nearest neighbors class        
         self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
@@ -268,7 +266,7 @@ class FDC:
         assert self.density_model is not None
         return (i_, self.density_model.evaluate_density(X_))
 
-    def coarse_grain(self, noise_iterable: Iterable[float]) -> FDC:
+    def coarse_grain(self, noise_iterable: Iterable[float]) -> 'FDC':
         """Started from an initial noise scale, progressively merges clusters.
         If specified, saves the cluster assignments at every level of the coarse graining.
 
@@ -350,7 +348,7 @@ class FDC:
             if self.search_size > self.nh_size:
                 self.search_size = self.nh_size
 
-    def compute_delta(self, X: NDArray[np.float64], rho: NDArray[np.float64] | None = None) -> FDC:
+    def compute_delta(self, X: NDArray[np.float64], rho: NDArray[np.float64] | None = None) -> 'FDC':
         """
         Purpose:
             Computes distance to nearest-neighbor with higher density

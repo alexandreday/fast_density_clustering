@@ -11,7 +11,7 @@ license = { text = "MIT" }
 authors = [
     { name = "Alexandre Day", email = "alexandre.day1@gmail.com" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -48,7 +48,7 @@ where = ["."]
 include = ["fdc*"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 files = ["fdc/fdc.py", "fdc/density_estimation.py"]
 disallow_untyped_defs = true
 warn_unused_ignores = true

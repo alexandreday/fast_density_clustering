@@ -3,7 +3,7 @@
 ## Project overview
 PyPI package for density-based clustering of 2D/3D data. Uses kernel density estimation and a density graph to find clusters without specifying the number upfront. O(n log n) time, O(n) memory.
 
-Author: Alexandre Day | License: MIT | Python ≥ 3.9
+Author: Alexandre Day | License: MIT | Python ≥ 3.10
 
 ## Development setup
 Uses `uv` for environment management.
@@ -55,7 +55,7 @@ example/
 GitHub Actions (`.github/workflows/ci.yml`) runs `pytest` on Python 3.9, 3.11, and 3.12 via `uv`.
 
 ## Code conventions
-- Python 3.9+ — no walrus operators or 3.10+ match syntax unless targeting ≥3.10
+- Python 3.10+ — walrus operators and match syntax are allowed
 - No type annotations required (adding them to new code is welcome, but don't annotate unchanged code)
 - NumPy-style array operations throughout; avoid Python loops over large arrays
 - Do not use deprecated numpy type aliases (`np.int`, `np.float`, `np.bool`, etc.) — use `np.int64`, `float`, `bool`, etc.
@@ -74,7 +74,7 @@ The project is being brought up to date incrementally:
 - [x] Phase 1 — Modern packaging (`pyproject.toml`, drop `setup.py`)
 - [x] Phase 2 — Add pytest test suite (`tests/`)
 - [x] Phase 3 — Fix deprecated numpy aliases and identity comparisons
-- [x] Phase 4 — GitHub Actions CI (Python 3.9 / 3.11 / 3.12)
+- [x] Phase 4 — GitHub Actions CI (Python 3.10 / 3.11 / 3.12)
 - [x] Phase 5 — Clean up dead code (`tree_old.py`, unused imports, build artifacts in `.gitignore`)
 - [ ] Phase 6 — Type annotations on public API (`FDC`, `KDE`, `DGRAPH`)
 - [ ] Phase 7 — Improve test coverage (KDE, graph, hierarchy modules)

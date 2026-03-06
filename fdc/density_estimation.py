@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.model_selection import train_test_split
@@ -53,7 +51,7 @@ class KDE():
         self.random_state = random_state
     
     
-    def fit(self, X: NDArray[np.float64]) -> KDE:
+    def fit(self, X: NDArray[np.float64]) -> 'KDE':
         """Fit kernel model to X"""
         if X.shape[1] > 8 :
             print('Careful, you are trying to do density estimation for data in a D > 8 dimensional space\n ... you are warned !')
