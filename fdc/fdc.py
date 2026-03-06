@@ -353,6 +353,7 @@ class FDC:
         within = np.sum(self.nn_dist <= cutoff, axis=1)
         effective_nh = max(int(np.median(within)), min_nh)
 
+        assert isinstance(self.nh_size, int)
         if effective_nh < self.nh_size:
             print("[fdc] Adaptive neighborhood: %i -> %i (cutoff=%.3f*h=%.4f)"
                   % (self.nh_size, effective_nh, alpha, cutoff))
@@ -419,8 +420,8 @@ class FDC:
         """
         assert self.rho is not None
         assert self.nn_delta is not None
-        idx = int(self.n_sample/10.)
-        idx = np.argsort(self.rho)[:-5*idx]#[2:idx:4*idx]
+        n_skip = int(self.n_sample/10.)
+        idx = np.argsort(self.rho)[:-5*n_skip]
         drho = []
 
         for i in idx:
