@@ -198,6 +198,26 @@ class TestFDCFindNHv1:
         assert isinstance(nh, np.ndarray)
 
 
+class TestFDCDuplicatePoints:
+    def test_duplicate_points_do_not_crash(self):
+        """Exact duplicate points should not cause bandwidth divergence."""
+        X, _ = make_blobs(n_samples=200, n_features=2, centers=3, cluster_std=0.5, random_state=42)
+        # Add exact duplicates
+        X = np.vstack([X, X[:50]])
+        model = FDC(eta=0.5, verbose=0, random_state=42)
+        model.fit(X)
+        assert model.cluster_label is not None
+        assert model.cluster_label.shape == (250,)
+
+    def test_all_identical_points(self):
+        """All-identical dataset: should not crash, returns single cluster."""
+        X = np.ones((100, 2))
+        model = FDC(eta=0.5, verbose=0, bandwidth=0.5)
+        model.fit(X)
+        assert model.cluster_label is not None
+        assert model.cluster_label.shape == (100,)
+
+
 class TestAssignCluster:
     def test_all_samples_assigned(self):
         idx_centers = np.array([0, 3], dtype=int)

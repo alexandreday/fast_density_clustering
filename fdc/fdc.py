@@ -223,19 +223,34 @@ class FDC:
 
     def fit_density(self, X: NDArray[np.float64]) -> 'FDC':
 
-        # nearest neighbors class        
-        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)  
+        # nearest neighbors class
+        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
 
         # get k-NN
         self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
 
-        # density model class
+        # Deduplicate for KDE fitting/bandwidth optimization.
+        # Exact duplicates cause nn_dist[:,1]=0, which makes bandwidth estimation
+        # diverge (h_min=0). We fit the KDE on unique points only, then evaluate
+        # density on all original points.
+        X_unique, unique_idx = np.unique(X, axis=0, return_index=True)
+        n_dupes = X.shape[0] - X_unique.shape[0]
+        if n_dupes > 0:
+            print("[fdc] Found %i duplicate points; using %i unique points for KDE fitting"
+                  % (n_dupes, X_unique.shape[0]))
+            # nn_dist from unique points only (for bandwidth_estimate)
+            nn_dist_unique = self.nn_dist[unique_idx]
+        else:
+            X_unique = X
+            nn_dist_unique = self.nn_dist
+
+        # density model class — fit on unique points to avoid bandwidth divergence
         self.density_model = KDE(bandwidth=self.bandwidth, test_ratio_size=self.test_ratio_size,
-            atol=self.atol, rtol=self.rtol, xtol=self.xtol, nn_dist=self.nn_dist, kernel=self.kernel,
+            atol=self.atol, rtol=self.rtol, xtol=self.xtol, nn_dist=nn_dist_unique, kernel=self.kernel,
             random_state=self.random_state)
-        
-        # fit density model to data
-        self.density_model.fit(X)
+
+        # fit density model on unique points
+        self.density_model.fit(X_unique)
 
         # save bandwidth
         self.bandwidth = self.density_model.bandwidth

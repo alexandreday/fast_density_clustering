@@ -57,6 +57,9 @@ class TestRoundFloat:
     def test_returns_float(self):
         assert isinstance(round_float(0.0056), float)
 
+    def test_zero_returns_zero(self):
+        assert round_float(0.0) == 0.0
+
 
 class TestTransform:
     def test_identity_transform(self):

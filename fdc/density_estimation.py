@@ -158,6 +158,8 @@ class KDE():
 def round_float(x: float) -> float:
     """ Rounds a float to it's first significant digit
     """
+    if x == 0.0:
+        return 0.0
     a = list(str(x))
     for i, e in enumerate(a):
         if e != '.':
