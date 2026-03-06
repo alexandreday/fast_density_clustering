@@ -23,11 +23,11 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# Generated output files
-result.png
-sklearn_datasets.png
-example/benchmark_sklearn.png
-# Benchmark output (except committed result images)
+# Generated output files (root-level only; example/ images are committed for README)
+/result.png
+/sklearn_datasets.png
+
+# Benchmark output
 benchmarks/benchmark_scaling.png
 
 # Dependency lockfile (not needed for library installs)

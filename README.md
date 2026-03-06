@@ -58,9 +58,9 @@ print("NMI:", nmi(y, model.cluster_label))
 
 ![Gaussian mixture result](https://github.com/alexandreday/fast_density_clustering/blob/master/example/result.png)
 
-`example/example2.py` — Benchmark against standard [sklearn datasets](http://scikit-learn.org/stable/modules/clustering.html), using the same parameters across all datasets:
+`example/benchmark_sklearn.py` — Benchmark against standard [sklearn datasets](http://scikit-learn.org/stable/modules/clustering.html), comparing FDC with DBSCAN, HDBSCAN, OPTICS, and MeanShift:
 
-![sklearn datasets benchmark](https://github.com/alexandreday/fast_density_clustering/blob/master/example/sklearn_datasets.png)
+![sklearn datasets benchmark](https://github.com/alexandreday/fast_density_clustering/blob/master/example/benchmark_sklearn.png)
 
 ## Citation
 
