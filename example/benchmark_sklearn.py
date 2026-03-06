@@ -59,6 +59,13 @@ def make_algorithms(X):
 # Run benchmark
 # ---------------------------------------------------------------------------
 algo_names = ["FDC", "DBSCAN", "HDBSCAN", "OPTICS", "MeanShift"]
+algo_param_labels = {
+    "FDC":       "η=0.6",
+    "DBSCAN":    "ε=0.3, min_s=5",
+    "HDBSCAN":   "min_cs=15",
+    "OPTICS":    "min_s=10, ξ=0.05",
+    "MeanShift": "bw=auto",
+}
 
 # results[dataset][algo] = (ari, runtime)
 # pred_labels[dataset][algo] = predicted labels (reused for plotting)
@@ -160,7 +167,8 @@ for row, (ds_name, (X_raw, y_true)) in enumerate(zip(dataset_names, dataset_list
         ax.set_title(f"{ari_str}\n{dt:.2f}s", fontsize=8)
 
         if row == 0:
-            ax.set_xlabel(algo_name, fontsize=10, fontweight="bold")
+            param_str = algo_param_labels[algo_name]
+            ax.set_xlabel(f"{algo_name}\n{param_str}", fontsize=9, fontweight="bold")
             ax.xaxis.set_label_position("top")
         if col == 0:
             ax.set_ylabel(ds_name, fontsize=9, rotation=90, labelpad=4)
