@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
 
 [project]
 name = "fdc"
-version = "1.16"
+version = "1.17"
 description = "Fast Density Clustering in low-dimension"
 readme = "READMEpypi.md"
 license = { text = "MIT" }
@@ -14,6 +14,10 @@ authors = [
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
@@ -36,16 +40,17 @@ benchmark = [
     "matplotlib>=3.4",
 ]
 
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "fdc_rs"
+python-packages = ["fdc"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [project.urls]
 Homepage = "https://alexandreday.github.io/"
 Repository = "https://github.com/alexandreday/fast_density_clustering"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["fdc*"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -55,7 +60,7 @@ warn_unused_ignores = true
 no_implicit_optional = true
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "scipy.*", "lattice.*"]
+module = ["sklearn.*", "scipy.*", "lattice.*", "fdc_rs"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

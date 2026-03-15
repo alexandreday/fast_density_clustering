@@ -9,6 +9,6 @@ from .fdc import FDC
 #from .utils import transform
 
 
-__version__ = '1.16'
+__version__ = '1.17'
 
 __all__ = ['FDC', 'KDE']

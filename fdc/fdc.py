@@ -19,6 +19,12 @@ from .density_estimation import KDE
 import pickle
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing
+
+try:
+    import fdc_rs
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
     
 class FDC:
 
@@ -223,11 +229,23 @@ class FDC:
 
     def fit_density(self, X: NDArray[np.float64]) -> 'FDC':
 
-        # nearest neighbors class
-        self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
+        if _HAS_RUST:
+            # Fast Rust k-NN via kiddo kd-tree
+            try:
+                nn_dist_flat, nn_idx_flat = fdc_rs.knn_query(X, self.nh_size)
+                self.nn_dist = nn_dist_flat.reshape(X.shape[0], self.nh_size)
+                self.nn_list = nn_idx_flat.reshape(X.shape[0], self.nh_size)
+                self.nbrs = None
+            except BaseException:
+                # Fallback for degenerate cases (e.g. all-identical points)
+                self.nbrs = NearestNeighbors(n_neighbors=self.nh_size, algorithm='kd_tree').fit(X)
+                self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
+        else:
+            # nearest neighbors class
+            self.nbrs = NearestNeighbors(n_neighbors = self.nh_size, algorithm='kd_tree').fit(X)
 
-        # get k-NN
-        self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
+            # get k-NN
+            self.nn_dist, self.nn_list = self.nbrs.kneighbors(X)
 
         # Deduplicate for KDE fitting/bandwidth optimization.
         # Exact duplicates cause nn_dist[:,1]=0, which makes bandwidth estimation
@@ -353,9 +371,11 @@ class FDC:
 
         cutoff = alpha * self.bandwidth
 
-        # Per-point count of neighbors within cutoff
-        within = np.sum(self.nn_dist <= cutoff, axis=1)
-        effective_nh = max(int(np.median(within)), min_nh)
+        if _HAS_RUST:
+            effective_nh = fdc_rs.adaptive_trim_size(self.nn_dist, self.bandwidth, alpha, min_nh)
+        else:
+            within = np.sum(self.nn_dist <= cutoff, axis=1)
+            effective_nh = max(int(np.median(within)), min_nh)
 
         assert isinstance(self.nh_size, int)
         if effective_nh < self.nh_size:
@@ -388,13 +408,23 @@ class FDC:
         assert self.nn_list is not None
         assert self.nn_dist is not None
 
+        if _HAS_RUST:
+            delta, nn_delta, idx_centers, density_graph = fdc_rs.compute_delta(
+                X, rho, self.nn_list.astype(np.int64), self.nn_dist
+            )
+            self.delta = delta
+            self.nn_delta = nn_delta
+            self.idx_centers_unmerged = idx_centers
+            self.density_graph = [list(children) for children in density_graph]
+            return self
+
         n_sample, n_feature = X.shape
 
         maxdist = np.linalg.norm([np.max(X[:,i])-np.min(X[:,i]) for i in range(n_feature)])
         delta = maxdist*np.ones(n_sample, dtype=float)
         nn_delta = np.ones(n_sample, dtype=int)
 
-        density_graph: list[list[int]] = [[] for i in range(n_sample)] # store incoming leaves
+        density_graph_py: list[list[int]] = [[] for i in range(n_sample)] # store incoming leaves
 
         ### ----------->
         nn_list = self.nn_list # restricted over neighborhood (nh_size)
@@ -403,18 +433,18 @@ class FDC:
         for i in range(n_sample):
             idx = index_greater(rho[nn_list[i]])
             if idx:
-                density_graph[nn_list[i,idx]].append(i)
+                density_graph_py[nn_list[i,idx]].append(i)
                 nn_delta[i] = nn_list[i,idx]
                 delta[i] = self.nn_dist[i,idx]
             else:
                 nn_delta[i]=-1
-        
+
         idx_centers=np.array(range(n_sample))[delta > 0.999*maxdist]
-        
+
         self.delta = delta
         self.nn_delta = nn_delta
         self.idx_centers_unmerged = idx_centers
-        self.density_graph = density_graph
+        self.density_graph = density_graph_py
 
         return self
 
@@ -456,16 +486,31 @@ class FDC:
         if eta is None:
             eta = self.eta
 
-        while True: # iterates untill number of cluster does not change ...
-
-            self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph) # first approximation of assignments
-            self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta)
+        if _HAS_RUST:
+            dg_for_rust = [list(int(x) for x in children) for children in self.density_graph]
+            idx_centers, cluster_label, nn_delta, delta, density_graph = fdc_rs.stability_loop(
+                X, self.rho, self.idx_centers_unmerged.astype(np.int64),
+                self.nn_delta.astype(np.int64), self.delta,
+                self.nn_list.astype(np.int64),
+                dg_for_rust, eta, self.search_size,
+            )
+            self.idx_centers = np.asarray(idx_centers)
+            self.cluster_label = np.asarray(cluster_label)
+            self.nn_delta = np.asarray(nn_delta)
+            self.delta = np.asarray(delta)
+            self.density_graph = [list(children) for children in density_graph]
             self.idx_centers_unmerged = self.idx_centers
+            print("      # of stable clusters with noise %.6f : %i" % (eta, self.idx_centers.shape[0]))
+        else:
+            while True:
+                self.cluster_label = assign_cluster(self.idx_centers_unmerged, self.nn_delta, self.density_graph)
+                self.idx_centers, n_false_pos = check_cluster_stability(self, X, eta)
+                self.idx_centers_unmerged = self.idx_centers
 
-            if n_false_pos == 0:
-                print("      # of stable clusters with noise %.6f : %i" % (eta, self.idx_centers.shape[0]))
-                break
-                
+                if n_false_pos == 0:
+                    print("      # of stable clusters with noise %.6f : %i" % (eta, self.idx_centers.shape[0]))
+                    break
+
         enablePrint()
 
     def find_NH_tree_search(self, idx: int, eta: float, cluster_label: NDArray[np.int_]) -> NDArray[np.int_]:

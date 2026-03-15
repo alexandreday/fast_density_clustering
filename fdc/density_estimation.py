@@ -3,6 +3,12 @@ from numpy.typing import NDArray
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KernelDensity, NearestNeighbors
 
+try:
+    import fdc_rs
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 
 def epanechnikov_kde_from_nn(
     nn_dist: NDArray[np.float64],
@@ -152,6 +158,10 @@ class KDE():
         """
         if nn_dist is not None and self._use_knn_kde:
             assert self.bandwidth is not None
+            if _HAS_RUST:
+                return np.asarray(fdc_rs.epanechnikov_kde(
+                    nn_dist, self.bandwidth, X.shape[1], self._n_fit,
+                ))
             return epanechnikov_kde_from_nn(
                 nn_dist, self.bandwidth, X.shape[1], n_total=self._n_fit,
             )
@@ -191,33 +201,52 @@ class KDE():
 
     def _find_optimal_bandwidth_knn(self, X: NDArray[np.float64]) -> float:
         """Fast bandwidth optimization using numpy k-NN KDE (epanechnikov only)."""
-        from scipy.optimize import fminbound
-
         X_train, X_test = train_test_split(X, test_size=self.test_ratio_size, random_state=self.random_state)
-        hest, hmin, hmax = self.bandwidth_estimate(X_train, X_test)
+
+        if _HAS_RUST:
+            hest, hmin, hmax = fdc_rs.bandwidth_estimate(
+                self.nn_dist if self.nn_dist is not None else np.zeros((0, 0)),
+                X_train, X_test,
+            )
+        else:
+            hest, hmin, hmax = self.bandwidth_estimate(X_train, X_test)
 
         print("[kde] Minimum bound = %.4f \t Rough estimate of h = %.4f \t Maximum bound = %.4f"%(hmin, hest, hmax))
-        self.xtol = round_float(hmin)
+        if _HAS_RUST:
+            self.xtol = fdc_rs.round_float(hmin)
+        else:
+            self.xtol = round_float(hmin)
         print('[kde] Bandwidth tolerance (xtol) set to precision of minimum bound : %.5f '%(self.xtol))
 
         dim = X_train.shape[1]
-        nh_size = self.nn_dist.shape[1] if self.nn_dist is not None else max(int(25 * np.log10(len(X))), 10)
-        # Clamp to available training points
+        nh_size = self.nn_dist.shape[1] if self.nn_dist is not None else max(min(int(np.sqrt(len(X))), int(15 * np.log10(len(X)))), 10)
         nh_size = min(nh_size, X_train.shape[0])
 
         # Build k-NN from training set, query test set
-        nbrs_train = NearestNeighbors(n_neighbors=nh_size, algorithm='kd_tree').fit(X_train)
-        nn_dist_test, _ = nbrs_train.kneighbors(X_test[:2000])
+        if _HAS_RUST:
+            nn_dist_flat, _ = fdc_rs.knn_query_cross(X_train, X_test[:2000], nh_size)
+            nn_dist_test = nn_dist_flat.reshape(min(2000, len(X_test)), nh_size)
+        else:
+            nbrs_train = NearestNeighbors(n_neighbors=nh_size, algorithm='kd_tree').fit(X_train)
+            nn_dist_test, _ = nbrs_train.kneighbors(X_test[:2000])
+
         n_train = X_train.shape[0]
 
-        def neg_log_likelihood(bandwidth: float) -> float:
-            log_dens = epanechnikov_kde_from_nn(nn_dist_test, bandwidth, dim, n_total=n_train)
-            return -float(np.mean(log_dens))
+        if _HAS_RUST:
+            h_optimal, niter = fdc_rs.find_optimal_bandwidth(
+                nn_dist_test, hmin, hmax, dim, n_train, self.xtol,
+            )
+        else:
+            from scipy.optimize import fminbound
 
-        h_optimal, score_opt, _, niter = fminbound(
-            neg_log_likelihood, hmin, hmax * 0.2,
-            maxfun=100, xtol=self.xtol, full_output=True,
-        )
+            def neg_log_likelihood(bandwidth: float) -> float:
+                log_dens = epanechnikov_kde_from_nn(nn_dist_test, bandwidth, dim, n_total=n_train)
+                return -float(np.mean(log_dens))
+
+            h_optimal, score_opt, _, niter = fminbound(
+                neg_log_likelihood, hmin, hmax * 0.2,
+                maxfun=100, xtol=self.xtol, full_output=True,
+            )
 
         print("[kde] Found log-likelihood maximum in %i evaluations, h = %.5f"%(niter, h_optimal))
 

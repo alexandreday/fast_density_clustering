@@ -2,12 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [master, bring_to_date]
+    branches: [master, bring_to_date, joss]
   pull_request:
     branches: [master]
 
 jobs:
-  test:
+  # ── Tests with Rust extension ───────────────────────────────────────────
+  test-rust:
+    name: Test (Python ${{ matrix.python-version }}, Rust)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -21,15 +23,52 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install dependencies
-        run: uv pip install --system -e ".[dev,plotting]"
+      - name: Install package with Rust extension
+        run: |
+          uv pip install --system maturin
+          maturin develop --release
+          uv pip install --system -e ".[dev,plotting]"
 
       - name: Run tests
         run: pytest -v
 
+  # ── Tests without Rust (pure-Python fallback) ───────────────────────────
+  test-python-only:
+    name: Test (Python ${{ matrix.python-version }}, pure-Python)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install package (pure-Python, no Rust)
+        run: |
+          uv pip install --system numpy scikit-learn scipy
+          uv pip install --system -e ".[dev,plotting]"
+
+      - name: Verify fdc_rs is NOT available
+        run: python -c "import fdc; import fdc.fdc as m; assert not m._HAS_RUST, 'fdc_rs should not be available'"
+
+      - name: Run tests (excluding Rust-specific)
+        run: pytest -v --ignore=tests/test_rust_backend.py
+
+  # ── Type checking ───────────────────────────────────────────────────────
   typecheck:
     runs-on: ubuntu-latest
 
@@ -45,7 +84,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev,plotting]"
+        run: |
+          uv pip install --system numpy scikit-learn scipy
+          uv pip install --system -e ".[dev,plotting]"
 
       - name: Run mypy
         run: mypy

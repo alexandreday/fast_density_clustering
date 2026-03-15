@@ -41,6 +41,26 @@ dist/
 *.egg-info/
 *.egg
 
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Native extension modules (built by maturin)
+*.so
+*.dylib
+*.pyd
+
+# Benchmark output (regenerated)
+benchmarks/benchmark_rust_vs_python.png
+benchmarks/rust_vs_c_runtime.csv
+
+# Downloaded benchmark datasets (clustering-benchmarks cache)
+github.com/
+
+# Temp files
+out.txt
+result3.png
+
 # Virtual environments
 .venv/
 venv/

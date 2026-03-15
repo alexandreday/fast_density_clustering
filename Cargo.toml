@@ -1,0 +1,23 @@
+[package]
+name = "fdc"
+version = "1.17.0"
+edition = "2021"
+description = "Rust-accelerated core for the Fast Density Clustering (fdc) Python package"
+license = "MIT"
+repository = "https://github.com/alexandreday/fast_density_clustering"
+
+[lib]
+name = "fdc_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+numpy = "0.23"
+kiddo = "4"
+rayon = "1.10"
+ndarray = "0.16"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
