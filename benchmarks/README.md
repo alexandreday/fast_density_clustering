@@ -219,6 +219,136 @@ of runtime vs n, with O(n), O(n log n), O(n^2) reference lines).
 
 ---
 
+## 3. SOTA comparison (`benchmark_sota.py`)
+
+Compares FDC against **modern density-based clustering methods** on the same
+21 datasets.  Each algorithm gets a fair parameter sweep; the best ARI per
+dataset is reported.  Runtime is a single re-run with the best parameters.
+
+### Algorithms
+
+| Algorithm | Implementation | Sweep |
+|-----------|---------------|-------|
+| FDC | `fdc.FDC` (Rust backend) | `eta` ∈ {0.1 … 0.9} |
+| HDBSCAN* | `sklearn.cluster.HDBSCAN` | `min_cluster_size` ∈ {5 … 100} |
+| pydpc | Rodriguez & Laio 2014 | 48 combos (fraction × density_t × delta_t) |
+| DBSCAN++ | Jang et al. | 72 combos (p × eps × minPts) |
+
+### Results (ARI, best over sweep)
+
+#### sklearn
+
+| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ |
+|---------|--:|--:|----:|---------:|------:|---------:|
+| circles | 1500 | 2 | **1.000** | **1.000** | 0.185 | 0.019 |
+| moons | 1500 | 2 | **1.000** | **1.000** | **1.000** | 0.581 |
+| blobs | 1500 | 3 | **1.000** | **1.000** | **1.000** | 0.986 |
+| aniso | 1500 | 3 | **0.998** | 0.932 | **0.998** | 0.417 |
+| varied | 1500 | 3 | 0.930 | 0.868 | **0.934** | 0.851 |
+| **MEAN** | | | **0.986** | 0.960 | 0.823 | 0.571 |
+
+#### sipu
+
+| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ |
+|---------|--:|--:|----:|---------:|------:|---------:|
+| jain | 373 | 2 | 0.747 | **0.936** | 0.686 | 0.231 |
+| compound | 399 | 6 | 0.740 | **0.811** | 0.740 | 0.468 |
+| aggregation | 788 | 7 | 0.912 | 0.841 | **0.916** | 0.297 |
+| pathbased | 300 | 3 | 0.507 | **0.643** | 0.582 | 0.085 |
+| spiral | 312 | 3 | **1.000** | 0.939 | **1.000** | 0.000 |
+| flame | 240 | 2 | 0.967 | 0.615 | **1.000** | 0.000 |
+| d31 | 3100 | 31 | **0.940** | 0.517 | 0.938 | 0.159 |
+| r15 | 600 | 15 | **0.993** | 0.944 | **0.993** | 0.054 |
+| unbalance | 6500 | 8 | **1.000** | **1.000** | **1.000** | 0.127 |
+| **MEAN** | | | 0.867 | 0.805 | **0.873** | 0.158 |
+
+#### fcps
+
+| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ |
+|---------|--:|--:|----:|---------:|------:|---------:|
+| atom | 800 | 2 | 0.325 | **1.000** | 0.599 | 0.334 |
+| chainlink | 1000 | 2 | 0.654 | **1.000** | 0.500 | 0.259 |
+| lsun | 400 | 3 | 0.789 | **0.995** | 0.662 | 0.419 |
+| target | 770 | 6 | 0.970 | **1.000** | 0.670 | 0.006 |
+| twodiamonds | 800 | 2 | 0.990 | 0.661 | 0.990 | **1.000** |
+| wingnut | 1016 | 2 | **1.000** | 0.957 | **1.000** | 0.344 |
+| hepta | 212 | 7 | **1.000** | **1.000** | **1.000** | 0.099 |
+| **MEAN** | | | 0.818 | **0.945** | 0.774 | 0.351 |
+
+#### Overall
+
+| | FDC | HDBSCAN* | pydpc | DBSCAN++ |
+|--|----:|---------:|------:|---------:|
+| **Mean ARI** | 0.879 | **0.888** | 0.828 | 0.321 |
+| **Mean AMI** | 0.887 | **0.896** | 0.858 | 0.381 |
+
+**Key findings:**
+- **FDC and HDBSCAN\*** are the top two methods overall (0.879 vs 0.888 mean ARI).
+- **FDC leads on 2D datasets** (0.986 mean ARI on sklearn, competitive on sipu)
+  and excels on many-cluster problems (d31, r15, spiral, unbalance).
+- **HDBSCAN\* leads on 3D datasets** (atom, chainlink) where FDC's density
+  estimation is less effective.
+- **pydpc** (original density peaks) is competitive on 2D data but limited by
+  O(n²) memory.
+- **DBSCAN++** trades quality for speed — coreset sampling yields only 0.321
+  mean ARI despite 72-combo sweep.
+
+### Usage
+
+```bash
+uv pip install pydpc dbscanpp   # optional SOTA deps
+uv run python benchmarks/benchmark_sota.py
+uv run python benchmarks/benchmark_sota.py --suite sklearn --no-plot
+```
+
+---
+
+## 4. SOTA scaling (`benchmark_sota_scaling.py`)
+
+Runtime and peak memory from 1K to 100K points (2D Gaussian blobs, k=10) with
+fixed parameters.  pydpc is capped at 10K due to O(n²) memory.
+
+### Runtime (seconds, median of 3 trials)
+
+| n | FDC | HDBSCAN* | pydpc | DBSCAN++ |
+|--:|----:|---------:|------:|---------:|
+| 1,000 | 0.035 | 0.108 | 0.062 | **0.003** |
+| 2,000 | 0.062 | 0.196 | 0.199 | **0.003** |
+| 5,000 | 0.136 | 0.529 | 1.357 | **0.005** |
+| 10,000 | 0.271 | 1.330 | 6.244 | **0.007** |
+| 20,000 | 0.582 | 3.838 | — | **0.012** |
+| 50,000 | 1.855 | 17.055 | — | **0.033** |
+| 100,000 | 3.220 | 65.763 | — | **0.051** |
+
+### Peak memory (MiB)
+
+| n | FDC | HDBSCAN* | pydpc | DBSCAN++ |
+|--:|----:|---------:|------:|---------:|
+| 1,000 | 1.1 | 0.5 | 7.7 | **0.0** |
+| 10,000 | 11.0 | 4.7 | 763.4 | **0.4** |
+| 100,000 | 126.5 | 46.8 | — | **3.7** |
+
+### Scaling summary
+
+| Algorithm | Time | Memory | Notes |
+|-----------|------|--------|-------|
+| **FDC** | ~O(n log n) | O(n·k) | k-NN via KD-tree (60% of runtime) |
+| **HDBSCAN\*** | ~O(n²) | O(n) | Mutual reachability graph bottleneck |
+| **pydpc** | O(n²) | O(n²) | Full distance matrix; impractical past 10K |
+| **DBSCAN++** | ~O(n) | O(p·n) | Coreset sampling (p=30%) → near-linear |
+
+**FDC is 20× faster than HDBSCAN\*** at 100K (3.2s vs 65.8s) while achieving
+comparable quality (0.879 vs 0.888 mean ARI).
+
+![SOTA scaling plot](benchmark_sota_scaling.png)
+
+```bash
+uv run python benchmarks/benchmark_sota_scaling.py
+uv run python benchmarks/benchmark_sota_scaling.py --trials 5 --no-plot
+```
+
+---
+
 ## References
 
 - Fränti, P. & Sieranoja, S. "K-means properties on six clustering benchmark
@@ -232,3 +362,7 @@ of runtime vs n, with O(n), O(n log n), O(n^2) reference lines).
   2, 1985. (ARI)
 - Vinh, Epps & Bailey. "Information Theoretic Measures for Clusterings
   Comparison." *ICML*, 2010. (AMI)
+- Rodriguez, A. & Laio, A. "Clustering by fast search and find of density
+  peaks." *Science* 344(6191), 2014. (pydpc)
+- Jang, J. & Jiang, H. "DBSCAN++: Towards fast and scalable density
+  clustering." *ICML*, 2019. (DBSCAN++)
