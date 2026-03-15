@@ -233,54 +233,55 @@ dataset is reported.  Runtime is a single re-run with the best parameters.
 | HDBSCAN* | `sklearn.cluster.HDBSCAN` | `min_cluster_size` ∈ {5 … 100} |
 | pydpc | Rodriguez & Laio 2014 | 48 combos (fraction × density_t × delta_t) |
 | DBSCAN++ | Jang et al. | 72 combos (p × eps × minPts) |
+| DPA | d'Errico et al. 2021 | `Z` ∈ {0.1, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 2.5, 3.0} |
 
 ### Results (ARI, best over sweep)
 
 #### sklearn
 
-| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ |
-|---------|--:|--:|----:|---------:|------:|---------:|
-| circles | 1500 | 2 | **1.000** | **1.000** | 0.185 | 0.019 |
-| moons | 1500 | 2 | **1.000** | **1.000** | **1.000** | 0.581 |
-| blobs | 1500 | 3 | **1.000** | **1.000** | **1.000** | 0.986 |
-| aniso | 1500 | 3 | **0.998** | 0.932 | **0.998** | 0.417 |
-| varied | 1500 | 3 | 0.930 | 0.868 | **0.934** | 0.851 |
-| **MEAN** | | | **0.986** | 0.960 | 0.823 | 0.571 |
+| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
+|---------|--:|--:|----:|---------:|------:|---------:|----:|
+| circles | 1500 | 2 | **1.000** | **1.000** | 0.185 | 0.019 | 0.132 |
+| moons | 1500 | 2 | **1.000** | **1.000** | **1.000** | 0.581 | **1.000** |
+| blobs | 1500 | 3 | **1.000** | **1.000** | **1.000** | 0.986 | **1.000** |
+| aniso | 1500 | 3 | **0.998** | 0.932 | **0.998** | 0.417 | **0.998** |
+| varied | 1500 | 3 | 0.930 | 0.868 | 0.934 | 0.851 | **0.949** |
+| **MEAN** | | | **0.986** | 0.960 | 0.823 | 0.571 | 0.816 |
 
 #### sipu
 
-| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ |
-|---------|--:|--:|----:|---------:|------:|---------:|
-| jain | 373 | 2 | 0.747 | **0.936** | 0.686 | 0.231 |
-| compound | 399 | 6 | 0.740 | **0.811** | 0.740 | 0.468 |
-| aggregation | 788 | 7 | 0.912 | 0.841 | **0.916** | 0.297 |
-| pathbased | 300 | 3 | 0.507 | **0.643** | 0.582 | 0.085 |
-| spiral | 312 | 3 | **1.000** | 0.939 | **1.000** | 0.000 |
-| flame | 240 | 2 | 0.967 | 0.615 | **1.000** | 0.000 |
-| d31 | 3100 | 31 | **0.940** | 0.517 | 0.938 | 0.159 |
-| r15 | 600 | 15 | **0.993** | 0.944 | **0.993** | 0.054 |
-| unbalance | 6500 | 8 | **1.000** | **1.000** | **1.000** | 0.127 |
-| **MEAN** | | | 0.867 | 0.805 | **0.873** | 0.158 |
+| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
+|---------|--:|--:|----:|---------:|------:|---------:|----:|
+| jain | 373 | 2 | 0.747 | **0.936** | 0.686 | 0.231 | 0.436 |
+| compound | 399 | 6 | 0.740 | 0.811 | 0.740 | 0.468 | **0.853** |
+| aggregation | 788 | 7 | 0.912 | 0.841 | 0.916 | 0.297 | **0.966** |
+| pathbased | 300 | 3 | 0.507 | **0.643** | 0.582 | 0.085 | 0.400 |
+| spiral | 312 | 3 | **1.000** | 0.939 | **1.000** | 0.000 | 0.453 |
+| flame | 240 | 2 | 0.967 | 0.615 | **1.000** | 0.000 | 0.532 |
+| d31 | 3100 | 31 | **0.940** | 0.518 | 0.938 | 0.159 | 0.938 |
+| r15 | 600 | 15 | **0.993** | 0.944 | **0.993** | 0.054 | 0.681 |
+| unbalance | 6500 | 8 | **1.000** | **1.000** | **1.000** | 0.127 | **1.000** |
+| **MEAN** | | | 0.867 | 0.805 | **0.873** | 0.158 | 0.695 |
 
 #### fcps
 
-| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ |
-|---------|--:|--:|----:|---------:|------:|---------:|
-| atom | 800 | 2 | 0.325 | **1.000** | 0.599 | 0.334 |
-| chainlink | 1000 | 2 | 0.654 | **1.000** | 0.500 | 0.259 |
-| lsun | 400 | 3 | 0.789 | **0.995** | 0.662 | 0.419 |
-| target | 770 | 6 | 0.970 | **1.000** | 0.670 | 0.006 |
-| twodiamonds | 800 | 2 | 0.990 | 0.661 | 0.990 | **1.000** |
-| wingnut | 1016 | 2 | **1.000** | 0.957 | **1.000** | 0.344 |
-| hepta | 212 | 7 | **1.000** | **1.000** | **1.000** | 0.099 |
-| **MEAN** | | | 0.818 | **0.945** | 0.774 | 0.351 |
+| Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
+|---------|--:|--:|----:|---------:|------:|---------:|----:|
+| atom | 800 | 2 | 0.325 | **1.000** | 0.599 | 0.334 | 0.771 |
+| chainlink | 1000 | 2 | 0.654 | **1.000** | 0.500 | 0.259 | FAIL |
+| lsun | 400 | 3 | 0.789 | **0.995** | 0.662 | 0.419 | 0.728 |
+| target | 770 | 6 | 0.970 | **1.000** | 0.670 | 0.006 | 0.496 |
+| twodiamonds | 800 | 2 | 0.990 | 0.650 | 0.990 | **1.000** | 0.985 |
+| wingnut | 1016 | 2 | **1.000** | 0.957 | **1.000** | 0.344 | **1.000** |
+| hepta | 212 | 7 | **1.000** | **1.000** | **1.000** | 0.099 | **1.000** |
+| **MEAN** | | | 0.818 | **0.943** | 0.774 | 0.351 | 0.711 |
 
 #### Overall
 
-| | FDC | HDBSCAN* | pydpc | DBSCAN++ |
-|--|----:|---------:|------:|---------:|
-| **Mean ARI** | 0.879 | **0.888** | 0.828 | 0.321 |
-| **Mean AMI** | 0.887 | **0.896** | 0.858 | 0.381 |
+| | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
+|--|----:|---------:|------:|---------:|----:|
+| **Mean ARI** | 0.879 | **0.888** | 0.828 | 0.321 | 0.729 |
+| **Mean AMI** | 0.887 | **0.896** | 0.858 | 0.381 | 0.779 |
 
 **Key findings:**
 - **FDC and HDBSCAN\*** are the top two methods overall (0.879 vs 0.888 mean ARI).
@@ -290,13 +291,17 @@ dataset is reported.  Runtime is a single re-run with the best parameters.
   estimation is less effective.
 - **pydpc** (original density peaks) is competitive on 2D data but limited by
   O(n²) memory.
+- **DPA** (Density Peaks Advanced) scores well on compound/aggregation but
+  struggles on non-convex shapes (spiral, flame) and is ~100× slower than FDC.
+  Failed on chainlink (3D).
 - **DBSCAN++** trades quality for speed — coreset sampling yields only 0.321
   mean ARI despite 72-combo sweep.
 
 ### Usage
 
 ```bash
-uv pip install pydpc dbscanpp   # optional SOTA deps
+uv pip install pydpc dbscanpp                          # optional SOTA deps
+uv pip install --no-deps git+https://github.com/mariaderrico/DPA  # DPA
 uv run python benchmarks/benchmark_sota.py
 uv run python benchmarks/benchmark_sota.py --suite sklearn --no-plot
 ```
@@ -306,27 +311,29 @@ uv run python benchmarks/benchmark_sota.py --suite sklearn --no-plot
 ## 4. SOTA scaling (`benchmark_sota_scaling.py`)
 
 Runtime and peak memory from 1K to 100K points (2D Gaussian blobs, k=10) with
-fixed parameters.  pydpc is capped at 10K due to O(n²) memory.
+fixed parameters.  pydpc is capped at 10K (O(n²) memory), DPA at 5K (very slow).
 
 ### Runtime (seconds, median of 3 trials)
 
-| n | FDC | HDBSCAN* | pydpc | DBSCAN++ |
-|--:|----:|---------:|------:|---------:|
-| 1,000 | 0.035 | 0.108 | 0.062 | **0.003** |
-| 2,000 | 0.062 | 0.196 | 0.199 | **0.003** |
-| 5,000 | 0.136 | 0.529 | 1.357 | **0.005** |
-| 10,000 | 0.271 | 1.330 | 6.244 | **0.007** |
-| 20,000 | 0.582 | 3.838 | — | **0.012** |
-| 50,000 | 1.855 | 17.055 | — | **0.033** |
-| 100,000 | 3.220 | 65.763 | — | **0.051** |
+| n | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
+|--:|----:|---------:|------:|---------:|----:|
+| 1,000 | 0.038 | 0.086 | 0.046 | **0.002** | FAIL |
+| 2,000 | 0.047 | 0.175 | 0.188 | **0.002** | 4.092 |
+| 5,000 | 0.108 | 0.522 | 1.452 | **0.005** | 12.470 |
+| 10,000 | 0.223 | 1.335 | 6.321 | **0.004** | — |
+| 20,000 | 0.506 | 3.960 | — | **0.009** | — |
+| 50,000 | 1.469 | 18.058 | — | **0.022** | — |
+| 100,000 | 3.414 | 62.818 | — | **0.050** | — |
 
 ### Peak memory (MiB)
 
-| n | FDC | HDBSCAN* | pydpc | DBSCAN++ |
-|--:|----:|---------:|------:|---------:|
-| 1,000 | 1.1 | 0.5 | 7.7 | **0.0** |
-| 10,000 | 11.0 | 4.7 | 763.4 | **0.4** |
-| 100,000 | 126.5 | 46.8 | — | **3.7** |
+| n | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
+|--:|----:|---------:|------:|---------:|----:|
+| 1,000 | 1.1 | 0.5 | 7.7 | **0.0** | 0.2 |
+| 2,000 | 2.1 | 1.0 | 30.6 | **0.1** | 49.7 |
+| 5,000 | 5.3 | 2.4 | 191.0 | **0.2** | 152.8 |
+| 10,000 | 11.0 | 4.7 | 763.4 | **0.4** | — |
+| 100,000 | 126.5 | 46.8 | — | **3.7** | — |
 
 ### Scaling summary
 
@@ -336,8 +343,9 @@ fixed parameters.  pydpc is capped at 10K due to O(n²) memory.
 | **HDBSCAN\*** | ~O(n²) | O(n) | Mutual reachability graph bottleneck |
 | **pydpc** | O(n²) | O(n²) | Full distance matrix; impractical past 10K |
 | **DBSCAN++** | ~O(n) | O(p·n) | Coreset sampling (p=30%) → near-linear |
+| **DPA** | ~O(n²) | O(n²) | k-NN density + topography; capped at 5K |
 
-**FDC is 20× faster than HDBSCAN\*** at 100K (3.2s vs 65.8s) while achieving
+**FDC is 18× faster than HDBSCAN\*** at 100K (3.4s vs 62.8s) while achieving
 comparable quality (0.879 vs 0.888 mean ARI).
 
 ![SOTA scaling plot](benchmark_sota_scaling.png)
@@ -366,3 +374,5 @@ uv run python benchmarks/benchmark_sota_scaling.py --trials 5 --no-plot
   peaks." *Science* 344(6191), 2014. (pydpc)
 - Jang, J. & Jiang, H. "DBSCAN++: Towards fast and scalable density
   clustering." *ICML*, 2019. (DBSCAN++)
+- d'Errico, M. et al. "Automatic topography of high-dimensional data sets by
+  non-parametric density peak clustering." *Information Sciences* 560, 2021. (DPA)

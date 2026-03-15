@@ -173,6 +173,25 @@ def _dbscanpp_param_grid():
     return grid
 
 
+# ── DPA (Density Peaks Advanced) ──────────────────────────────────────────────
+
+def _has_dpa():
+    try:
+        from Pipeline import DPA
+        return True
+    except ImportError:
+        return False
+
+
+def _run_dpa(X, Z=1.0):
+    from Pipeline import DPA
+    return DPA.DensityPeakAdvanced(Z=Z).fit_predict(X)
+
+
+def _dpa_param_grid():
+    return [{"Z": z} for z in [0.1, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 2.5, 3.0]]
+
+
 # ── HDBSCAN sweep ────────────────────────────────────────────────────────────
 
 def _run_hdbscan(X, min_cluster_size=15):
@@ -223,6 +242,16 @@ def _build_algorithm_list():
         })
     else:
         print("  DBSCAN++ not installed — skipping (pip install dbscanpp)")
+
+    if _has_dpa():
+        ALGORITHMS.append({
+            "name": "DPA",
+            "runner": _run_dpa,
+            "grid": _dpa_param_grid(),
+            "isolate": False,
+        })
+    else:
+        print("  DPA not installed — skipping (pip install git+https://github.com/mariaderrico/DPA)")
 
 
 # ── Benchmark runner ─────────────────────────────────────────────────────────

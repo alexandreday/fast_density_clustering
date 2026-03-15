@@ -36,6 +36,8 @@ RANDOM_STATE = 42
 
 # pydpc uses O(n^2) distance matrix — skip past this threshold
 PYDPC_MAX_N = 10_000
+# DPA is very slow (~1s/point); skip past this threshold
+DPA_MAX_N = 5_000
 
 
 # ── Algorithm wrappers ───────────────────────────────────────────────────────
@@ -84,6 +86,19 @@ def _fit_dbscanpp(X):
     DBSCANPP(p=0.3, eps_density=0.5, eps_clustering=0.5, minPts=5).fit_predict(X)
 
 
+def _has_dpa():
+    try:
+        from Pipeline import DPA
+        return True
+    except ImportError:
+        return False
+
+
+def _fit_dpa(X):
+    from Pipeline import DPA
+    DPA.DensityPeakAdvanced(Z=1.0).fit(X)
+
+
 # ── Algorithm registry ───────────────────────────────────────────────────────
 
 def _build_algorithms():
@@ -108,6 +123,15 @@ def _build_algorithms():
         })
     else:
         print("  DBSCAN++ not installed — skipping")
+
+    if _has_dpa():
+        algos.append({
+            "name": "DPA",
+            "fit": _fit_dpa,
+            "max_n": DPA_MAX_N,
+        })
+    else:
+        print("  DPA not installed — skipping")
 
     return algos
 
@@ -212,6 +236,7 @@ def plot_scaling(algo_names, times, outfile="benchmark_sota_scaling.png"):
         "HDBSCAN*": {"marker": "D", "color": "#4daf4a"},
         "pydpc":    {"marker": "^", "color": "#984ea3"},
         "DBSCAN++": {"marker": "s", "color": "#377eb8"},
+        "DPA":      {"marker": "P", "color": "#ff7f00"},
     }
 
     for name in algo_names:
