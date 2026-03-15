@@ -385,6 +385,7 @@ class FDC:
             self.nn_list = self.nn_list[:, :effective_nh]
             self.nh_size = effective_nh
 
+            assert isinstance(self.nh_size, int)
             if self.search_size > self.nh_size:
                 self.search_size = self.nh_size
 
@@ -487,6 +488,7 @@ class FDC:
             eta = self.eta
 
         if _HAS_RUST:
+            assert self.nn_list is not None
             dg_for_rust = [list(int(x) for x in children) for children in self.density_graph]
             idx_centers, cluster_label, nn_delta, delta, density_graph = fdc_rs.stability_loop(
                 X, self.rho, self.idx_centers_unmerged.astype(np.int64),
