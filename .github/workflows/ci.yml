@@ -34,7 +34,7 @@ jobs:
           uv pip install --system maturin
           maturin build --release --out dist
           uv pip install --system dist/*.whl
-          uv pip install --system pytest pytest-cov matplotlib mypy
+          uv pip install --system pytest pytest-cov matplotlib
 
       - name: Run tests
         run: pytest -v
@@ -58,14 +58,14 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install fdc pure-Python (skip Rust build)
+      - name: Install dependencies (no Rust)
         run: |
           uv pip install --system numpy scikit-learn scipy matplotlib
           uv pip install --system pytest pytest-cov
-          cd fdc && pip install --system --no-deps --no-build-isolation . || true
-          python -c "import sys; sys.path.insert(0, '.'); from fdc import FDC; print('fdc imported')"
 
-      - name: Run tests (excluding Rust-specific)
+      - name: Run tests (pure-Python, no fdc_rs)
+        env:
+          PYTHONPATH: .
         run: pytest -v --ignore=tests/test_rust_backend.py
 
   # ── Type checking ───────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv pip install --system numpy scikit-learn scipy mypy
+        run: uv pip install --system numpy scikit-learn scipy matplotlib mypy
 
       - name: Run mypy
         run: mypy
