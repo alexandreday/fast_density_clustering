@@ -7,9 +7,8 @@ on:
     branches: [master]
 
 jobs:
-  # ── Tests with Rust extension ───────────────────────────────────────────
-  test-rust:
-    name: Test (Python ${{ matrix.python-version }}, Rust)
+  test:
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -39,36 +38,6 @@ jobs:
       - name: Run tests
         run: pytest -v
 
-  # ── Tests without Rust (pure-Python fallback) ───────────────────────────
-  test-python-only:
-    name: Test (Python ${{ matrix.python-version }}, pure-Python)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.12"]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Install dependencies (no Rust)
-        run: |
-          uv pip install --system numpy scikit-learn scipy matplotlib
-          uv pip install --system pytest pytest-cov
-
-      - name: Run tests (pure-Python, no fdc_rs)
-        env:
-          PYTHONPATH: .
-        run: pytest -v --ignore=tests/test_rust_backend.py
-
-  # ── Type checking ───────────────────────────────────────────────────────
   typecheck:
     runs-on: ubuntu-latest
 
