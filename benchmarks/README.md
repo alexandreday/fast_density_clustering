@@ -268,27 +268,28 @@ dataset is reported.  Runtime is a single re-run with the best parameters.
 | Dataset | n | k | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
 |---------|--:|--:|----:|---------:|------:|---------:|----:|
 | atom | 800 | 2 | 0.325 | **1.000** | 0.599 | 0.334 | 0.771 |
-| chainlink | 1000 | 2 | 0.654 | **1.000** | 0.500 | 0.259 | FAIL |
+| chainlink | 1000 | 2 | **1.000** | **1.000** | 0.500 | 0.259 | FAIL |
 | lsun | 400 | 3 | 0.789 | **0.995** | 0.662 | 0.419 | 0.728 |
 | target | 770 | 6 | 0.970 | **1.000** | 0.670 | 0.006 | 0.496 |
 | twodiamonds | 800 | 2 | 0.990 | 0.650 | 0.990 | **1.000** | 0.985 |
 | wingnut | 1016 | 2 | **1.000** | 0.957 | **1.000** | 0.344 | **1.000** |
 | hepta | 212 | 7 | **1.000** | **1.000** | **1.000** | 0.099 | **1.000** |
-| **MEAN** | | | 0.818 | **0.943** | 0.774 | 0.351 | 0.711 |
+| **MEAN** | | | 0.868 | **0.943** | 0.774 | 0.351 | 0.711 |
 
 #### Overall
 
 | | FDC | HDBSCAN* | pydpc | DBSCAN++ | DPA |
 |--|----:|---------:|------:|---------:|----:|
-| **Mean ARI** | 0.879 | **0.888** | 0.828 | 0.321 | 0.729 |
-| **Mean AMI** | 0.887 | **0.896** | 0.858 | 0.381 | 0.779 |
+| **Mean ARI** | **0.896** | 0.888 | 0.828 | 0.321 | 0.725 |
+| **Mean AMI** | **0.900** | 0.896 | 0.858 | 0.381 | 0.777 |
 
 **Key findings:**
-- **FDC and HDBSCAN\*** are the top two methods overall (0.879 vs 0.888 mean ARI).
+- **FDC leads overall** (0.896 vs HDBSCAN\* 0.888 mean ARI) with an extended
+  eta sweep (0.1–2.0).
 - **FDC leads on 2D datasets** (0.986 mean ARI on sklearn, competitive on sipu)
   and excels on many-cluster problems (d31, r15, spiral, unbalance).
-- **HDBSCAN\* leads on 3D datasets** (atom, chainlink) where FDC's density
-  estimation is less effective.
+- **HDBSCAN\* leads on 3D datasets** (atom) where FDC's KDE bandwidth
+  optimization struggles with extreme density contrasts.
 - **pydpc** (original density peaks) is competitive on 2D data but limited by
   O(n²) memory.
 - **DPA** (Density Peaks Advanced) scores well on compound/aggregation but

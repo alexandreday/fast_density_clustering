@@ -54,7 +54,7 @@ def _run_fdc(X, eta=0.6):
 
 
 def _fdc_param_grid():
-    return [{"eta": eta} for eta in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]]
+    return [{"eta": eta} for eta in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0]]
 
 
 def _worker(runner_fn, X, y_true, params, result_queue):
