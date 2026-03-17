@@ -246,6 +246,27 @@ pub fn find_optimal_bandwidth(
     Ok((h_opt, nfev))
 }
 
+/// Fisher-Yates partial shuffle to sample `k` indices from `0..n` without replacement.
+/// Uses a simple xorshift64 PRNG seeded with `seed`.
+fn random_sample_indices(n: usize, k: usize, seed: u64) -> Vec<usize> {
+    let k = k.min(n);
+    let mut indices: Vec<usize> = (0..n).collect();
+    let mut state = seed ^ 0x5DEECE66D; // avoid zero state
+    if state == 0 {
+        state = 1;
+    }
+    for i in 0..k {
+        // xorshift64
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        let j = i + (state as usize % (n - i));
+        indices.swap(i, j);
+    }
+    indices.truncate(k);
+    indices
+}
+
 /// Estimate bandwidth bounds from k-NN distances.
 #[pyfunction]
 pub fn bandwidth_estimate<'py>(
@@ -268,12 +289,18 @@ pub fn bandwidth_estimate<'py>(
     mean_nn2 /= n as f64;
     let h_min = (mean_nn2 / dim as f64).sqrt();
 
-    let max_size = train.nrows().min(test.nrows()).min(1000);
+    // Randomly sample up to 1000 indices from train and test (matching Python)
+    let sample_size = train.nrows().min(1000);
+    let idx_train = random_sample_indices(train.nrows(), sample_size, 0);
+    let sample_size_test = test.nrows().min(1000);
+    let idx_test = random_sample_indices(test.nrows(), sample_size_test, 0);
+    let max_size = idx_train.len().min(idx_test.len());
+
     let mut mean_dist2 = 0.0;
     for i in 0..max_size {
         let mut d2 = 0.0;
         for d in 0..dim {
-            let diff = train[[i, d]] - test[[i, d]];
+            let diff = train[[idx_train[i], d]] - test[[idx_test[i], d]];
             d2 += diff * diff;
         }
         mean_dist2 += d2;
